@@ -72,9 +72,62 @@ with col_time:
     ist_time = current_time_utc.astimezone(ist)
     edt_time = current_time_utc.astimezone(edt)
     
+    # Get exchange rates (using Yahoo Finance)
+    exchange_rates = {}
+    currencies = {
+        'USD': 'USDINR=X',
+        'EUR': 'EURINR=X',
+        'GBP': 'GBPINR=X',
+        'CAD': 'CADINR=X',
+        'CHF': 'CHFINR=X'
+    }
+    
+    for currency, ticker_symbol in currencies.items():
+        try:
+            ticker = yf.Ticker(ticker_symbol)
+            rate = ticker.history(period='1d')['Close'].iloc[-1]
+            exchange_rates[currency] = f"₹{rate:.2f}"
+        except:
+            exchange_rates[currency] = "--"
+    
+    # Get commodities and crypto prices
+    commodities = {}
+    
+    # Oil (WTI Crude)
+    try:
+        oil = yf.Ticker('CL=F')
+        oil_price = oil.history(period='1d')['Close'].iloc[-1]
+        commodities['Oil'] = f"${oil_price:.2f}"
+    except:
+        commodities['Oil'] = "--"
+    
+    # Gold
+    try:
+        gold = yf.Ticker('GC=F')
+        gold_price = gold.history(period='1d')['Close'].iloc[-1]
+        commodities['Gold'] = f"${gold_price:.2f}"
+    except:
+        commodities['Gold'] = "--"
+    
+    # Bitcoin
+    try:
+        btc = yf.Ticker('BTC-USD')
+        btc_price = btc.history(period='1d')['Close'].iloc[-1]
+        commodities['Bitcoin'] = f"${btc_price:,.0f}"
+    except:
+        commodities['Bitcoin'] = "--"
+    
     st.markdown(f"""
-    <div style='text-align: right; padding-top: 20px;'>
-        <p style='margin: 0; font-size: 14px; color: #888;'>🕐 IST: <strong>{ist_time.strftime('%I:%M %p')}</strong></p>
+    <div style='text-align: right; padding-top: 10px;'>
+        <p style='margin: 0; font-size: 13px; color: #888;'>💵 USD: <strong>{exchange_rates['USD']}</strong></p>
+        <p style='margin: 0; font-size: 13px; color: #888;'>💶 EUR: <strong>{exchange_rates['EUR']}</strong></p>
+        <p style='margin: 0; font-size: 13px; color: #888;'>💷 GBP: <strong>{exchange_rates['GBP']}</strong></p>
+        <p style='margin: 0; font-size: 13px; color: #888;'>🍁 CAD: <strong>{exchange_rates['CAD']}</strong></p>
+        <p style='margin: 0; font-size: 13px; color: #888;'>🇨🇭 CHF: <strong>{exchange_rates['CHF']}</strong></p>
+        <p style='margin: 3px 0 0 0; font-size: 13px; color: #888;'>🛢️ Oil: <strong>{commodities['Oil']}</strong></p>
+        <p style='margin: 0; font-size: 13px; color: #888;'>🥇 Gold: <strong>{commodities['Gold']}</strong></p>
+        <p style='margin: 0; font-size: 13px; color: #888;'>₿ Bitcoin: <strong>{commodities['Bitcoin']}</strong></p>
+        <p style='margin: 5px 0 0 0; font-size: 14px; color: #888;'>🕐 IST: <strong>{ist_time.strftime('%I:%M %p')}</strong></p>
         <p style='margin: 0; font-size: 14px; color: #888;'>🕐 EDT: <strong>{edt_time.strftime('%I:%M %p')}</strong></p>
         <p style='margin: 0; font-size: 12px; color: #666;'>{ist_time.strftime('%d %b %Y')}</p>
     </div>
