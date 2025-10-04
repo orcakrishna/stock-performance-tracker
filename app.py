@@ -220,14 +220,25 @@ def get_nse_index_data(index_name):
         
         if response.status_code == 200:
             data = response.json()
+            # Try exact match first
             for item in data.get('data', []):
                 if item.get('index', '').upper() == index_name.upper():
                     current_price = item.get('last', 0)
                     change_pct = item.get('percentChange', 0)
                     return current_price, change_pct
+            
+            # Try partial match for "Total Market"
+            if 'TOTAL' in index_name.upper():
+                for item in data.get('data', []):
+                    idx_name = item.get('index', '').upper()
+                    if 'TOTAL' in idx_name and 'MARKET' in idx_name:
+                        current_price = item.get('last', 0)
+                        change_pct = item.get('percentChange', 0)
+                        return current_price, change_pct
         
         return None, None
-    except:
+    except Exception as e:
+        print(f"NSE index fetch error: {str(e)}")
         return None, None
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
@@ -239,21 +250,24 @@ def get_index_performance(index_symbol, index_name=None):
         if nse_price and nse_change:
             return nse_price, nse_change
     
-    # Fallback to Yahoo Finance
-    try:
-        index = yf.Ticker(index_symbol)
-        hist = index.history(period='5d')
-        
-        if hist.empty or len(hist) < 2:
+    # Fallback to Yahoo Finance only if symbol is provided
+    if index_symbol:
+        try:
+            index = yf.Ticker(index_symbol)
+            hist = index.history(period='5d')
+            
+            if hist.empty or len(hist) < 2:
+                return None, None
+            
+            current_price = hist['Close'].iloc[-1]
+            previous_price = hist['Close'].iloc[-2]
+            change_pct = ((current_price - previous_price) / previous_price) * 100
+            
+            return current_price, change_pct
+        except:
             return None, None
-        
-        current_price = hist['Close'].iloc[-1]
-        previous_price = hist['Close'].iloc[-2]
-        change_pct = ((current_price - previous_price) / previous_price) * 100
-        
-        return current_price, change_pct
-    except:
-        return None, None
+    
+    return None, None
 
 def get_stock_performance(ticker):
     """Fetch accurate stock performance using Yahoo Finance"""
