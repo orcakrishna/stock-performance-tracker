@@ -179,6 +179,24 @@ def get_stock_list(category_name):
     
     return [], "❌ No data available"
 
+@st.cache_data(ttl=300)  # Cache for 5 minutes
+def get_index_performance(index_symbol):
+    """Fetch index performance"""
+    try:
+        index = yf.Ticker(index_symbol)
+        hist = index.history(period='5d')
+        
+        if hist.empty or len(hist) < 2:
+            return None, None
+        
+        current_price = hist['Close'].iloc[-1]
+        previous_price = hist['Close'].iloc[-2]
+        change_pct = ((current_price - previous_price) / previous_price) * 100
+        
+        return current_price, change_pct
+    except:
+        return None, None
+
 def get_stock_performance(ticker):
     """Fetch accurate stock performance using Yahoo Finance"""
     symbol = ticker.replace('.NS', '').replace('.BO', '')
@@ -412,6 +430,65 @@ def main():
     if not selected_stocks:
         st.warning("⚠️ Please select at least one stock to view performance.")
         return
+    
+    # Display Market Indices at the top
+    st.markdown("### 📈 Market Indices - Today's Performance")
+    
+    # Row 1: Major Indices
+    indices_row1 = {
+        'Nifty 50': '^NSEI',
+        'Sensex': '^BSESN',
+        'Bank Nifty': '^NSEBANK',
+        'Nifty Total Market': '^CNXTME',
+        'India VIX': '^INDIAVIX'
+    }
+    
+    cols1 = st.columns(len(indices_row1))
+    for idx, (name, symbol) in enumerate(indices_row1.items()):
+        with cols1[idx]:
+            price, change = get_index_performance(symbol)
+            if price and change:
+                # Special handling for VIX (higher = more volatile/risky)
+                if 'VIX' in name:
+                    st.metric(
+                        label=f"📊 {name}",
+                        value=f"{price:.2f}",
+                        delta=f"{change:+.2f}%",
+                        delta_color="inverse"  # Red when up, green when down
+                    )
+                else:
+                    st.metric(
+                        label=name,
+                        value=f"{price:,.2f}",
+                        delta=f"{change:+.2f}%"
+                    )
+            else:
+                st.metric(label=name, value="--", delta="--")
+    
+    # Row 2: Sectoral Indices
+    st.markdown("**Sectoral Indices:**")
+    indices_row2 = {
+        'Nifty IT': '^CNXIT',
+        'Nifty Pharma': '^CNXPHARMA',
+        'Nifty Auto': '^CNXAUTO',
+        'Nifty FMCG': '^CNXFMCG',
+        'Nifty Metal': '^CNXMETAL'
+    }
+    
+    cols2 = st.columns(len(indices_row2))
+    for idx, (name, symbol) in enumerate(indices_row2.items()):
+        with cols2[idx]:
+            price, change = get_index_performance(symbol)
+            if price and change:
+                st.metric(
+                    label=name,
+                    value=f"{price:,.2f}",
+                    delta=f"{change:+.2f}%"
+                )
+            else:
+                st.metric(label=name, value="--", delta="--")
+    
+    st.markdown("---")
     
     # Fetch data for selected stocks
     st.subheader(f"📊 {category} - Performance Summary ({len(selected_stocks)} Stock(s))")
