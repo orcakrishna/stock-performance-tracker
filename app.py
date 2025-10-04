@@ -248,11 +248,11 @@ def color_percentage(val):
         return val
 
 def main():
-    # Initialize session state for uploaded stocks
-    if 'uploaded_stocks' not in st.session_state:
-        st.session_state.uploaded_stocks = None
-    if 'uploaded_filename' not in st.session_state:
-        st.session_state.uploaded_filename = None
+    # Initialize session state for multiple saved lists
+    if 'saved_lists' not in st.session_state:
+        st.session_state.saved_lists = {}  # Dictionary: {list_name: [stocks]}
+    if 'current_list_name' not in st.session_state:
+        st.session_state.current_list_name = None
     
     # Sidebar for stock selection
     st.sidebar.header("📋 Stock Selection")
@@ -279,30 +279,27 @@ def main():
     
     elif category == 'Upload File':
         st.sidebar.markdown("---")
-        st.sidebar.markdown("**📤 Upload Stock List**")
+        st.sidebar.markdown("**📤 Manage Stock Lists**")
         
-        # Show previously uploaded file info if exists
-        if st.session_state.uploaded_stocks is not None:
-            st.sidebar.info(
-                f"📋 **Currently Loaded:**\n"
-                f"File: {st.session_state.uploaded_filename}\n"
-                f"Stocks: {len(st.session_state.uploaded_stocks)}\n\n"
-                f"Upload a new file to replace."
-            )
-        else:
-            st.sidebar.info(
-                "Upload a CSV or TXT file with stock symbols.\n\n"
-                "**Format:**\n"
-                "- One symbol per line\n"
-                "- Add .NS for NSE stocks\n"
-                "- Add .BO for BSE stocks\n\n"
-                "**Example:**\n"
-                "```\n"
-                "RELIANCE.NS\n"
-                "TCS.NS\n"
-                "INFY.BO\n"
-                "```"
-            )
+        # Show saved lists
+        if st.session_state.saved_lists:
+            st.sidebar.markdown("**💾 Saved Lists:**")
+            for list_name, stocks in st.session_state.saved_lists.items():
+                col1, col2 = st.sidebar.columns([3, 1])
+                with col1:
+                    if st.button(f"📋 {list_name} ({len(stocks)})", key=f"load_{list_name}"):
+                        st.session_state.current_list_name = list_name
+                        st.rerun()
+                with col2:
+                    if st.button("🗑️", key=f"del_{list_name}"):
+                        del st.session_state.saved_lists[list_name]
+                        if st.session_state.current_list_name == list_name:
+                            st.session_state.current_list_name = None
+                        st.rerun()
+            st.sidebar.markdown("---")
+        
+        # Upload new list section
+        st.sidebar.markdown("**📤 Upload New List**")
         
         # Download sample template
         sample_content = "RELIANCE.NS\nTCS.NS\nHDFCBANK.NS\nICICIBANK.NS\nINFY.NS"
@@ -336,36 +333,54 @@ def main():
                         # Default to .NS if no suffix
                         valid_stocks.append(f"{symbol}.NS")
                 
-                # Save to session state
-                st.session_state.uploaded_stocks = valid_stocks
-                st.session_state.uploaded_filename = uploaded_file.name
+                # Ask for list name
+                list_name = st.sidebar.text_input(
+                    "Enter a name for this list:",
+                    value=uploaded_file.name.replace('.txt', '').replace('.csv', ''),
+                    key="new_list_name"
+                )
                 
+                if st.sidebar.button("💾 Save List"):
+                    if list_name.strip():
+                        st.session_state.saved_lists[list_name.strip()] = valid_stocks
+                        st.session_state.current_list_name = list_name.strip()
+                        st.sidebar.success(f"✅ Saved '{list_name}' with {len(valid_stocks)} stocks")
+                        st.rerun()
+                    else:
+                        st.sidebar.error("Please enter a list name")
+                
+                # Use uploaded stocks temporarily
                 selected_stocks = valid_stocks
                 available_stocks = valid_stocks
-                st.sidebar.success(f"✅ Loaded {len(valid_stocks)} stocks from {uploaded_file.name}")
+                
             except Exception as e:
                 st.sidebar.error(f"Error reading file: {str(e)}")
                 selected_stocks = []
                 available_stocks = []
         
-        # Use previously uploaded stocks if available
-        elif st.session_state.uploaded_stocks is not None:
-            selected_stocks = st.session_state.uploaded_stocks
-            available_stocks = st.session_state.uploaded_stocks
-            st.sidebar.success(f"✅ Using {len(selected_stocks)} stocks from {st.session_state.uploaded_filename}")
+        # Use currently selected saved list
+        elif st.session_state.current_list_name and st.session_state.current_list_name in st.session_state.saved_lists:
+            selected_stocks = st.session_state.saved_lists[st.session_state.current_list_name]
+            available_stocks = selected_stocks
+            st.sidebar.success(f"✅ Using '{st.session_state.current_list_name}' ({len(selected_stocks)} stocks)")
         
-        # No file uploaded and no saved stocks
+        # No list selected
         else:
-            st.sidebar.warning("⚠️ Please upload a file")
+            st.sidebar.info(
+                "📋 **Upload a stock list:**\n\n"
+                "**Format:**\n"
+                "- One symbol per line\n"
+                "- Add .NS for NSE stocks\n"
+                "- Add .BO for BSE stocks\n\n"
+                "**Example:**\n"
+                "```\n"
+                "RELIANCE.NS\n"
+                "TCS.NS\n"
+                "INFY.BO\n"
+                "```"
+            )
             selected_stocks = []
             available_stocks = []
-        
-        # Add clear button if stocks are loaded
-        if st.session_state.uploaded_stocks is not None:
-            if st.sidebar.button("🗑️ Clear Uploaded List"):
-                st.session_state.uploaded_stocks = None
-                st.session_state.uploaded_filename = None
-                st.rerun()
     else:  # Custom Selection
         # Get all available stocks from all categories
         all_nifty_50, _ = get_stock_list('Nifty 50')
