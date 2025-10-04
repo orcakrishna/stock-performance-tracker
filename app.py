@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 import time
 import yfinance as yf
 import pytz
+import os
+import json
 
 # Page configuration
 st.set_page_config(
@@ -337,10 +339,53 @@ def color_percentage(val):
     except:
         return val
 
+# Directory for saved lists
+SAVED_LISTS_DIR = "saved_stock_lists"
+
+def ensure_saved_lists_dir():
+    """Create directory for saved lists if it doesn't exist"""
+    if not os.path.exists(SAVED_LISTS_DIR):
+        os.makedirs(SAVED_LISTS_DIR)
+
+def save_list_to_csv(list_name, stocks):
+    """Save a stock list to CSV file"""
+    ensure_saved_lists_dir()
+    filename = os.path.join(SAVED_LISTS_DIR, f"{list_name}.csv")
+    df = pd.DataFrame({'Symbol': stocks})
+    df.to_csv(filename, index=False)
+
+def load_list_from_csv(list_name):
+    """Load a stock list from CSV file"""
+    filename = os.path.join(SAVED_LISTS_DIR, f"{list_name}.csv")
+    if os.path.exists(filename):
+        df = pd.read_csv(filename)
+        return df['Symbol'].tolist()
+    return None
+
+def delete_list_csv(list_name):
+    """Delete a stock list CSV file"""
+    filename = os.path.join(SAVED_LISTS_DIR, f"{list_name}.csv")
+    if os.path.exists(filename):
+        os.remove(filename)
+
+def load_all_saved_lists():
+    """Load all saved lists from CSV files"""
+    ensure_saved_lists_dir()
+    saved_lists = {}
+    if os.path.exists(SAVED_LISTS_DIR):
+        for filename in os.listdir(SAVED_LISTS_DIR):
+            if filename.endswith('.csv'):
+                list_name = filename[:-4]  # Remove .csv extension
+                stocks = load_list_from_csv(list_name)
+                if stocks:
+                    saved_lists[list_name] = stocks
+    return saved_lists
+
 def main():
     # Initialize session state for multiple saved lists
     if 'saved_lists' not in st.session_state:
-        st.session_state.saved_lists = {}  # Dictionary: {list_name: [stocks]}
+        # Load saved lists from CSV files on startup
+        st.session_state.saved_lists = load_all_saved_lists()
     if 'current_list_name' not in st.session_state:
         st.session_state.current_list_name = None
     
