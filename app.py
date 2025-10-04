@@ -201,8 +201,45 @@ def get_stock_list(category_name):
     return [], "❌ No data available"
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
-def get_index_performance(index_symbol):
-    """Fetch index performance"""
+def get_nse_index_data(index_name):
+    """Fetch index data directly from NSE"""
+    try:
+        url = "https://www.nseindia.com/api/allIndices"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.nseindia.com/'
+        }
+        
+        session = requests.Session()
+        session.get("https://www.nseindia.com", headers=headers, timeout=10)
+        time.sleep(0.5)
+        
+        response = session.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            for item in data.get('data', []):
+                if item.get('index', '').upper() == index_name.upper():
+                    current_price = item.get('last', 0)
+                    change_pct = item.get('percentChange', 0)
+                    return current_price, change_pct
+        
+        return None, None
+    except:
+        return None, None
+
+@st.cache_data(ttl=300)  # Cache for 5 minutes
+def get_index_performance(index_symbol, index_name=None):
+    """Fetch index performance from Yahoo Finance or NSE"""
+    # Try NSE first for specific indices
+    if index_name:
+        nse_price, nse_change = get_nse_index_data(index_name)
+        if nse_price and nse_change:
+            return nse_price, nse_change
+    
+    # Fallback to Yahoo Finance
     try:
         index = yf.Ticker(index_symbol)
         hist = index.history(period='5d')
@@ -470,19 +507,19 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    # Row 1: Major Indices
+    # Row 1: Major Indices (name: (yahoo_symbol, nse_name))
     indices_row1 = {
-        'Nifty 50': '^NSEI',
-        'Sensex': '^BSESN',
-        'Bank Nifty': '^NSEBANK',
-        'Nifty Total Market': '^CNXTME',
-        'India VIX': '^INDIAVIX'
+        'Nifty 50': ('^NSEI', 'NIFTY 50'),
+        'Sensex': ('^BSESN', None),
+        'Bank Nifty': ('^NSEBANK', 'NIFTY BANK'),
+        'Nifty Total Market': (None, 'NIFTY TOTAL MARKET'),
+        'India VIX': ('^INDIAVIX', 'INDIA VIX')
     }
     
     cols1 = st.columns(len(indices_row1))
-    for idx, (name, symbol) in enumerate(indices_row1.items()):
+    for idx, (name, (symbol, nse_name)) in enumerate(indices_row1.items()):
         with cols1[idx]:
-            price, change = get_index_performance(symbol)
+            price, change = get_index_performance(symbol, nse_name)
             if price and change:
                 # Color coding based on change
                 if change >= 0:
