@@ -601,20 +601,19 @@ def main():
         with cols1[idx]:
             price, change = get_index_performance(symbol, nse_name)
             if price and change:
-                # Special handling for VIX (higher = more volatile/risky)
-                if 'VIX' in name:
-                    st.metric(
-                        label=f"📊 {name}",
-                        value=f"{price:.2f}",
-                        delta=f"{change:+.2f}%",
-                        delta_color="inverse"  # Red when up, green when down
-                    )
-                else:
-                    st.metric(
-                        label=name,
-                        value=f"{price:,.2f}",
-                        delta=f"{change:+.2f}%"
-                    )
+                # Determine color based on change (same for all indices)
+                # Green for positive, Red for negative
+                color = "#00ff00" if change > 0 else "#ff4444"
+                arrow = "↑" if change > 0 else "↓"
+                
+                # Display with HTML for colored percentage
+                st.markdown(f"""
+                <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px;'>
+                    <p style='margin: 0; font-size: 14px; color: #888;'>{name}</p>
+                    <p style='margin: 5px 0; font-size: 20px; color: #fff; font-weight: bold;'>{price:,.2f}</p>
+                    <p style='margin: 0; font-size: 14px; font-weight: bold;'><span style='color: {color};'>{arrow} {change:+.2f}%</span></p>
+                </div>
+                """, unsafe_allow_html=True)
             else:
                 st.metric(label=name, value="--", delta="--")
     
@@ -633,11 +632,18 @@ def main():
         with cols2[idx]:
             price, change = get_index_performance(symbol)
             if price and change:
-                st.metric(
-                    label=name,
-                    value=f"{price:,.2f}",
-                    delta=f"{change:+.2f}%"
-                )
+                # Color based on change
+                color = "#00ff00" if change > 0 else "#ff4444"
+                arrow = "↑" if change > 0 else "↓"
+                
+                # Display with HTML for colored percentage
+                st.markdown(f"""
+                <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px;'>
+                    <p style='margin: 0; font-size: 14px; color: #888;'>{name}</p>
+                    <p style='margin: 5px 0; font-size: 20px; color: #fff; font-weight: bold;'>{price:,.2f}</p>
+                    <p style='margin: 0; font-size: 14px; font-weight: bold;'><span style='color: {color};'>{arrow} {change:+.2f}%</span></p>
+                </div>
+                """, unsafe_allow_html=True)
             else:
                 st.metric(label=name, value="--", delta="--")
     
