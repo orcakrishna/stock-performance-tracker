@@ -3,7 +3,7 @@
 # Stock Tracker Startup Script
 # This script keeps the app running and restarts it if it crashes
 
-APP_DIR="/Users/krishnashukla/Desktop/test/CascadeProjects/windsurf-project"
+APP_DIR="/Users/krishnashukla/Desktop/nse/CascadeProjects/windsurf-project"
 LOG_DIR="$APP_DIR/logs"
 VENV_PATH="$APP_DIR/venv"
 
