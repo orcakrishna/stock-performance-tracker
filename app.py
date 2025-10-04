@@ -84,16 +84,13 @@ with col_currency:
     
     st.markdown("**💱 Currency (to INR)**")
     emoji = {'USD': '💵', 'EUR': '💶', 'GBP': '💷', 'CAD': '🍁', 'CHF': '🇨🇭'}
-    currency_html = '<div style="display: flex; flex-wrap: wrap; gap: 5px;">'
     for currency, rate in exchange_rates.items():
-        currency_html += f'''
-        <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px; flex: 1; min-width: 45%;'>
+        st.markdown(f"""
+        <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
             <p style='margin: 0; font-size: 12px; color: #888;'>{emoji[currency]} {currency}</p>
             <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{rate}</p>
         </div>
-        '''
-    currency_html += '</div>'
-    st.markdown(currency_html, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
 with col_commodities:
     # Get commodities and crypto prices
