@@ -10,7 +10,7 @@
 
 2. Copy and paste this command:
    
-   cd /Users/krishnashukla/Desktop/test/CascadeProjects/windsurf-project && ./start_app.sh
+   cd /Users/krishnashukla/Desktop/nse/CascadeProjects/windsurf-project && ./start_app.sh
 
 3. Press Enter
 
