@@ -506,7 +506,7 @@ def main():
     # Display Market Indices at the top with custom styling
     st.markdown("### 📈 Market Indices - Today's Performance")
     
-    # Custom CSS for smaller font and darker colors in metrics
+    # Custom CSS for smaller font and MUCH darker colors in metrics
     st.markdown("""
     <style>
         [data-testid="stMetricValue"] {
@@ -517,20 +517,21 @@ def main():
         }
         [data-testid="stMetricDelta"] {
             font-size: 14px !important;
+            font-weight: bold !important;
         }
-        /* Darker green for positive changes */
-        [data-testid="stMetricDelta"] svg[fill*="rgb(9, 171, 59)"] {
-            fill: rgb(0, 200, 0) !important;
+        /* GREEN for positive (up arrow) */
+        [data-testid="stMetricDelta"]:has(svg[data-testid="stMetricDeltaIcon-Up"]) {
+            color: #00ff00 !important;
         }
-        [data-testid="stMetricDelta"][data-testid*="increase"] {
-            color: #00cc00 !important;
+        [data-testid="stMetricDelta"] svg[data-testid="stMetricDeltaIcon-Up"] {
+            fill: #00ff00 !important;
         }
-        /* Darker red for negative changes */
-        [data-testid="stMetricDelta"] svg[fill*="rgb(255, 43, 43)"] {
-            fill: rgb(255, 0, 0) !important;
+        /* RED for negative (down arrow) */
+        [data-testid="stMetricDelta"]:has(svg[data-testid="stMetricDeltaIcon-Down"]) {
+            color: #ff4444 !important;
         }
-        [data-testid="stMetricDelta"][data-testid*="decrease"] {
-            color: #ff0000 !important;
+        [data-testid="stMetricDelta"] svg[data-testid="stMetricDeltaIcon-Down"] {
+            fill: #ff4444 !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -539,8 +540,8 @@ def main():
     indices_row1 = {
         'Nifty 50': ('^NSEI', 'NIFTY 50'),
         'Sensex': ('^BSESN', None),
-        'Bank Nifty': ('^NSEBANK', 'NIFTY bank'),
-        'Nifty Total Market': (None, 'Nifty Total Market'),
+        'Bank Nifty': ('^NSEBANK', 'NIFTY BANK'),
+        'Nifty Midcap 50': ('^NSEMDCP50', 'NIFTY MIDCAP 50'),
         'India VIX': ('^INDIAVIX', 'INDIA VIX')
     }
     
