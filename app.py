@@ -248,6 +248,12 @@ def color_percentage(val):
         return val
 
 def main():
+    # Initialize session state for uploaded stocks
+    if 'uploaded_stocks' not in st.session_state:
+        st.session_state.uploaded_stocks = None
+    if 'uploaded_filename' not in st.session_state:
+        st.session_state.uploaded_filename = None
+    
     # Sidebar for stock selection
     st.sidebar.header("📋 Stock Selection")
     
@@ -274,19 +280,29 @@ def main():
     elif category == 'Upload File':
         st.sidebar.markdown("---")
         st.sidebar.markdown("**📤 Upload Stock List**")
-        st.sidebar.info(
-            "Upload a CSV or TXT file with stock symbols.\n\n"
-            "**Format:**\n"
-            "- One symbol per line\n"
-            "- Add .NS for NSE stocks\n"
-            "- Add .BO for BSE stocks\n\n"
-            "**Example:**\n"
-            "```\n"
-            "RELIANCE.NS\n"
-            "TCS.NS\n"
-            "INFY.BO\n"
-            "```"
-        )
+        
+        # Show previously uploaded file info if exists
+        if st.session_state.uploaded_stocks is not None:
+            st.sidebar.info(
+                f"📋 **Currently Loaded:**\n"
+                f"File: {st.session_state.uploaded_filename}\n"
+                f"Stocks: {len(st.session_state.uploaded_stocks)}\n\n"
+                f"Upload a new file to replace."
+            )
+        else:
+            st.sidebar.info(
+                "Upload a CSV or TXT file with stock symbols.\n\n"
+                "**Format:**\n"
+                "- One symbol per line\n"
+                "- Add .NS for NSE stocks\n"
+                "- Add .BO for BSE stocks\n\n"
+                "**Example:**\n"
+                "```\n"
+                "RELIANCE.NS\n"
+                "TCS.NS\n"
+                "INFY.BO\n"
+                "```"
+            )
         
         # Download sample template
         sample_content = "RELIANCE.NS\nTCS.NS\nHDFCBANK.NS\nICICIBANK.NS\nINFY.NS"
@@ -303,6 +319,7 @@ def main():
             help="Upload a file with stock symbols (one per line)"
         )
         
+        # Process newly uploaded file
         if uploaded_file is not None:
             try:
                 # Read the file
@@ -319,17 +336,36 @@ def main():
                         # Default to .NS if no suffix
                         valid_stocks.append(f"{symbol}.NS")
                 
+                # Save to session state
+                st.session_state.uploaded_stocks = valid_stocks
+                st.session_state.uploaded_filename = uploaded_file.name
+                
                 selected_stocks = valid_stocks
                 available_stocks = valid_stocks
-                st.sidebar.success(f"✅ Loaded {len(valid_stocks)} stocks from file")
+                st.sidebar.success(f"✅ Loaded {len(valid_stocks)} stocks from {uploaded_file.name}")
             except Exception as e:
                 st.sidebar.error(f"Error reading file: {str(e)}")
                 selected_stocks = []
                 available_stocks = []
+        
+        # Use previously uploaded stocks if available
+        elif st.session_state.uploaded_stocks is not None:
+            selected_stocks = st.session_state.uploaded_stocks
+            available_stocks = st.session_state.uploaded_stocks
+            st.sidebar.success(f"✅ Using {len(selected_stocks)} stocks from {st.session_state.uploaded_filename}")
+        
+        # No file uploaded and no saved stocks
         else:
             st.sidebar.warning("⚠️ Please upload a file")
             selected_stocks = []
             available_stocks = []
+        
+        # Add clear button if stocks are loaded
+        if st.session_state.uploaded_stocks is not None:
+            if st.sidebar.button("🗑️ Clear Uploaded List"):
+                st.session_state.uploaded_stocks = None
+                st.session_state.uploaded_filename = None
+                st.rerun()
     else:  # Custom Selection
         # Get all available stocks from all categories
         all_nifty_50, _ = get_stock_list('Nifty 50')
