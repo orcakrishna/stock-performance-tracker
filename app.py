@@ -56,85 +56,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Title and info boxes on the same row
-col_title, col_currency, col_commodities, col_time = st.columns([2, 1, 1, 1])
+# Title and time in header
+col_title, col_time = st.columns([3, 1])
 
 with col_title:
     st.title("📊 Indian Stock Performance Tracker")
     st.markdown("View 1-month, 2-month, and 3-month performance of NSE/BSE stocks.")
-
-with col_currency:
-    # Get exchange rates (using Yahoo Finance)
-    exchange_rates = {}
-    currencies = {
-        'USD': 'USDINR=X',
-        'EUR': 'EURINR=X',
-        'GBP': 'GBPINR=X',
-        'CAD': 'CADINR=X',
-        'CHF': 'CHFINR=X'
-    }
-    
-    for currency, ticker_symbol in currencies.items():
-        try:
-            ticker = yf.Ticker(ticker_symbol)
-            rate = ticker.history(period='1d')['Close'].iloc[-1]
-            exchange_rates[currency] = f"₹{rate:.2f}"
-        except:
-            exchange_rates[currency] = "--"
-    
-    st.markdown("**💱 Currency (to INR)**")
-    emoji = {'USD': '💵', 'EUR': '💶', 'GBP': '💷', 'CAD': '🍁', 'CHF': '🇨🇭'}
-    for currency, rate in exchange_rates.items():
-        st.markdown(f"""
-        <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
-            <p style='margin: 0; font-size: 12px; color: #888;'>{emoji[currency]} {currency}</p>
-            <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{rate}</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-with col_commodities:
-    # Get commodities and crypto prices
-    commodities = {}
-    
-    # Oil (WTI Crude)
-    try:
-        oil = yf.Ticker('CL=F')
-        oil_price = oil.history(period='1d')['Close'].iloc[-1]
-        commodities['Oil'] = f"${oil_price:.2f}"
-    except:
-        commodities['Oil'] = "--"
-    
-    # Gold
-    try:
-        gold = yf.Ticker('GC=F')
-        gold_price = gold.history(period='1d')['Close'].iloc[-1]
-        commodities['Gold'] = f"${gold_price:.2f}"
-    except:
-        commodities['Gold'] = "--"
-    
-    # Bitcoin
-    try:
-        btc = yf.Ticker('BTC-USD')
-        btc_price = btc.history(period='1d')['Close'].iloc[-1]
-        commodities['Bitcoin'] = f"${btc_price:,.0f}"
-    except:
-        commodities['Bitcoin'] = "--"
-    
-    st.markdown("**💰 Commodities**")
-    st.markdown(f"""
-    <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
-        <p style='margin: 0; font-size: 12px; color: #888;'>🛢️ Oil (WTI)</p>
-        <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{commodities['Oil']}</p>
-    </div>
-    <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
-        <p style='margin: 0; font-size: 12px; color: #888;'>🥇 Gold</p>
-        <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{commodities['Gold']}</p>
-    </div>
-    <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px;'>
-        <p style='margin: 0; font-size: 12px; color: #888;'>₿ Bitcoin</p>
-        <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{commodities['Bitcoin']}</p>
-    </div>
-    """, unsafe_allow_html=True)
 
 with col_time:
     # Get current time in different timezones
@@ -145,19 +72,36 @@ with col_time:
     ist_time = current_time_utc.astimezone(ist)
     edt_time = current_time_utc.astimezone(edt)
     
-    st.markdown("**🕐 Time**")
+    # Get commodities prices
+    try:
+        oil = yf.Ticker('CL=F')
+        oil_price = oil.history(period='1d')['Close'].iloc[-1]
+        oil_str = f"${oil_price:.2f}"
+    except:
+        oil_str = "--"
+    
+    try:
+        gold = yf.Ticker('GC=F')
+        gold_price = gold.history(period='1d')['Close'].iloc[-1]
+        gold_str = f"${gold_price:.2f}"
+    except:
+        gold_str = "--"
+    
+    try:
+        btc = yf.Ticker('BTC-USD')
+        btc_price = btc.history(period='1d')['Close'].iloc[-1]
+        btc_str = f"${btc_price:,.0f}"
+    except:
+        btc_str = "--"
+    
     st.markdown(f"""
-    <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
-        <p style='margin: 0; font-size: 12px; color: #888;'>IST (India)</p>
-        <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{ist_time.strftime('%I:%M %p')}</p>
-    </div>
-    <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
-        <p style='margin: 0; font-size: 12px; color: #888;'>EDT (US East)</p>
-        <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{edt_time.strftime('%I:%M %p')}</p>
-    </div>
-    <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px;'>
-        <p style='margin: 0; font-size: 12px; color: #888;'>Date</p>
-        <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{ist_time.strftime('%d %b %Y')}</p>
+    <div style='text-align: right; padding-top: 20px;'>
+        <p style='margin: 0; font-size: 14px; color: #fff;'>🕐 IST: <strong>{ist_time.strftime('%I:%M %p')}</strong></p>
+        <p style='margin: 0; font-size: 14px; color: #fff;'>🕐 EDT: <strong>{edt_time.strftime('%I:%M %p')}</strong></p>
+        <p style='margin: 5px 0 0 0; font-size: 13px; color: #888;'>🛢️ Oil: <strong>{oil_str}</strong></p>
+        <p style='margin: 0; font-size: 13px; color: #888;'>🥇 Gold: <strong>{gold_str}</strong></p>
+        <p style='margin: 0; font-size: 13px; color: #888;'>₿ BTC: <strong>{btc_str}</strong></p>
+        <p style='margin: 5px 0 0 0; font-size: 12px; color: #888;'>{ist_time.strftime('%d %b %Y')}</p>
     </div>
     """, unsafe_allow_html=True)
 
