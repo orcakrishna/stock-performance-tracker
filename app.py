@@ -82,15 +82,18 @@ with col_currency:
         except:
             exchange_rates[currency] = "--"
     
-    st.markdown("**💱 Currency Rates (to INR)**")
+    st.markdown("**💱 Currency (to INR)**")
+    emoji = {'USD': '💵', 'EUR': '💶', 'GBP': '💷', 'CAD': '🍁', 'CHF': '🇨🇭'}
+    currency_html = '<div style="display: flex; flex-wrap: wrap; gap: 5px;">'
     for currency, rate in exchange_rates.items():
-        emoji = {'USD': '💵', 'EUR': '💶', 'GBP': '💷', 'CAD': '🍁', 'CHF': '🇨🇭'}
-        st.markdown(f"""
-        <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
-            <p style='margin: 0; font-size: 14px; color: #888;'>{emoji[currency]} {currency}</p>
-            <p style='margin: 5px 0 0 0; font-size: 18px; color: #fff; font-weight: bold;'>{rate}</p>
+        currency_html += f'''
+        <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px; flex: 1; min-width: 45%;'>
+            <p style='margin: 0; font-size: 12px; color: #888;'>{emoji[currency]} {currency}</p>
+            <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{rate}</p>
         </div>
-        """, unsafe_allow_html=True)
+        '''
+    currency_html += '</div>'
+    st.markdown(currency_html, unsafe_allow_html=True)
 
 with col_commodities:
     # Get commodities and crypto prices
@@ -120,29 +123,19 @@ with col_commodities:
     except:
         commodities['Bitcoin'] = "--"
     
-    st.markdown("**💰 Commodities & Crypto**")
-    
-    # Oil
+    st.markdown("**💰 Commodities**")
     st.markdown(f"""
-    <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
-        <p style='margin: 0; font-size: 14px; color: #888;'>🛢️ Oil (WTI)</p>
-        <p style='margin: 5px 0 0 0; font-size: 18px; color: #fff; font-weight: bold;'>{commodities['Oil']}</p>
+    <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
+        <p style='margin: 0; font-size: 12px; color: #888;'>🛢️ Oil (WTI)</p>
+        <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{commodities['Oil']}</p>
     </div>
-    """, unsafe_allow_html=True)
-    
-    # Gold
-    st.markdown(f"""
-    <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
-        <p style='margin: 0; font-size: 14px; color: #888;'>🥇 Gold</p>
-        <p style='margin: 5px 0 0 0; font-size: 18px; color: #fff; font-weight: bold;'>{commodities['Gold']}</p>
+    <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
+        <p style='margin: 0; font-size: 12px; color: #888;'>🥇 Gold</p>
+        <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{commodities['Gold']}</p>
     </div>
-    """, unsafe_allow_html=True)
-    
-    # Bitcoin
-    st.markdown(f"""
-    <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
-        <p style='margin: 0; font-size: 14px; color: #888;'>₿ Bitcoin</p>
-        <p style='margin: 5px 0 0 0; font-size: 18px; color: #fff; font-weight: bold;'>{commodities['Bitcoin']}</p>
+    <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px;'>
+        <p style='margin: 0; font-size: 12px; color: #888;'>₿ Bitcoin</p>
+        <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{commodities['Bitcoin']}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -155,29 +148,19 @@ with col_time:
     ist_time = current_time_utc.astimezone(ist)
     edt_time = current_time_utc.astimezone(edt)
     
-    st.markdown("**🕐 Time Zones**")
-    
-    # IST
+    st.markdown("**🕐 Time**")
     st.markdown(f"""
-    <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
-        <p style='margin: 0; font-size: 14px; color: #888;'>IST (India)</p>
-        <p style='margin: 5px 0 0 0; font-size: 18px; color: #fff; font-weight: bold;'>{ist_time.strftime('%I:%M %p')}</p>
+    <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
+        <p style='margin: 0; font-size: 12px; color: #888;'>IST (India)</p>
+        <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{ist_time.strftime('%I:%M %p')}</p>
     </div>
-    """, unsafe_allow_html=True)
-    
-    # EDT
-    st.markdown(f"""
-    <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
-        <p style='margin: 0; font-size: 14px; color: #888;'>EDT (US East)</p>
-        <p style='margin: 5px 0 0 0; font-size: 18px; color: #fff; font-weight: bold;'>{edt_time.strftime('%I:%M %p')}</p>
+    <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
+        <p style='margin: 0; font-size: 12px; color: #888;'>EDT (US East)</p>
+        <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{edt_time.strftime('%I:%M %p')}</p>
     </div>
-    """, unsafe_allow_html=True)
-    
-    # Date
-    st.markdown(f"""
-    <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px;'>
-        <p style='margin: 0; font-size: 14px; color: #888;'>Date</p>
-        <p style='margin: 5px 0 0 0; font-size: 16px; color: #fff; font-weight: bold;'>{ist_time.strftime('%d %b %Y')}</p>
+    <div style='padding: 8px; background-color: #2d2d2d; border-radius: 5px;'>
+        <p style='margin: 0; font-size: 12px; color: #888;'>Date</p>
+        <p style='margin: 2px 0 0 0; font-size: 14px; color: #fff; font-weight: bold;'>{ist_time.strftime('%d %b %Y')}</p>
     </div>
     """, unsafe_allow_html=True)
 
