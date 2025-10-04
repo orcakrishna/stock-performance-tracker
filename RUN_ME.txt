@@ -21,7 +21,7 @@
 
 📌 TO STOP THE APP:
 
-   cd /Users/krishnashukla/Desktop/test/CascadeProjects/windsurf-project && ./stop_app.sh
+   cd /Users/krishnashukla/Desktop/nse/CascadeProjects/windsurf-project && ./stop_app.sh
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
