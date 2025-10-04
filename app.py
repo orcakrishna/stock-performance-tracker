@@ -118,27 +118,37 @@ FALLBACK_BSE_SENSEX = [
 def fetch_nifty_50_from_nse():
     """Fetch Nifty 50 stocks dynamically from NSE website"""
     try:
-        url = "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%2050"
+        # More complete headers to mimic real browser
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': '*/*',
             'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': 'https://www.nseindia.com/'
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Referer': 'https://www.nseindia.com/market-data/live-equity-market',
+            'X-Requested-With': 'XMLHttpRequest'
         }
         
         session = requests.Session()
-        session.get("https://www.nseindia.com", headers=headers, timeout=10)
-        time.sleep(1)
         
-        response = session.get(url, headers=headers, timeout=10)
+        # First request to get cookies
+        session.get("https://www.nseindia.com", headers=headers, timeout=15)
+        time.sleep(2)
+        
+        # Second request to API
+        url = "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%2050"
+        response = session.get(url, headers=headers, timeout=15)
         
         if response.status_code == 200:
             data = response.json()
             stocks = [item['symbol'] + '.NS' for item in data.get('data', []) if 'symbol' in item]
             if len(stocks) > 40:  # Validate we got reasonable data
+                print(f"✅ Successfully fetched {len(stocks)} stocks from NSE")
                 return stocks[:50]  # Return top 50
+        else:
+            print(f"NSE API returned status code: {response.status_code}")
     except Exception as e:
-        print(f"NSE fetch failed: {str(e)}")
+        print(f"❌ NSE fetch failed: {str(e)}")
     
     return None
 
@@ -650,7 +660,13 @@ def main():
     st.markdown("---")
     
     # Fetch data for selected stocks
-    st.subheader(f"📊 {category} - Performance Summary ({len(selected_stocks)} Stock(s))")
+    # Display title based on category
+    if category == 'Upload File' and st.session_state.current_list_name:
+        display_title = f"📊 {st.session_state.current_list_name} - Performance Summary ({len(selected_stocks)} Stock(s))"
+    else:
+        display_title = f"📊 {category} - Performance Summary ({len(selected_stocks)} Stock(s))"
+    
+    st.subheader(display_title)
     st.caption(f"🔽 Sorted by: **{sort_by}** ({sort_order})")
     
     with st.spinner(f"Fetching data for {len(selected_stocks)} stocks..."):
@@ -693,7 +709,7 @@ def main():
         st.session_state.current_page = 1
     
     # Pagination controls
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns([1, 6, 1])
     
     with col1:
         if st.button("⬅️ Previous", disabled=(st.session_state.current_page == 1)):
@@ -701,7 +717,7 @@ def main():
             st.rerun()
     
     with col2:
-        st.markdown(f"<h4 style='text-align: center;'>Page {st.session_state.current_page} of {total_pages}</h4>", unsafe_allow_html=True)
+        st.markdown(f"<h4 style='text-align: center; margin-top: 5px;'>Page {st.session_state.current_page} of {total_pages}</h4>", unsafe_allow_html=True)
     
     with col3:
         if st.button("Next ➡️", disabled=(st.session_state.current_page == total_pages)):
