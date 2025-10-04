@@ -683,19 +683,51 @@ def main():
     # Add rank column
     df.insert(0, 'Rank', range(1, len(df) + 1))
     
+    # Pagination
+    ITEMS_PER_PAGE = 10
+    total_items = len(df)
+    total_pages = (total_items + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE  # Ceiling division
+    
+    # Initialize page number in session state
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 1
+    
+    # Pagination controls
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col1:
+        if st.button("⬅️ Previous", disabled=(st.session_state.current_page == 1)):
+            st.session_state.current_page -= 1
+            st.rerun()
+    
+    with col2:
+        st.markdown(f"<h4 style='text-align: center;'>Page {st.session_state.current_page} of {total_pages}</h4>", unsafe_allow_html=True)
+    
+    with col3:
+        if st.button("Next ➡️", disabled=(st.session_state.current_page == total_pages)):
+            st.session_state.current_page += 1
+            st.rerun()
+    
+    # Calculate start and end indices for current page
+    start_idx = (st.session_state.current_page - 1) * ITEMS_PER_PAGE
+    end_idx = min(start_idx + ITEMS_PER_PAGE, total_items)
+    
+    # Get data for current page
+    df_page = df.iloc[start_idx:end_idx]
+    
     # Create HTML table with colored percentages
     html_table = '<table style="width:100%; border-collapse: collapse; background-color: #2d2d2d;">'
     html_table += '<thead><tr style="background-color: #3d3d3d;">'
     
     # Add headers
-    for col in df.columns:
+    for col in df_page.columns:
         html_table += f'<th style="padding: 12px; text-align: left; border: 1px solid #555; color: #ffffff; font-weight: bold;">{col}</th>'
     html_table += '</tr></thead><tbody>'
     
     # Add rows
-    for _, row in df.iterrows():
+    for _, row in df_page.iterrows():
         html_table += '<tr>'
-        for col in df.columns:
+        for col in df_page.columns:
             value = row[col]
             if col in ['1 Week %', '1 Month %', '2 Months %', '3 Months %']:
                 colored_value = color_percentage(value)
@@ -708,6 +740,9 @@ def main():
     
     # Display the HTML table
     st.markdown(html_table, unsafe_allow_html=True)
+    
+    # Show items range
+    st.caption(f"Showing {start_idx + 1} to {end_idx} of {total_items} stocks")
     
     # Display statistics and top/bottom performers
     st.markdown("---")
