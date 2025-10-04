@@ -492,7 +492,7 @@ def main():
     # Display Market Indices at the top with custom styling
     st.markdown("### 📈 Market Indices - Today's Performance")
     
-    # Custom CSS for smaller font in metrics
+    # Custom CSS for smaller font and darker colors in metrics
     st.markdown("""
     <style>
         [data-testid="stMetricValue"] {
@@ -504,6 +504,20 @@ def main():
         [data-testid="stMetricDelta"] {
             font-size: 14px !important;
         }
+        /* Darker green for positive changes */
+        [data-testid="stMetricDelta"] svg[fill*="rgb(9, 171, 59)"] {
+            fill: rgb(0, 200, 0) !important;
+        }
+        [data-testid="stMetricDelta"][data-testid*="increase"] {
+            color: #00cc00 !important;
+        }
+        /* Darker red for negative changes */
+        [data-testid="stMetricDelta"] svg[fill*="rgb(255, 43, 43)"] {
+            fill: rgb(255, 0, 0) !important;
+        }
+        [data-testid="stMetricDelta"][data-testid*="decrease"] {
+            color: #ff0000 !important;
+        }
     </style>
     """, unsafe_allow_html=True)
     
@@ -511,8 +525,8 @@ def main():
     indices_row1 = {
         'Nifty 50': ('^NSEI', 'NIFTY 50'),
         'Sensex': ('^BSESN', None),
-        'Bank Nifty': ('^NSEBANK', 'NIFTY BANK'),
-        'Nifty Total Market': (None, 'NIFTY TOTAL MARKET'),
+        'Bank Nifty': ('^NSEBANK', 'NIFTY bank'),
+        'Nifty Total Market': (None, 'Nifty Total Market'),
         'India VIX': ('^INDIAVIX', 'INDIA VIX')
     }
     
@@ -521,12 +535,6 @@ def main():
         with cols1[idx]:
             price, change = get_index_performance(symbol, nse_name)
             if price and change:
-                # Color coding based on change
-                if change >= 0:
-                    color = "normal"  # Green for positive
-                else:
-                    color = "normal"  # Red for negative (Streamlit handles this automatically)
-                
                 # Special handling for VIX (higher = more volatile/risky)
                 if 'VIX' in name:
                     st.metric(
@@ -539,8 +547,7 @@ def main():
                     st.metric(
                         label=name,
                         value=f"{price:,.2f}",
-                        delta=f"{change:+.2f}%",
-                        delta_color=color
+                        delta=f"{change:+.2f}%"
                     )
             else:
                 st.metric(label=name, value="--", delta="--")
