@@ -56,22 +56,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Title and time display
-col_title, col_time = st.columns([3, 1])
+# Title and info boxes on the same row
+col_title, col_currency, col_commodities, col_time = st.columns([2, 1, 1, 1])
 
 with col_title:
     st.title("📊 Indian Stock Performance Tracker")
     st.markdown("View 1-month, 2-month, and 3-month performance of NSE/BSE stocks.")
 
-with col_time:
-    # Get current time in different timezones
-    ist = pytz.timezone('Asia/Kolkata')
-    edt = pytz.timezone('America/New_York')
-    
-    current_time_utc = datetime.now(pytz.utc)
-    ist_time = current_time_utc.astimezone(ist)
-    edt_time = current_time_utc.astimezone(edt)
-    
+with col_currency:
     # Get exchange rates (using Yahoo Finance)
     exchange_rates = {}
     currencies = {
@@ -90,6 +82,17 @@ with col_time:
         except:
             exchange_rates[currency] = "--"
     
+    st.markdown("**💱 Currency Rates (to INR)**")
+    for currency, rate in exchange_rates.items():
+        emoji = {'USD': '💵', 'EUR': '💶', 'GBP': '💷', 'CAD': '🍁', 'CHF': '🇨🇭'}
+        st.markdown(f"""
+        <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
+            <p style='margin: 0; font-size: 14px; color: #888;'>{emoji[currency]} {currency}</p>
+            <p style='margin: 5px 0 0 0; font-size: 18px; color: #fff; font-weight: bold;'>{rate}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+with col_commodities:
     # Get commodities and crypto prices
     commodities = {}
     
@@ -117,19 +120,64 @@ with col_time:
     except:
         commodities['Bitcoin'] = "--"
     
+    st.markdown("**💰 Commodities & Crypto**")
+    
+    # Oil
     st.markdown(f"""
-    <div style='text-align: right; padding-top: 10px;'>
-        <p style='margin: 0; font-size: 13px; color: #888;'>💵 USD: <strong>{exchange_rates['USD']}</strong></p>
-        <p style='margin: 0; font-size: 13px; color: #888;'>💶 EUR: <strong>{exchange_rates['EUR']}</strong></p>
-        <p style='margin: 0; font-size: 13px; color: #888;'>💷 GBP: <strong>{exchange_rates['GBP']}</strong></p>
-        <p style='margin: 0; font-size: 13px; color: #888;'>🍁 CAD: <strong>{exchange_rates['CAD']}</strong></p>
-        <p style='margin: 0; font-size: 13px; color: #888;'>🇨🇭 CHF: <strong>{exchange_rates['CHF']}</strong></p>
-        <p style='margin: 3px 0 0 0; font-size: 13px; color: #888;'>🛢️ Oil: <strong>{commodities['Oil']}</strong></p>
-        <p style='margin: 0; font-size: 13px; color: #888;'>🥇 Gold: <strong>{commodities['Gold']}</strong></p>
-        <p style='margin: 0; font-size: 13px; color: #888;'>₿ Bitcoin: <strong>{commodities['Bitcoin']}</strong></p>
-        <p style='margin: 5px 0 0 0; font-size: 14px; color: #888;'>🕐 IST: <strong>{ist_time.strftime('%I:%M %p')}</strong></p>
-        <p style='margin: 0; font-size: 14px; color: #888;'>🕐 EDT: <strong>{edt_time.strftime('%I:%M %p')}</strong></p>
-        <p style='margin: 0; font-size: 12px; color: #666;'>{ist_time.strftime('%d %b %Y')}</p>
+    <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
+        <p style='margin: 0; font-size: 14px; color: #888;'>🛢️ Oil (WTI)</p>
+        <p style='margin: 5px 0 0 0; font-size: 18px; color: #fff; font-weight: bold;'>{commodities['Oil']}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Gold
+    st.markdown(f"""
+    <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
+        <p style='margin: 0; font-size: 14px; color: #888;'>🥇 Gold</p>
+        <p style='margin: 5px 0 0 0; font-size: 18px; color: #fff; font-weight: bold;'>{commodities['Gold']}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Bitcoin
+    st.markdown(f"""
+    <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
+        <p style='margin: 0; font-size: 14px; color: #888;'>₿ Bitcoin</p>
+        <p style='margin: 5px 0 0 0; font-size: 18px; color: #fff; font-weight: bold;'>{commodities['Bitcoin']}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col_time:
+    # Get current time in different timezones
+    ist = pytz.timezone('Asia/Kolkata')
+    edt = pytz.timezone('America/New_York')
+    
+    current_time_utc = datetime.now(pytz.utc)
+    ist_time = current_time_utc.astimezone(ist)
+    edt_time = current_time_utc.astimezone(edt)
+    
+    st.markdown("**🕐 Time Zones**")
+    
+    # IST
+    st.markdown(f"""
+    <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
+        <p style='margin: 0; font-size: 14px; color: #888;'>IST (India)</p>
+        <p style='margin: 5px 0 0 0; font-size: 18px; color: #fff; font-weight: bold;'>{ist_time.strftime('%I:%M %p')}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # EDT
+    st.markdown(f"""
+    <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px; margin-bottom: 5px;'>
+        <p style='margin: 0; font-size: 14px; color: #888;'>EDT (US East)</p>
+        <p style='margin: 5px 0 0 0; font-size: 18px; color: #fff; font-weight: bold;'>{edt_time.strftime('%I:%M %p')}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Date
+    st.markdown(f"""
+    <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px;'>
+        <p style='margin: 0; font-size: 14px; color: #888;'>Date</p>
+        <p style='margin: 5px 0 0 0; font-size: 16px; color: #fff; font-weight: bold;'>{ist_time.strftime('%d %b %Y')}</p>
     </div>
     """, unsafe_allow_html=True)
 
