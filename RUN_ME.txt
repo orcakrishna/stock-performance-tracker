@@ -1,0 +1,67 @@
+╔═══════════════════════════════════════════════════════════╗
+║                                                           ║
+║        🚀 STOCK TRACKER - QUICK START GUIDE 🚀           ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
+
+📋 TO START THE APP (3 SIMPLE STEPS):
+
+1. Open Terminal (press Cmd + Space, type "Terminal")
+
+2. Copy and paste this command:
+   
+   cd /Users/krishnashukla/Desktop/test/CascadeProjects/windsurf-project && ./start_app.sh
+
+3. Press Enter
+
+✅ DONE! Access your app at: http://localhost:8501
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📌 TO STOP THE APP:
+
+   cd /Users/krishnashukla/Desktop/test/CascadeProjects/windsurf-project && ./stop_app.sh
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌐 TO RUN 24/7 (FREE CLOUD HOSTING):
+
+   Read: QUICK_START.md (Option 2)
+   
+   Benefits:
+   ✅ Access from anywhere (phone, tablet, any computer)
+   ✅ Always running (no laptop needed)
+   ✅ FREE forever
+   ✅ Takes 10 minutes to setup
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 TROUBLESHOOTING:
+
+Problem: Port already in use
+Solution: 
+   lsof -i :8501
+   kill -9 $(lsof -t -i:8501)
+   ./start_app.sh
+
+Problem: Can't access app
+Solution: 
+   - Use http://localhost:8501 (not https)
+   - Check logs: cat logs/app.log
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 MORE INFO:
+
+   - Quick Start: QUICK_START.md
+   - Full Guide: DEPLOYMENT_GUIDE.md
+   - Logs: logs/app.log
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Need help? Check the documentation files above!
