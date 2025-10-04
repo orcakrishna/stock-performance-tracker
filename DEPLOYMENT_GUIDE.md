@@ -43,7 +43,7 @@ nano ~/Library/LaunchAgents/com.stocktracker.plist
 
 3. Create logs directory:
 ```bash
-mkdir -p ~/Desktop/test/CascadeProjects/windsurf-project/logs
+mkdir -p ~/Desktop/nse/CascadeProjects/windsurf-project/logs
 ```
 
 4. Load the launch agent:
