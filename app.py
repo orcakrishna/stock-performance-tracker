@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import yfinance as yf
+import pytz
 
 # Page configuration
 st.set_page_config(
@@ -53,9 +54,29 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Title and description
-st.title("📊 Indian Stock Performance Tracker")
-st.markdown("View 1-month, 2-month, and 3-month performance of NSE/BSE stocks.")
+# Title and time display
+col_title, col_time = st.columns([3, 1])
+
+with col_title:
+    st.title("📊 Indian Stock Performance Tracker")
+    st.markdown("View 1-month, 2-month, and 3-month performance of NSE/BSE stocks.")
+
+with col_time:
+    # Get current time in different timezones
+    ist = pytz.timezone('Asia/Kolkata')
+    edt = pytz.timezone('America/New_York')
+    
+    current_time_utc = datetime.now(pytz.utc)
+    ist_time = current_time_utc.astimezone(ist)
+    edt_time = current_time_utc.astimezone(edt)
+    
+    st.markdown(f"""
+    <div style='text-align: right; padding-top: 20px;'>
+        <p style='margin: 0; font-size: 14px; color: #888;'>🕐 IST: <strong>{ist_time.strftime('%I:%M %p')}</strong></p>
+        <p style='margin: 0; font-size: 14px; color: #888;'>🕐 EDT: <strong>{edt_time.strftime('%I:%M %p')}</strong></p>
+        <p style='margin: 0; font-size: 12px; color: #666;'>{ist_time.strftime('%d %b %Y')}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Fallback hardcoded lists (used if dynamic fetch fails)
 FALLBACK_NIFTY_50 = [
@@ -431,8 +452,23 @@ def main():
         st.warning("⚠️ Please select at least one stock to view performance.")
         return
     
-    # Display Market Indices at the top
+    # Display Market Indices at the top with custom styling
     st.markdown("### 📈 Market Indices - Today's Performance")
+    
+    # Custom CSS for smaller font in metrics
+    st.markdown("""
+    <style>
+        [data-testid="stMetricValue"] {
+            font-size: 20px !important;
+        }
+        [data-testid="stMetricLabel"] {
+            font-size: 14px !important;
+        }
+        [data-testid="stMetricDelta"] {
+            font-size: 14px !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
     
     # Row 1: Major Indices
     indices_row1 = {
@@ -448,6 +484,12 @@ def main():
         with cols1[idx]:
             price, change = get_index_performance(symbol)
             if price and change:
+                # Color coding based on change
+                if change >= 0:
+                    color = "normal"  # Green for positive
+                else:
+                    color = "normal"  # Red for negative (Streamlit handles this automatically)
+                
                 # Special handling for VIX (higher = more volatile/risky)
                 if 'VIX' in name:
                     st.metric(
@@ -460,7 +502,8 @@ def main():
                     st.metric(
                         label=name,
                         value=f"{price:,.2f}",
-                        delta=f"{change:+.2f}%"
+                        delta=f"{change:+.2f}%",
+                        delta_color=color
                     )
             else:
                 st.metric(label=name, value="--", delta="--")
