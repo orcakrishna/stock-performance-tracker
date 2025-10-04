@@ -603,6 +603,8 @@ def main():
         'Sensex': ('^BSESN', None),
         'Bank Nifty': ('^NSEBANK', 'NIFTY BANK'),
         'Nifty Midcap 50': ('^NSEMDCP50', 'NIFTY MIDCAP 50'),
+        'Dow Jones': ('^DJI', None),
+        'NASDAQ': ('^IXIC', None),
         'India VIX': ('^INDIAVIX', 'INDIA VIX')
     }
     
