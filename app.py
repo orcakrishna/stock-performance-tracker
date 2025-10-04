@@ -427,7 +427,10 @@ def main():
                         st.rerun()
                 with col2:
                     if st.button("🗑️", key=f"del_{list_name}"):
+                        # Delete from session state
                         del st.session_state.saved_lists[list_name]
+                        # Delete CSV file
+                        delete_list_csv(list_name)
                         if st.session_state.current_list_name == list_name:
                             st.session_state.current_list_name = None
                         st.rerun()
@@ -477,9 +480,12 @@ def main():
                 
                 if st.sidebar.button("💾 Save List"):
                     if list_name.strip():
+                        # Save to session state
                         st.session_state.saved_lists[list_name.strip()] = valid_stocks
                         st.session_state.current_list_name = list_name.strip()
-                        st.sidebar.success(f"✅ Saved '{list_name}' with {len(valid_stocks)} stocks")
+                        # Save to CSV file
+                        save_list_to_csv(list_name.strip(), valid_stocks)
+                        st.sidebar.success(f"✅ Saved '{list_name}' with {len(valid_stocks)} stocks to CSV")
                         st.rerun()
                     else:
                         st.sidebar.error("Please enter a list name")
