@@ -21,9 +21,9 @@ nano ~/Library/LaunchAgents/com.stocktracker.plist
     <string>com.stocktracker</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/YOUR_USERNAME/Desktop/test/CascadeProjects/windsurf-project/venv/bin/streamlit</string>
+        <string>/Users/YOUR_USERNAME/Desktop/nse/CascadeProjects/windsurf-project/venv/bin/streamlit</string>
         <string>run</string>
-        <string>/Users/YOUR_USERNAME/Desktop/test/CascadeProjects/windsurf-project/app.py</string>
+        <string>/Users/YOUR_USERNAME/Desktop/nse/CascadeProjects/windsurf-project/app.py</string>
         <string>--server.port</string>
         <string>8501</string>
         <string>--server.headless</string>
@@ -34,16 +34,16 @@ nano ~/Library/LaunchAgents/com.stocktracker.plist
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/Users/YOUR_USERNAME/Desktop/test/CascadeProjects/windsurf-project/logs/stdout.log</string>
+    <string>/Users/YOUR_USERNAME/Desktop/nse/CascadeProjects/windsurf-project/logs/stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/YOUR_USERNAME/Desktop/test/CascadeProjects/windsurf-project/logs/stderr.log</string>
+    <string>/Users/YOUR_USERNAME/Desktop/nse/CascadeProjects/windsurf-project/logs/stderr.log</string>
 </dict>
 </plist>
 ```
 
 3. Create logs directory:
 ```bash
-mkdir -p ~/Desktop/test/CascadeProjects/windsurf-project/logs
+mkdir -p ~/Desktop/nse/CascadeProjects/windsurf-project/logs
 ```
 
 4. Load the launch agent:
@@ -80,7 +80,7 @@ launchctl unload ~/Library/LaunchAgents/com.stocktracker.plist
 
 2. **Push Your Code to GitHub:**
 ```bash
-cd /Users/krishnashukla/Desktop/test/CascadeProjects/windsurf-project
+cd /Users/krishnashukla/Desktop/nse/CascadeProjects/windsurf-project
 git init
 git add .
 git commit -m "Initial commit"
