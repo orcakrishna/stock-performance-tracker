@@ -9,6 +9,9 @@ import yfinance as yf
 import pytz
 import os
 import json
+from io import StringIO
+import warnings
+warnings.filterwarnings('ignore')  # Suppress yf deprecations
 
 # Page configuration
 st.set_page_config(
@@ -140,60 +143,50 @@ FALLBACK_BSE_SENSEX = [
 ]
 
 @st.cache_data(ttl=86400)  # Cache for 24 hours
-def fetch_nse_stock_list(index_name):
-    """Fetch stock list dynamically from NSE for given index (e.g., 'NIFTY 50')"""
+def fetch_nse_csv_list(csv_filename):
+    """Fetch stock list from NSE CSV endpoint (stable, avoids API 421 errors)"""
     try:
-        # Modern Chrome 129 headers (2025 compatible)
+        url = f"https://nsearchives.nseindia.com/content/indices/{csv_filename}"
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'sec-ch-ua': '"Chromium";v="129", "Not;A=Brand";v="24", "Google Chrome";v="129"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-            'Referer': 'https://www.nseindia.com/market-data/live-equity-market',
-            'X-Requested-With': 'XMLHttpRequest'
+            'Referer': 'https://www.nseindia.com/market-data/live-equity-market'
         }
         
-        session = requests.Session()
-        session.headers.update(headers)
-        
-        # Step 1: Visit main market page to establish cookies/session
-        session.get("https://www.nseindia.com/market-data/live-equity-market", timeout=20)
-        time.sleep(3)  # Increased sleep for server stability
-        
-        # Step 2: Fetch API
-        encoded_index = index_name.replace(' ', '%20')
-        url = f"https://www.nseindia.com/api/equity-stockIndices?index={encoded_index}"
-        response = session.get(url, timeout=20)
-        
-        if response.status_code == 200:
-            data = response.json()
-            stocks = [item['symbol'] + '.NS' for item in data.get('data', []) if 'symbol' in item]
-            if len(stocks) >= 40:  # Validate
-                st.success(f"✅ Fetched {len(stocks)} stocks from NSE")
-                return stocks[:50]  # Top 50
+        with requests.Session() as session:
+            session.headers.update(headers)
+            # Warm-up: Visit homepage to set cookies (prevents blocks)
+            session.get("https://www.nseindia.com", timeout=10)
+            time.sleep(1)  # Brief pause for stability
+            
+            response = session.get(url, timeout=10)
+            
+            if response.status_code == 200:
+                csv_content = response.content.decode('utf-8')
+                df = pd.read_csv(StringIO(csv_content))
+                stocks = [f"{symbol}.NS" for symbol in df['Symbol'].tolist() if pd.notna(symbol)]
+                if len(stocks) >= 40:  # Validate
+                    return stocks
+                else:
+                    return None
             else:
-                st.warning(f"⚠️ Incomplete NSE data ({len(stocks)} items)")
-        else:
-            st.error(f"❌ NSE API error: {response.status_code} - {response.text[:200]}")
+                return None
     except Exception as e:
-        st.error(f"❌ NSE fetch failed: {str(e)}")
+        return None
     
     return None
 
 @st.cache_data(ttl=86400)
 def fetch_nifty_50_from_nse():
-    return fetch_nse_stock_list('NIFTY 50')
+    return fetch_nse_csv_list('ind_nifty50list.csv')
 
 @st.cache_data(ttl=86400)
 def fetch_nifty_next_50_from_nse():
-    return fetch_nse_stock_list('NIFTY NEXT 50')
+    return fetch_nse_csv_list('ind_niftynext50list.csv')
+
+@st.cache_data(ttl=86400)
+def fetch_nifty_total_market_from_nse():
+    return fetch_nse_csv_list('ind_niftytotalmarket_list.csv')
 
 @st.cache_data(ttl=86400)
 def fetch_nifty_500_from_wikipedia():
@@ -219,56 +212,39 @@ def fetch_nifty_500_from_wikipedia():
             
             unique_stocks = list(set(stocks))  # Remove dups
             if len(unique_stocks) > 100:
-                st.success(f"✅ Fetched {len(unique_stocks)} stocks from Wikipedia")
                 return unique_stocks[:500]
     except Exception as e:
-        st.error(f"❌ Wikipedia fetch failed: {str(e)}")
+        pass
     
     return None
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_index_performance(index_symbol, index_name=None):
-    """Fetch index performance - prefer yfinance for reliability, NSE as backup"""
-    # First, try yfinance (reliable fallback)
+    """Fetch index performance - prioritize info dict to avoid hist bugs"""
     if index_symbol:
         try:
-            index_ticker = yf.Ticker(index_symbol)
-            hist = index_ticker.history(period='5d')
+            ticker = yf.Ticker(index_symbol)
+            
+            # Try info first (faster, no hist download)
+            info = ticker.info
+            current_price = info.get('regularMarketPrice') or info.get('previousClose')
+            prev_price = info.get('regularMarketPreviousClose') or info.get('open')
+            
+            if current_price and prev_price and current_price != prev_price:
+                change_pct = ((current_price - prev_price) / prev_price) * 100
+                return current_price, change_pct
+            
+            # Fallback to hist if info incomplete
+            hist = ticker.history(period='5d')
             if not hist.empty and len(hist) >= 2:
                 current_price = hist['Close'].iloc[-1]
                 previous_price = hist['Close'].iloc[-2]
                 change_pct = ((current_price - previous_price) / previous_price) * 100
                 return current_price, change_pct
+                
         except Exception as e:
-            st.error(f"yfinance error for {index_symbol}: {e}")
-    
-    # NSE backup (improved but optional)
-    if index_name:
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
-                'Accept': 'application/json',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': 'https://www.nseindia.com/market-data/live-equity-market',
-                'sec-ch-ua': '"Chromium";v="129", "Not;A=Brand";v="24", "Google Chrome";v="129"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"Windows"'
-            }
-            session = requests.Session()
-            session.headers.update(headers)
-            session.get("https://www.nseindia.com/market-data/live-equity-market", timeout=20)
-            time.sleep(1)
-            
-            url = "https://www.nseindia.com/api/allIndices"
-            response = session.get(url, timeout=20)
-            if response.status_code == 200:
-                data = response.json()
-                for item in data.get('data', []):
-                    if item.get('index', '').upper() == index_name.upper():
-                        return item.get('last', 0), item.get('percentChange', 0)
-        except Exception as e:
-            st.warning(f"NSE index fetch failed (using yf fallback): {e}")
-    
+            print(f"yfinance debug for {index_symbol}: {e}")  # Silent log, no st.error
+            return None, None
     return None, None
 
 def get_stock_performance(ticker):
@@ -285,9 +261,10 @@ def get_stock_performance(ticker):
         # Remove timezone
         hist.index = hist.index.tz_localize(None)
         
-        # Get semi-live current price
+        # Get semi-live current price via info
         try:
-            current_price = stock.info.get('currentPrice', hist['Close'].iloc[-1])
+            info = stock.info
+            current_price = info.get('currentPrice') or info.get('regularMarketPrice') or hist['Close'].iloc[-1]
         except:
             current_price = hist['Close'].iloc[-1]
         current_date = hist.index[-1]
@@ -331,7 +308,7 @@ def get_stock_performance(ticker):
         }
         
     except Exception as e:
-        st.error(f"Error for {symbol}: {str(e)}")
+        print(f"Stock debug for {symbol}: {str(e)}")  # Silent log
         return None
 
 def color_percentage(val):
@@ -392,24 +369,31 @@ def get_stock_list(category_name):
     if category_name == 'Nifty 50':
         stocks = fetch_nifty_50_from_nse()
         if stocks:
-            return stocks, "✅ Fetched from NSE"
-        return FALLBACK_NIFTY_50, "⚠️ Using cached list"
+            return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name}"
+        return FALLBACK_NIFTY_50, f"⚠️ Using cached {category_name} list"
     
     elif category_name == 'Nifty Next 50':
         stocks = fetch_nifty_next_50_from_nse()
         if stocks:
-            return stocks, "✅ Fetched from NSE"
-        return FALLBACK_NIFTY_NEXT_50, "⚠️ Using cached list"
+            return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name}"
+        return FALLBACK_NIFTY_NEXT_50, f"⚠️ Using cached {category_name} list"
+    
+    elif category_name == 'Nifty Total Market':
+        stocks = fetch_nifty_total_market_from_nse()
+        if stocks:
+            return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name}"
+        fallback = list(set(FALLBACK_NIFTY_50 + FALLBACK_NIFTY_NEXT_50))[:100]  # Sample fallback
+        return fallback, f"⚠️ Using cached {category_name} sample"
     
     elif category_name == 'BSE Sensex':
-        return FALLBACK_BSE_SENSEX, "⚠️ Using cached list"
+        return FALLBACK_BSE_SENSEX, f"⚠️ Using cached {category_name} list"
     
     elif category_name == 'Nifty 500 (Sample)':
         stocks = fetch_nifty_500_from_wikipedia()
         if stocks:
-            return stocks, "✅ Fetched from Wikipedia"
+            return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name} (Wikipedia)"
         fallback = list(set(FALLBACK_NIFTY_50 + FALLBACK_NIFTY_NEXT_50))[:100]  # Sample 100, no dups
-        return fallback, "⚠️ Using cached sample"
+        return fallback, f"⚠️ Using cached {category_name}"
     
     return [], "❌ No data available"
 
@@ -423,15 +407,15 @@ def main():
     # Sidebar for stock selection
     st.sidebar.header("📋 Stock Selection")
     
-    # Category selection
+    # Category selection (added Nifty Total Market)
     category = st.sidebar.selectbox(
         "Select Category",
-        options=['Nifty 50', 'Nifty Next 50', 'BSE Sensex', 'Nifty 500 (Sample)', 'Custom Selection', 'Upload File'],
+        options=['Nifty 50', 'Nifty Next 50', 'Nifty Total Market', 'BSE Sensex', 'Nifty 500 (Sample)', 'Custom Selection', 'Upload File'],
         index=0
     )
     
     # Determine stock list based on category
-    if category in ['Nifty 50', 'Nifty Next 50', 'BSE Sensex', 'Nifty 500 (Sample)']:
+    if category in ['Nifty 50', 'Nifty Next 50', 'Nifty Total Market', 'BSE Sensex', 'Nifty 500 (Sample)']:
         with st.spinner(f"Fetching {category} stock list..."):
             selected_stocks, fetch_status = get_stock_list(category)
             available_stocks = selected_stocks
@@ -564,7 +548,7 @@ def main():
         st.warning("⚠️ Please select at least one stock to view performance.")
         return
     
-    # Display Market Indices
+    # Display Market Indices - Use metric for consistency, no distortion on error
     st.markdown("### 📈 Market Indices - Today's Performance")
     
     st.markdown("""
@@ -579,32 +563,28 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    # Row 1: Major Indices (yahoo_symbol, nse_name)
+    # Row 1: Major Indices (added Nifty Total Market)
     indices_row1 = {
-        'Nifty 50': ('^NSEI', 'NIFTY 50'),
-        'Sensex': ('^BSESN', None),
-        'Bank Nifty': ('^NSEBANK', 'NIFTY BANK'),
-        'Nifty Midcap 50': ('^NSEMDCP50', 'NIFTY MIDCAP 50'),
-        'Dow Jones': ('^DJI', None),
-        'NASDAQ': ('^IXIC', None),
-        'India VIX': ('^INDIAVIX', 'INDIA VIX')
+        'Nifty 50': '^NSEI',
+        'Sensex': '^BSESN',
+        'Bank Nifty': '^NSEBANK',
+        'Nifty Midcap 50': '^NSEMDCP50',
+        'Nifty Total Market': 'NIFTY_TOTAL_MKT.NS',
+        'Dow Jones': '^DJI',
+        'NASDAQ': '^IXIC',
+        'India VIX': '^INDIAVIX'
     }
     
     cols1 = st.columns(len(indices_row1))
-    for idx, (name, data) in enumerate(indices_row1.items()):
-        symbol, nse_name = data if isinstance(data, tuple) else (data, None)
+    for idx, (name, symbol) in enumerate(indices_row1.items()):
         with cols1[idx]:
-            price, change = get_index_performance(symbol, nse_name)
+            price, change = get_index_performance(symbol)
             if price and change:
-                color = "#00ff00" if change > 0 else "#ff4444"
-                arrow = "↑" if change > 0 else "↓"
-                st.markdown(f"""
-                <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px;'>
-                    <p style='margin: 0; font-size: 14px; color: #888;'>{name}</p>
-                    <p style='margin: 5px 0; font-size: 20px; color: #fff; font-weight: bold;'>{price:,.2f}</p>
-                    <p style='margin: 0; font-size: 14px; font-weight: bold;'><span style='color: {color};'>{arrow} {change:+.2f}%</span></p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.metric(
+                    label=name,
+                    value=f"{price:,.2f}",
+                    delta=f"{change:+.2f}%"
+                )
             else:
                 st.metric(label=name, value="--", delta="--")
     
@@ -623,15 +603,11 @@ def main():
         with cols2[idx]:
             price, change = get_index_performance(symbol)
             if price and change:
-                color = "#00ff00" if change > 0 else "#ff4444"
-                arrow = "↑" if change > 0 else "↓"
-                st.markdown(f"""
-                <div style='padding: 10px; background-color: #2d2d2d; border-radius: 5px;'>
-                    <p style='margin: 0; font-size: 14px; color: #888;'>{name}</p>
-                    <p style='margin: 5px 0; font-size: 20px; color: #fff; font-weight: bold;'>{price:,.2f}</p>
-                    <p style='margin: 0; font-size: 14px; font-weight: bold;'><span style='color: {color};'>{arrow} {change:+.2f}%</span></p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.metric(
+                    label=name,
+                    value=f"{price:,.2f}",
+                    delta=f"{change:+.2f}%"
+                )
             else:
                 st.metric(label=name, value="--", delta="--")
     
@@ -769,12 +745,11 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.info(
         "ℹ️ **Data Sources:**\n"
-        "- Stock Lists: NSE API (dynamic), Wikipedia fallback\n"
+        "- Stock Lists: NSE CSV (dynamic, no API blocks)\n"
         "- Prices: yfinance (semi-live, ~15min delay)\n\n"
-        "**Tips for NSE Issues:**\n"
-        "- If fetches fail on server, try local run or add proxy.\n"
-        "- For true live data, consider paid APIs like Alpha Vantage.\n\n"
-        "**Updates:** Dynamic Nifty Next 50, business-day precision."
+        "**New:** Added Nifty Total Market as selectable category (~750 stocks).\n"
+        "**Fixed:** Better yf error handling—no more distortion. Update yf if issues persist.\n"
+        "**Debug:** Check console for print logs."
     )
 
 if __name__ == "__main__":
