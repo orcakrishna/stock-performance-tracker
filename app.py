@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -188,35 +189,6 @@ def fetch_nifty_next_50_from_nse():
 def fetch_nifty_total_market_from_nse():
     return fetch_nse_csv_list('ind_niftytotalmarket_list.csv')
 
-@st.cache_data(ttl=86400)
-def fetch_nifty_500_from_wikipedia():
-    """Fetch Nifty 500 stocks from Wikipedia as fallback"""
-    try:
-        url = "https://en.wikipedia.org/wiki/NIFTY_500"
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        response = requests.get(url, headers=headers, timeout=15)
-        
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            tables = soup.find_all('table', class_='wikitable')
-            
-            stocks = []
-            for table in tables:
-                rows = table.find_all('tr')[1:]  # Skip header
-                for row in rows:
-                    cols = row.find_all('td')
-                    if len(cols) > 1:
-                        symbol = cols[1].text.strip()
-                        if symbol and symbol != 'Symbol':
-                            stocks.append(f"{symbol}.NS")
-            
-            unique_stocks = list(set(stocks))  # Remove dups
-            if len(unique_stocks) > 100:
-                return unique_stocks[:500]
-    except Exception as e:
-        pass
-    
-    return None
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_index_performance(index_symbol, index_name=None):
@@ -385,15 +357,6 @@ def get_stock_list(category_name):
         fallback = list(set(FALLBACK_NIFTY_50 + FALLBACK_NIFTY_NEXT_50))[:100]  # Sample fallback
         return fallback, f"⚠️ Using cached {category_name} sample"
     
-    elif category_name == 'BSE Sensex':
-        return FALLBACK_BSE_SENSEX, f"⚠️ Using cached {category_name} list"
-    
-    elif category_name == 'Nifty 500 (Sample)':
-        stocks = fetch_nifty_500_from_wikipedia()
-        if stocks:
-            return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name} (Wikipedia)"
-        fallback = list(set(FALLBACK_NIFTY_50 + FALLBACK_NIFTY_NEXT_50))[:100]  # Sample 100, no dups
-        return fallback, f"⚠️ Using cached {category_name}"
     
     return [], "❌ No data available"
 
@@ -410,7 +373,7 @@ def main():
     # Category selection (added Nifty Total Market)
     category = st.sidebar.selectbox(
         "Select Category",
-        options=['Nifty 50', 'Nifty Next 50', 'Nifty Total Market', 'BSE Sensex', 'Nifty 500 (Sample)', 'Custom Selection', 'Upload File'],
+        options=['Nifty 50', 'Nifty Next 50', 'Nifty Total Market', 'Custom Selection', 'Upload File'],
         index=0
     )
     
