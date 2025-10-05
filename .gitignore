@@ -15,8 +15,8 @@ ENV/
 logs/
 *.log
 
-# Saved stock lists
-saved_stock_lists/
+# Saved stock lists - now tracked for cloud persistence
+# saved_stock_lists/
 
 # OS
 .DS_Store
