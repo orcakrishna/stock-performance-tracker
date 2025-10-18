@@ -33,3 +33,7 @@ logs/
 *.csv
 *.xlsx
 !sample_stocks.txt
+
+# Cache
+cache/
+*.cache

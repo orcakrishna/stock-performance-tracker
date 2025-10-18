@@ -10,8 +10,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Import custom modules
 from config import CUSTOM_CSS, ITEMS_PER_PAGE
-from data_fetchers import get_stock_list, get_stock_performance
+from data_fetchers import get_stock_list, get_stock_performance, fetch_stocks_bulk
 from file_manager import load_all_saved_lists, save_list_to_csv, delete_list_csv
+from cache_manager import get_cache_stats, clear_cache
 from ui_components import (
     render_header, render_market_indices, render_sidebar_info,
     render_top_bottom_performers, render_averages, render_pagination_controls
@@ -85,17 +86,36 @@ def handle_file_upload():
         help="Upload a file with stock symbols (one per line)"
     )
     
+    # Exchange selector
+    exchange = st.sidebar.radio(
+        "Select Exchange",
+        options=['Auto-detect', 'NSE (.NS)', 'BSE (.BO)'],
+        index=0,
+        help="Auto-detect uses filename (e.g., 'bse.txt' → BSE)"
+    )
+    
     if uploaded_file is not None:
         try:
             content = uploaded_file.read().decode('utf-8')
             uploaded_stocks = [line.strip() for line in content.split('\n') if line.strip()]
+            
+            # Determine suffix based on selection
+            if exchange == 'BSE (.BO)':
+                suffix = '.BO'
+            elif exchange == 'NSE (.NS)':
+                suffix = '.NS'
+            else:  # Auto-detect
+                is_bse = 'bse' in uploaded_file.name.lower()
+                suffix = '.BO' if is_bse else '.NS'
+            
+            st.sidebar.info(f"📍 Using suffix: **{suffix}**")
             
             valid_stocks = []
             for symbol in uploaded_stocks:
                 if '.NS' in symbol or '.BO' in symbol:
                     valid_stocks.append(symbol)
                 else:
-                    valid_stocks.append(f"{symbol}.NS")
+                    valid_stocks.append(f"{symbol}{suffix}")
             
             list_name = st.sidebar.text_input(
                 "Enter a name for this list:",
@@ -139,15 +159,26 @@ def handle_file_upload():
         return [], []
 
 
-def fetch_stocks_data(selected_stocks, use_parallel):
-    """Fetch stock data using parallel or sequential method"""
-    if use_parallel:
-        with st.spinner(f"⚡ Fetching {len(selected_stocks)} stocks in parallel (5 at a time to avoid rate limits)..."):
+def fetch_stocks_data(selected_stocks, use_parallel, use_cache=True):
+    """Fetch stock data using parallel or sequential method with caching"""
+    num_stocks = len(selected_stocks)
+    
+    # For large datasets (>100 stocks), always use bulk fetch with caching
+    if num_stocks > 100:
+        st.info(f"🚀 Optimized mode: Fetching {num_stocks} stocks with caching (3 parallel workers)")
+        return fetch_stocks_bulk(selected_stocks, max_workers=3, use_cache=use_cache)
+    
+    # For medium datasets (50-100), use parallel with caching
+    elif use_parallel or num_stocks > 50:
+        with st.spinner(f"⚡ Fetching {num_stocks} stocks in parallel (3 workers)..."):
             stocks_data = []
             progress_bar = st.progress(0)
             
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                future_to_ticker = {executor.submit(get_stock_performance, ticker): ticker for ticker in selected_stocks}
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                future_to_ticker = {
+                    executor.submit(get_stock_performance, ticker, use_cache): ticker 
+                    for ticker in selected_stocks
+                }
                 completed = 0
                 
                 for future in as_completed(future_to_ticker):
@@ -162,21 +193,22 @@ def fetch_stocks_data(selected_stocks, use_parallel):
                     progress_bar.progress(completed / len(selected_stocks))
             
             progress_bar.empty()
+            return stocks_data
+    
     else:
-        # Sequential method
-        with st.spinner(f"Fetching data for {len(selected_stocks)} stocks..."):
+        # Sequential method for small datasets
+        with st.spinner(f"Fetching data for {num_stocks} stocks..."):
             stocks_data = []
             progress_bar = st.progress(0)
             
             for idx, ticker in enumerate(selected_stocks):
-                data = get_stock_performance(ticker)
+                data = get_stock_performance(ticker, use_cache)
                 if data:
                     stocks_data.append(data)
                 progress_bar.progress((idx + 1) / len(selected_stocks))
             
             progress_bar.empty()
-    
-    return stocks_data
+            return stocks_data
 
 
 def main():
@@ -242,6 +274,21 @@ def main():
         help="Fetch 5 stocks at once (rate-limit safe). Keep unchecked for sequential mode (slower but more reliable)."
     )
     
+    # Cache management
+    st.sidebar.markdown("---")
+    st.sidebar.header("💾 Cache Management")
+    cache_stats = get_cache_stats()
+    st.sidebar.metric("Cached Stocks", cache_stats['valid'])
+    st.sidebar.caption(f"Expired: {cache_stats['expired']} | Total: {cache_stats['total']}")
+    
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        if st.button("🔄 Refresh All"):
+            clear_cache()
+            st.rerun()
+    with col2:
+        use_cache = st.checkbox("Use Cache", value=True, help="Use cached data (6hr expiry)")
+    
     # Sidebar info
     render_sidebar_info()
     
@@ -263,7 +310,7 @@ def main():
     st.caption(f"🔽 Sorted by: **{sort_by}** ({sort_order})")
     
     # Fetch stock data
-    stocks_data = fetch_stocks_data(selected_stocks, use_parallel)
+    stocks_data = fetch_stocks_data(selected_stocks, use_parallel, use_cache)
     
     if not stocks_data:
         st.error("❌ Failed to fetch data for the selected stocks. Please try again later.")

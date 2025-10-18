@@ -9,7 +9,9 @@ import requests
 from io import StringIO
 import time
 import yfinance as yf
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from config import FALLBACK_NIFTY_50, FALLBACK_NIFTY_NEXT_50, FALLBACK_BSE_SENSEX, COMMODITIES
+from cache_manager import load_from_cache, save_to_cache, load_bulk_cache, save_bulk_cache
 
 
 @st.cache_data(ttl=86400)  # Cache for 24 hours
@@ -92,36 +94,47 @@ def get_index_performance(index_symbol, index_name=None):
     return None, None
 
 
-def get_stock_performance(ticker):
+def get_stock_performance(ticker, use_cache=True):
     """Fetch stock performance with semi-live current price"""
     symbol = ticker.replace('.NS', '').replace('.BO', '')
     
-    # Retry logic for rate limiting
+    # Try loading from cache first
+    if use_cache:
+        cached_data = load_from_cache(ticker)
+        if cached_data:
+            return cached_data
+    
+    # Retry logic for rate limiting with longer delays
     max_retries = 3
     for attempt in range(max_retries):
         try:
+            # Add small delay before each request to avoid rate limits
+            if attempt > 0:
+                time.sleep(3 ** attempt)  # 3s, 9s, 27s
+            
             stock = yf.Ticker(ticker)
             hist = stock.history(period='4mo')
             
             if hist.empty or len(hist) < 20:
                 if attempt < max_retries - 1:
-                    time.sleep(1)  # Wait before retry
+                    time.sleep(2)  # Wait before retry
                     continue
                 return None
             break  # Success, exit retry loop
         except Exception as e:
-            if "Rate" in str(e) or "429" in str(e):
+            error_msg = str(e)
+            if "Rate" in error_msg or "429" in error_msg or "curl_cffi" in error_msg:
                 if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)  # Exponential backoff
+                    time.sleep(5 ** attempt)  # 5s, 25s, 125s exponential backoff
                     continue
                 else:
-                    st.warning(f"⚠️ Rate limited on {symbol}, skipping...")
+                    # Don't show warning, just skip silently
                     return None
             else:
                 if attempt < max_retries - 1:
-                    time.sleep(1)
+                    time.sleep(2)
                     continue
-                st.warning(f"⚠️ Error fetching {symbol}: {str(e)}")
+                # Don't show warning for common errors
                 return None
     
     try:
@@ -160,7 +173,7 @@ def get_stock_performance(ticker):
         change_2m = ((current_price - price_2m) / price_2m) * 100
         change_3m = ((current_price - price_3m) / price_3m) * 100
         
-        return {
+        result = {
             'Stock Name': symbol,
             'Current Price': f"₹{current_price:.2f}",
             '1 Week %': round(change_1w, 2),
@@ -168,6 +181,12 @@ def get_stock_performance(ticker):
             '2 Months %': round(change_2m, 2),
             '3 Months %': round(change_3m, 2)
         }
+        
+        # Save to cache
+        if use_cache:
+            save_to_cache(ticker, result)
+        
+        return result
         
     except Exception as e:
         st.warning(f"⚠️ Error fetching {symbol}: {str(e)}")  # Show error to user
@@ -200,6 +219,56 @@ def get_commodities_prices():
         prices['btc'] = "--"
     
     return prices
+
+
+def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True):
+    """
+    Fetch multiple stocks in parallel with aggressive caching
+    Optimized for large datasets (1000+ stocks)
+    Uses conservative parallelism to avoid rate limits
+    """
+    # First, try to load from cache
+    if use_cache:
+        cached_data, missing_tickers = load_bulk_cache(tickers)
+        if cached_data:
+            st.info(f"📦 Loaded {len(cached_data)} stocks from cache, fetching {len(missing_tickers)} fresh...")
+    else:
+        cached_data = []
+        missing_tickers = tickers
+    
+    # Fetch missing stocks in parallel with delays
+    if missing_tickers:
+        fresh_data = []
+        progress_bar = st.progress(0)
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_ticker = {
+                executor.submit(get_stock_performance, ticker, use_cache=False): ticker 
+                for ticker in missing_tickers
+            }
+            completed = 0
+            
+            for future in as_completed(future_to_ticker):
+                completed += 1
+                try:
+                    data = future.result(timeout=30)
+                    if data:
+                        fresh_data.append(data)
+                except Exception as e:
+                    ticker = future_to_ticker[future]
+                    print(f"Error fetching {ticker}: {e}")
+                progress_bar.progress(completed / len(missing_tickers))
+        
+        progress_bar.empty()
+        
+        # Save fresh data to cache
+        if use_cache and fresh_data:
+            save_bulk_cache(fresh_data)
+        
+        # Combine cached and fresh data
+        return cached_data + fresh_data
+    
+    return cached_data
 
 
 def get_stock_list(category_name):

@@ -6,3 +6,4 @@ beautifulsoup4
 lxml
 yfinance
 pytz
+curl-cffi
