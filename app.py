@@ -266,9 +266,10 @@ def main():
         index=0
     )
     sort_order = st.sidebar.radio(
-        "Order",
+        "Order By",
         options=['Best to Worst', 'Worst to Best'],
-        index=0
+        index=0,
+        horizontal=True
     )
     
     # Performance options
