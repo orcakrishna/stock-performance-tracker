@@ -204,6 +204,10 @@ CUSTOM_CSS = """
         color: #ffffff !important;
         font-size: 1rem !important;
         font-weight: 600 !important;
+        display: inline !important;
+    }
+    /* Sidebar section headers (standalone bold text) */
+    [data-testid="stSidebar"] p:has(> strong:only-child) strong {
         display: block !important;
         margin-top: 0.5rem !important;
         margin-bottom: 0.75rem !important;
