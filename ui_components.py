@@ -6,7 +6,7 @@ Streamlit UI rendering functions
 import streamlit as st
 import yfinance as yf
 from config import INDICES_ROW1, INDICES_ROW2, METRIC_CSS, TICKER_STOCKS
-from data_fetchers import get_index_performance, get_commodities_prices
+from data_fetchers import get_index_performance, get_commodities_prices, get_stock_list
 from utils import get_current_times, format_time_display
 
 
@@ -168,34 +168,43 @@ def get_ticker_data():
     """Fetch live data for ticker stocks"""
     ticker_data = []
     
-    try:
-        # Fetch data for all ticker stocks at once
-        tickers = yf.Tickers(' '.join(TICKER_STOCKS))
-        
-        for symbol in TICKER_STOCKS:
-            try:
-                ticker = tickers.tickers[symbol]
-                info = ticker.info
-                
-                # Get current price and change
-                current_price = info.get('currentPrice') or info.get('regularMarketPrice')
-                prev_close = info.get('previousClose') or info.get('regularMarketPreviousClose')
-                
-                if current_price and prev_close:
-                    change_pct = ((current_price - prev_close) / prev_close) * 100
-                    
-                    ticker_data.append({
-                        'symbol': symbol.replace('.NS', ''),
-                        'price': current_price,
-                        'change': change_pct
-                    })
-            except Exception as e:
-                # Skip stocks that fail to fetch
-                continue
-                
-    except Exception as e:
-        st.warning(f"⚠️ Ticker data temporarily unavailable")
+    # Get Nifty 50 stocks
+    nifty_50_stocks, _ = get_stock_list('Nifty 50')
+    stocks_to_fetch = nifty_50_stocks if nifty_50_stocks else TICKER_STOCKS
     
+    # Fetch data for each stock
+    for symbol in stocks_to_fetch:
+        try:
+            ticker = yf.Ticker(symbol)
+            # Use 2-day history (most reliable method)
+            hist = ticker.history(period='2d')
+            
+            if len(hist) >= 2:
+                current_price = hist['Close'].iloc[-1]
+                prev_close = hist['Close'].iloc[-2]
+                change_pct = ((current_price - prev_close) / prev_close) * 100
+                
+                ticker_data.append({
+                    'symbol': symbol.replace('.NS', '').replace('.BO', ''),
+                    'price': float(current_price),
+                    'change': float(change_pct)
+                })
+            elif len(hist) == 1:
+                # If only 1 day, use open vs close
+                current_price = hist['Close'].iloc[-1]
+                open_price = hist['Open'].iloc[-1]
+                if open_price > 0:
+                    change_pct = ((current_price - open_price) / open_price) * 100
+                    ticker_data.append({
+                        'symbol': symbol.replace('.NS', '').replace('.BO', ''),
+                        'price': float(current_price),
+                        'change': float(change_pct)
+                    })
+        except Exception as e:
+            # Skip stocks that fail
+            continue
+    
+    print(f"📊 Ticker: Fetched {len(ticker_data)}/{len(stocks_to_fetch)} stocks")
     return ticker_data
 
 
@@ -242,6 +251,14 @@ def render_live_ticker():
     ticker_data = get_ticker_data()
     
     if not ticker_data:
+        # Show loading message
+        st.markdown("""
+        <div class="ticker-container">
+            <div style="text-align: center; padding: 10px; color: #888;">
+                📊 Loading live stock data...
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         return
     
     # Sort alphabetically by symbol
