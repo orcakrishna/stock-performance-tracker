@@ -81,7 +81,7 @@ CUSTOM_CSS = """
 <style>
     .main {
         background-color: #1e1e1e;
-        padding: 0.5rem 1.5rem 1.5rem 1.5rem;
+        padding: 0.5rem 1rem 1rem 1rem;
     }
     .stApp {
         background-color: #1e1e1e;
@@ -103,15 +103,15 @@ CUSTOM_CSS = """
         gap: 0.5rem !important;
     }
     /* Base font size for better cross-platform consistency */
-    /* Reduced to 14px to prevent need for 90% zoom on Windows */
+    /* Reduced to 13px to prevent need for 90% zoom on Windows */
     html {
-        font-size: 14px;
+        font-size: 13px;
     }
     
     /* Responsive scaling for larger screens */
     @media (min-width: 1920px) {
         html {
-            font-size: 15px;
+            font-size: 14px;
         }
     }
     
