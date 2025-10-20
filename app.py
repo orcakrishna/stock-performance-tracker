@@ -283,7 +283,7 @@ def main():
     # Cache management
     st.sidebar.markdown("---")
     cache_stats = get_cache_stats()
-    st.sidebar.markdown(f"<span style='white-space: nowrap;'>**Cached Stocks:** {cache_stats['valid']}</span>", unsafe_allow_html=True)
+    st.sidebar.markdown(f"<div style='white-space: nowrap;'><strong>Cached Stocks:</strong> {cache_stats['valid']}</div>", unsafe_allow_html=True)
     st.sidebar.caption(f"Expired: {cache_stats['expired']} | Total: {cache_stats['total']}")
     
     col1, col2 = st.sidebar.columns(2)
