@@ -81,7 +81,7 @@ CUSTOM_CSS = """
 <style>
     .main {
         background-color: #1e1e1e;
-        padding: 0.5rem 2rem 2rem 2rem;
+        padding: 0.5rem 1.5rem 1.5rem 1.5rem;
     }
     .stApp {
         background-color: #1e1e1e;
@@ -103,8 +103,16 @@ CUSTOM_CSS = """
         gap: 0.5rem !important;
     }
     /* Base font size for better cross-platform consistency */
+    /* Reduced to 14px to prevent need for 90% zoom on Windows */
     html {
-        font-size: 16px;
+        font-size: 14px;
+    }
+    
+    /* Responsive scaling for larger screens */
+    @media (min-width: 1920px) {
+        html {
+            font-size: 15px;
+        }
     }
     
     h1, h2, h3, p, label, div {
@@ -116,7 +124,7 @@ CUSTOM_CSS = """
         color: #ffffff !important;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif !important;
         font-weight: 600 !important;
-        font-size: 2rem !important;
+        font-size: 1.75rem !important;
         line-height: 1.3 !important;
     }
     h2, h3 {
@@ -127,11 +135,11 @@ CUSTOM_CSS = """
         color: #ffffff !important;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif !important;
         font-weight: 600 !important;
-        font-size: 1.5rem !important;
+        font-size: 1.35rem !important;
         line-height: 1.4 !important;
     }
     h3 {
-        font-size: 1.25rem !important;
+        font-size: 1.15rem !important;
     }
     hr {
         margin: 0.25rem 0 !important;
