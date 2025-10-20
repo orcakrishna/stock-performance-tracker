@@ -282,7 +282,6 @@ def main():
     
     # Cache management
     st.sidebar.markdown("---")
-    st.sidebar.markdown("**💾 Cache Management**")
     cache_stats = get_cache_stats()
     st.sidebar.metric("Cached Stocks", cache_stats['valid'])
     st.sidebar.caption(f"Expired: {cache_stats['expired']} | Total: {cache_stats['total']}")
