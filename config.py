@@ -199,10 +199,45 @@ CUSTOM_CSS = """
         font-size: 0.938rem !important;
         line-height: 1.6 !important;
     }
-    /* Sidebar Selectbox */
+    /* Sidebar Selectbox - Fixed for Windows visibility */
     [data-testid="stSidebar"] [data-baseweb="select"] {
         background-color: #1e1e2e !important;
         border-radius: 8px !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] > div {
+        background-color: #1e1e2e !important;
+        color: #ffffff !important;
+        border: 1px solid #3d3d4d !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] input {
+        color: #ffffff !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] svg {
+        fill: #ffffff !important;
+    }
+    /* Dropdown menu styling */
+    [data-baseweb="popover"] {
+        background-color: #1e1e2e !important;
+    }
+    [data-baseweb="menu"] {
+        background-color: #1e1e2e !important;
+        border: 1px solid #3d3d4d !important;
+    }
+    [data-baseweb="menu"] li {
+        background-color: #1e1e2e !important;
+        color: #ffffff !important;
+    }
+    [data-baseweb="menu"] li:hover {
+        background-color: #2d2d3d !important;
+        color: #ffffff !important;
+    }
+    [role="option"] {
+        background-color: #1e1e2e !important;
+        color: #ffffff !important;
+    }
+    [role="option"]:hover {
+        background-color: #2d2d3d !important;
+        color: #ffffff !important;
     }
     /* Sidebar Radio Buttons */
     [data-testid="stSidebar"] [data-testid="stRadio"] label {
