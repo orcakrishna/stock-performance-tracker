@@ -195,16 +195,17 @@ def render_averages(df):
     st.markdown("---")
     st.subheader("📊 Key Index Performance (1 Year)")
     
-    # Define key indices
+    # Define main indices only (not sectoral) - alphabetically ordered
+    # Note: Smallcap indices not available in Yahoo Finance with reliable data
     indices = {
-        'Nifty 50': '^NSEI',
         'Bank Nifty': '^NSEBANK',
-        'Nifty IT': '^CNXIT',
-        'Nifty Pharma': '^CNXPHARMA'
+        'Nifty 50': '^NSEI',
+        'Nifty Midcap 50': '^NSEMDCP50',
+        'Sensex': '^BSESN'
     }
     
-    col1, col2, col3, col4 = st.columns(4)
-    cols = [col1, col2, col3, col4]
+    # Create 4 columns for 4 indices
+    cols = st.columns(4)
     
     for idx, (name, symbol) in enumerate(indices.items()):
         with cols[idx]:
@@ -263,3 +264,116 @@ def render_pagination_controls(total_items, items_per_page):
     end_idx = min(start_idx + items_per_page, total_items)
     
     return start_idx, end_idx
+
+
+# =========================
+# SECTORAL YEARLY PERFORMANCE
+# =========================
+@st.cache_data(ttl=3600)  # Cache for 1 hour
+def fetch_sectoral_yearly_data():
+    """Fetch 1-year data for sectoral indices only (not main indices)"""
+    import yfinance as yf
+    from datetime import datetime, timedelta
+    import time
+    
+    # Only sectoral indices (excluding main indices) - alphabetically ordered
+    all_sectoral_indices = {
+        'Nifty Auto': '^CNXAUTO',
+        'Nifty Energy': '^CNXENERGY',
+        'Nifty FMCG': '^CNXFMCG',
+        'Nifty IT': '^CNXIT',
+        'Nifty Metal': '^CNXMETAL',
+        'Nifty Pharma': '^CNXPHARMA',
+        'Nifty Realty': '^CNXREALTY'
+    }
+    
+    sectoral_data = []
+    
+    for name, symbol in all_sectoral_indices.items():
+        # Retry logic with longer delays
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                ticker = yf.Ticker(symbol)
+                
+                # Use period instead of start/end for better reliability
+                hist = ticker.history(period='1y')
+                
+                if not hist.empty and len(hist) > 20:  # Ensure sufficient data
+                    start_price = hist['Close'].iloc[0]
+                    end_price = hist['Close'].iloc[-1]
+                    year_change = ((end_price - start_price) / start_price) * 100
+                    
+                    sectoral_data.append({
+                        'Sector': name,
+                        'Current Price': f"{end_price:,.2f}",
+                        '1 Year Change %': round(year_change, 2),
+                        'Start Price': f"{start_price:,.2f}"
+                    })
+                    break  # Success, exit retry loop
+                
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    time.sleep(2)  # Wait 2 seconds before retry
+                    continue
+                else:
+                    print(f"Error fetching {name} after {max_retries} attempts: {e}")
+                    # Add placeholder data so section still shows
+                    sectoral_data.append({
+                        'Sector': name,
+                        'Current Price': '--',
+                        '1 Year Change %': 0,
+                        'Start Price': '--'
+                    })
+        
+        # Longer delay between indices to avoid rate limiting
+        time.sleep(0.5)
+    
+    return sectoral_data
+
+
+def render_sectoral_yearly_performance():
+    """Render comprehensive sectoral indices 1-year performance"""
+    
+    st.markdown("---")
+    st.subheader("📊 Sectoral Indices - 1 Year Performance")
+    st.caption("Annual performance comparison across all major sectors")
+    
+    # Add button to load on demand
+    if 'show_sectoral' not in st.session_state:
+        st.session_state.show_sectoral = False
+    
+    if not st.session_state.show_sectoral:
+        if st.button("📊 Load Sectoral Performance Data"):
+            st.session_state.show_sectoral = True
+            st.rerun()
+        return
+    
+    # Fetch data with caching
+    with st.spinner("Loading sectoral performance data..."):
+        sectoral_data = fetch_sectoral_yearly_data()
+    
+    if sectoral_data and len(sectoral_data) > 0:
+        # Data is already in alphabetical order from the dictionary
+        # Display all sectors in a single row with equal columns
+        num_sectors = len(sectoral_data)
+        cols = st.columns(num_sectors)
+        
+        for idx, data in enumerate(sectoral_data):
+            with cols[idx]:
+                change_pct = data['1 Year Change %']
+                # Handle placeholder data
+                if data['Current Price'] == '--':
+                    st.metric(
+                        label=data['Sector'],
+                        value="--",
+                        delta="--"
+                    )
+                else:
+                    st.metric(
+                        label=data['Sector'],
+                        value=data['Current Price'],
+                        delta=f"{change_pct:+.2f}%"
+                    )
+    else:
+        st.warning("⚠️ Unable to fetch sectoral performance data. Yahoo Finance may be rate limiting. Please wait a few minutes and refresh.")

@@ -16,7 +16,7 @@ from cache_manager import get_cache_stats, clear_cache
 from ui_components import (
     render_header, render_market_indices, render_sidebar_info,
     render_top_bottom_performers, render_averages, render_pagination_controls,
-    render_live_ticker, render_gainer_loser_banner
+    render_live_ticker, render_gainer_loser_banner, render_sectoral_yearly_performance
 )
 from utils import create_html_table
 
@@ -127,10 +127,13 @@ def handle_file_upload():
                     st.session_state.current_list_name = list_name.strip()
                     save_list_to_csv(list_name.strip(), valid_stocks)
                     st.sidebar.success(f"✅ Saved '{list_name}' with {len(valid_stocks)} stocks")
+                    st.rerun()  # Rerun to load the saved list
                 else:
                     st.sidebar.error("Please enter a list name")
             
-            return valid_stocks, valid_stocks
+            # Show preview but don't process until saved
+            st.sidebar.info(f"📋 Preview: {len(valid_stocks)} stocks ready. Click 'Save List' to proceed.")
+            return [], []  # Return empty until saved
             
         except Exception as e:
             st.sidebar.error(f"Error reading file: {str(e)}")
@@ -219,6 +222,12 @@ def main():
         st.session_state.saved_lists = load_all_saved_lists()
     if 'current_list_name' not in st.session_state:
         st.session_state.current_list_name = None
+    if 'cached_stocks_data' not in st.session_state:
+        st.session_state.cached_stocks_data = None
+    if 'cached_stocks_list' not in st.session_state:
+        st.session_state.cached_stocks_list = None
+    if 'last_category' not in st.session_state:
+        st.session_state.last_category = None
     
     # Render header
     render_header()
@@ -231,6 +240,12 @@ def main():
     
     # Sidebar: Stock selection
     category = render_stock_selection_sidebar()
+    
+    # Clear cache if category changed
+    if st.session_state.last_category != category:
+        st.session_state.cached_stocks_data = None
+        st.session_state.cached_stocks_list = None
+        st.session_state.last_category = category
     
     # Determine stock list based on category
     if category in ['Nifty 50', 'Nifty Next 50', 'Nifty Total Market']:
@@ -291,6 +306,8 @@ def main():
     with col1:
         if st.button("🔄 Refresh All"):
             clear_cache()
+            st.session_state.cached_stocks_data = None  # Clear session cache
+            st.session_state.cached_stocks_list = None
             st.rerun()
     with col2:
         use_cache = st.checkbox("Use Cache", value=True, help="Use cached data (6hr expiry)")
@@ -315,12 +332,25 @@ def main():
     st.subheader(display_title)
     st.caption(f"🔽 Sorted by: **{sort_by}** ({sort_order})")
     
-    # Fetch stock data
-    stocks_data = fetch_stocks_data(selected_stocks, use_parallel, use_cache)
+    # Check if we need to fetch data (only if stocks list changed)
+    stocks_list_key = ','.join(sorted(selected_stocks))  # Create unique key for current stock list
     
-    if not stocks_data:
-        st.error("❌ Failed to fetch data for the selected stocks. Please try again later.")
-        return
+    if (st.session_state.cached_stocks_data is None or 
+        st.session_state.cached_stocks_list != stocks_list_key):
+        # Fetch stock data only when needed
+        with st.spinner("🔄 Fetching stock data..."):
+            stocks_data = fetch_stocks_data(selected_stocks, use_parallel, use_cache)
+        
+        if not stocks_data:
+            st.error("❌ Failed to fetch data for the selected stocks. Please try again later.")
+            return
+        
+        # Cache the fetched data
+        st.session_state.cached_stocks_data = stocks_data
+        st.session_state.cached_stocks_list = stocks_list_key
+    else:
+        # Use cached data (no re-fetch needed for sorting)
+        stocks_data = st.session_state.cached_stocks_data
     
     # Create DataFrame
     df = pd.DataFrame(stocks_data)
@@ -351,6 +381,9 @@ def main():
     
     # Averages
     render_averages(df)
+    
+    # Sectoral yearly performance
+    render_sectoral_yearly_performance()
 
 
 if __name__ == "__main__":

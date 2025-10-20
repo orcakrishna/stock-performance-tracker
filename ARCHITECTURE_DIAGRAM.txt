@@ -1,0 +1,370 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                   NSE STOCK PERFORMANCE TRACKER ARCHITECTURE                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              USER INTERFACE LAYER                            │
+│                              (Streamlit Frontend)                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          APPLICATION LAYER (app.py)                          │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ main()                                                                │   │
+│  │  ├─ Initialize session state                                         │   │
+│  │  ├─ Apply CSS styling                                                │   │
+│  │  ├─ Render UI components                                             │   │
+│  │  ├─ Handle user interactions                                         │   │
+│  │  └─ Orchestrate data flow                                            │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ render_stock_selection_sidebar()                                     │   │
+│  │  └─ Category selection UI                                            │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ handle_file_upload()                                                 │   │
+│  │  ├─ File validation                                                  │   │
+│  │  ├─ Exchange detection (.NS/.BO)                                     │   │
+│  │  └─ Save/load/delete lists                                           │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ fetch_stocks_data()                                                  │   │
+│  │  ├─ >100 stocks → Bulk mode (3 workers)                             │   │
+│  │  ├─ 50-100 stocks → Parallel mode (3 workers)                       │   │
+│  │  └─ <50 stocks → Sequential mode                                    │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐
+│   UI COMPONENTS      │  │   DATA FETCHERS      │  │   UTILITIES          │
+│  (ui_components.py)  │  │  (data_fetchers.py)  │  │     (utils.py)       │
+├──────────────────────┤  ├──────────────────────┤  ├──────────────────────┤
+│ • render_header()    │  │ • fetch_nse_csv_list │  │ • color_percentage() │
+│ • render_indices()   │  │ • get_stock_perf()   │  │ • get_current_times()│
+│ • render_ticker()    │  │ • get_index_perf()   │  │ • create_html_table()│
+│ • render_banner()    │  │ • get_commodities()  │  │ • get_ticker_data()  │
+│ • render_performers()│  │ • fetch_stocks_bulk()│  │ • format_time()      │
+│ • render_pagination()│  │ • get_stock_list()   │  │                      │
+└──────────────────────┘  └──────────────────────┘  └──────────────────────┘
+                                      │
+                                      ▼
+                    ┌──────────────────────────────────┐
+                    │   EXTERNAL DATA SOURCES          │
+                    ├──────────────────────────────────┤
+                    │ • NSE CSV Archives (stock lists) │
+                    │ • Yahoo Finance (prices, indices)│
+                    │ • yfinance API (commodities)     │
+                    └──────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            PERSISTENCE LAYER                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────────────────────┐    ┌──────────────────────────────┐      │
+│  │   CACHE MANAGER              │    │   FILE MANAGER               │      │
+│  │   (cache_manager.py)         │    │   (file_manager.py)          │      │
+│  ├──────────────────────────────┤    ├──────────────────────────────┤      │
+│  │ • save_to_cache()            │    │ • save_list_to_csv()         │      │
+│  │ • load_from_cache()          │    │ • load_list_from_csv()       │      │
+│  │ • save_bulk_cache()          │    │ • delete_list_csv()          │      │
+│  │ • load_bulk_cache()          │    │ • load_all_saved_lists()     │      │
+│  │ • clear_cache()              │    │ • ensure_saved_lists_dir()   │      │
+│  │ • get_cache_stats()          │    │                              │      │
+│  └──────────────────────────────┘    └──────────────────────────────┘      │
+│                │                                    │                        │
+│                ▼                                    ▼                        │
+│  ┌──────────────────────────────┐    ┌──────────────────────────────┐      │
+│  │   cache/stocks_cache.pkl     │    │   saved_stock_lists/*.csv    │      │
+│  │   (Pickle format, 6hr expiry)│    │   (User uploaded lists)      │      │
+│  └──────────────────────────────┘    └──────────────────────────────┘      │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          CONFIGURATION LAYER                                 │
+│                              (config.py)                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ • FALLBACK_NIFTY_50 (50 stocks)                                             │
+│ • FALLBACK_NIFTY_NEXT_50 (38 stocks)                                        │
+│ • FALLBACK_BSE_SENSEX (30 stocks)                                           │
+│ • INDICES_ROW1 (8 major indices)                                            │
+│ • INDICES_ROW2 (7 sectoral indices)                                         │
+│ • COMMODITIES (Oil, Gold, Silver, BTC)                                      │
+│ • CUSTOM_CSS (440+ lines of dark theme styling)                             │
+│ • METRIC_CSS (metric component styling)                                     │
+│ • ITEMS_PER_PAGE = 10                                                       │
+│ • SAVED_LISTS_DIR = "saved_stock_lists"                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                              DATA FLOW SEQUENCE                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+[1] User Opens App
+        │
+        ▼
+[2] app.py: main() initializes
+        │
+        ├─→ Load session state (saved_lists, current_list_name)
+        ├─→ Apply CUSTOM_CSS from config.py
+        └─→ Render UI components
+                │
+                ├─→ ui_components.render_header()
+                │       └─→ utils.get_current_times() → IST/EDT
+                │       └─→ data_fetchers.get_commodities_prices()
+                │
+                ├─→ ui_components.render_gainer_loser_banner()
+                │       └─→ data_fetchers.get_index_performance()
+                │
+                └─→ ui_components.render_live_ticker()
+                        └─→ utils.get_ticker_data() [60s cache]
+                                └─→ data_fetchers.get_stock_list('Nifty 50')
+        │
+        ▼
+[3] User Selects Category (Nifty 50 / Next 50 / Total Market / Custom / Upload)
+        │
+        ▼
+[4] data_fetchers.get_stock_list(category)
+        │
+        ├─→ Try: fetch_nse_csv_list() [24hr cache]
+        │       │
+        │       ├─→ Set browser headers
+        │       ├─→ Warm-up: Visit nseindia.com
+        │       ├─→ Fetch CSV from archives
+        │       ├─→ Parse with pandas
+        │       └─→ Validate (min 40 stocks)
+        │
+        └─→ Fallback: Use FALLBACK_NIFTY_50 from config.py
+        │
+        ▼
+[5] ui_components.render_market_indices()
+        │
+        └─→ data_fetchers.get_index_performance() [5min cache]
+                └─→ yfinance.Ticker(symbol).info
+        │
+        ▼
+[6] User Configures Options
+        │
+        ├─→ Sort by: 3 Months % / 2 Months % / 1 Month % / 1 Week % / Stock Name
+        ├─→ Order: Best to Worst / Worst to Best
+        ├─→ Parallel fetching: ON/OFF
+        └─→ Use cache: ON/OFF
+        │
+        ▼
+[7] app.py: fetch_stocks_data(selected_stocks, use_parallel, use_cache)
+        │
+        ├─→ If num_stocks > 100:
+        │       └─→ data_fetchers.fetch_stocks_bulk(max_workers=3)
+        │               │
+        │               ├─→ cache_manager.load_bulk_cache(tickers)
+        │               │       └─→ Returns (cached_data, missing_tickers)
+        │               │
+        │               └─→ ThreadPoolExecutor (3 workers)
+        │                       └─→ Fetch missing stocks in parallel
+        │
+        ├─→ Elif use_parallel or num_stocks > 50:
+        │       └─→ ThreadPoolExecutor (3 workers)
+        │               └─→ data_fetchers.get_stock_performance() for each
+        │
+        └─→ Else (Sequential):
+                └─→ Loop: data_fetchers.get_stock_performance() one by one
+        │
+        ▼
+[8] data_fetchers.get_stock_performance(ticker, use_cache)
+        │
+        ├─→ Check cache: cache_manager.load_from_cache(ticker)
+        │       └─→ If valid (< 6 hours old): Return cached data
+        │
+        ├─→ Retry Logic (3 attempts):
+        │       │
+        │       ├─→ Attempt 1: Fetch immediately
+        │       ├─→ Attempt 2: Wait 3s, retry
+        │       └─→ Attempt 3: Wait 9s, retry
+        │
+        ├─→ yfinance.Ticker(ticker).history(period='4mo')
+        │       └─→ Get 4 months of historical data
+        │
+        ├─→ Get semi-live current price:
+        │       └─→ stock.info.get('currentPrice') or hist['Close'].iloc[-1]
+        │
+        ├─→ Calculate historical prices:
+        │       ├─→ 1 Week: hist['Close'].iloc[-6] (5 trading days)
+        │       ├─→ 1 Month: get_price_by_days_back(30)
+        │       ├─→ 2 Months: get_price_by_days_back(60)
+        │       └─→ 3 Months: get_price_by_days_back(90)
+        │
+        ├─→ Calculate percentage changes:
+        │       ├─→ change_1w = ((current - price_1w) / price_1w) * 100
+        │       ├─→ change_1m = ((current - price_1m) / price_1m) * 100
+        │       ├─→ change_2m = ((current - price_2m) / price_2m) * 100
+        │       └─→ change_3m = ((current - price_3m) / price_3m) * 100
+        │
+        ├─→ Format result:
+        │       └─→ {'Stock Name', 'Current Price', '1 Week %', '1 Month %', ...}
+        │
+        └─→ Save to cache: cache_manager.save_to_cache(ticker, result)
+        │
+        ▼
+[9] app.py: Create DataFrame
+        │
+        ├─→ pd.DataFrame(stocks_data)
+        ├─→ Apply sorting (by selected column)
+        ├─→ Add rank column (1, 2, 3, ...)
+        └─→ Paginate (10 items per page)
+        │
+        ▼
+[10] utils.create_html_table(df_page)
+        │
+        ├─→ Generate HTML table structure
+        ├─→ Color-code percentage columns:
+        │       ├─→ Positive: Green (#00ff00)
+        │       ├─→ Negative: Red (#ff4444)
+        │       └─→ Zero: White (#ffffff)
+        └─→ Return HTML string
+        │
+        ▼
+[11] Display Results
+        │
+        ├─→ st.markdown(html_table, unsafe_allow_html=True)
+        ├─→ ui_components.render_pagination_controls()
+        ├─→ ui_components.render_top_bottom_performers(df)
+        │       └─→ Top 3 and Bottom 3 by 3 Months %
+        └─→ ui_components.render_averages(df)
+                └─→ 1-year performance of key indices
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                           CACHING ARCHITECTURE                               ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          MULTI-LAYER CACHING                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Layer 1: Streamlit @st.cache_data
+    │
+    ├─→ fetch_nse_csv_list() → 24 hours
+    ├─→ get_index_performance() → 5 minutes
+    └─→ get_ticker_data() → 60 seconds
+
+Layer 2: Persistent Pickle Cache (cache_manager.py)
+    │
+    ├─→ File: cache/stocks_cache.pkl
+    ├─→ Format: Pickle (25x faster than JSON)
+    ├─→ Expiry: 6 hours
+    └─→ Structure:
+            {
+                'stocks': {
+                    'RELIANCE.NS': {
+                        'data': {...},
+                        'timestamp': datetime(...)
+                    },
+                    ...
+                },
+                'last_updated': datetime(...)
+            }
+
+Cache Operations:
+    │
+    ├─→ Save Single: save_to_cache(ticker, data)
+    ├─→ Load Single: load_from_cache(ticker)
+    ├─→ Save Bulk: save_bulk_cache(stocks_data)
+    ├─→ Load Bulk: load_bulk_cache(tickers)
+    ├─→ Clear All: clear_cache()
+    └─→ Get Stats: get_cache_stats()
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                        PARALLEL FETCHING STRATEGY                            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Decision Tree:
+    │
+    ├─→ num_stocks > 100?
+    │       │
+    │       └─→ YES: Bulk Mode
+    │               ├─→ Load bulk cache (instant)
+    │               ├─→ Fetch missing stocks
+    │               ├─→ ThreadPoolExecutor (3 workers)
+    │               ├─→ Save bulk cache
+    │               └─→ Combine cached + fresh
+    │
+    ├─→ use_parallel OR num_stocks > 50?
+    │       │
+    │       └─→ YES: Parallel Mode
+    │               ├─→ ThreadPoolExecutor (3 workers)
+    │               ├─→ Submit all tasks
+    │               ├─→ as_completed() iterator
+    │               ├─→ Progress bar
+    │               └─→ Timeout: 30s per stock
+    │
+    └─→ ELSE: Sequential Mode
+            ├─→ Loop through stocks
+            ├─→ Fetch one by one
+            ├─→ Progress bar
+            └─→ Slower but more reliable
+
+Rate Limit Protection:
+    │
+    ├─→ Retry Logic: 3 attempts
+    ├─→ Exponential Backoff: 3s, 9s, 27s
+    ├─→ Conservative Workers: 3 (not 10)
+    └─→ Timeout Handling: 30s per stock
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                          FILE UPLOAD WORKFLOW                                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+[1] User Uploads File (.txt or .csv)
+        │
+        ▼
+[2] app.py: handle_file_upload()
+        │
+        ├─→ Read file content
+        ├─→ Parse lines (one symbol per line)
+        └─→ Validate symbols
+        │
+        ▼
+[3] Exchange Detection
+        │
+        ├─→ User selects: Auto-detect / NSE (.NS) / BSE (.BO)
+        │
+        ├─→ Auto-detect:
+        │       └─→ Check filename: 'bse' in name → .BO, else → .NS
+        │
+        └─→ Manual: Use selected suffix
+        │
+        ▼
+[4] Symbol Normalization
+        │
+        ├─→ If symbol has .NS or .BO: Keep as-is
+        └─→ Else: Append selected suffix
+        │
+        ▼
+[5] User Names List
+        │
+        └─→ Default: filename without extension
+        │
+        ▼
+[6] Save List
+        │
+        ├─→ file_manager.save_list_to_csv(list_name, stocks)
+        │       └─→ saved_stock_lists/{list_name}.csv
+        │
+        ├─→ Update session_state.saved_lists
+        └─→ Set session_state.current_list_name
+        │
+        ▼
+[7] Load Anytime
+        │
+        └─→ file_manager.load_all_saved_lists()
+                └─→ Display in sidebar with Load/Delete buttons
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                            END OF ARCHITECTURE DIAGRAM
+═══════════════════════════════════════════════════════════════════════════════
