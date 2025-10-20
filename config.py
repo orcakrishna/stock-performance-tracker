@@ -107,14 +107,18 @@ CUSTOM_CSS = """
     h1 {
         margin-top: 0 !important;
         padding-top: 0 !important;
-        color: #4a90e2 !important;
+        color: #ffffff !important;
+        font-family: 'Segoe UI', 'Arial', sans-serif !important;
+        font-weight: 600 !important;
     }
     h2, h3 {
         margin-top: 0.25rem !important;
         margin-bottom: 0.25rem !important;
         padding-top: 0 !important;
         padding-bottom: 0 !important;
-        color: #4a90e2 !important;
+        color: #ffffff !important;
+        font-family: 'Segoe UI', 'Arial', sans-serif !important;
+        font-weight: 600 !important;
     }
     hr {
         margin: 0.25rem 0 !important;

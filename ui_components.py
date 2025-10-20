@@ -50,7 +50,7 @@ def render_market_indices():
     
     # Row 2: Sectoral Indices
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### <span style='color: #4a90e2; font-weight: bold;'>Sectoral Indices:</span>", unsafe_allow_html=True)
+    st.markdown("### <span style='color: #ffffff; font-weight: 600; font-family: Segoe UI, Arial, sans-serif;'>Sectoral Indices:</span>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
     cols2 = st.columns(len(INDICES_ROW2))
     for idx, (name, symbol) in enumerate(INDICES_ROW2.items()):
