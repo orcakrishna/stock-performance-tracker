@@ -5,6 +5,10 @@ Helper functions for formatting, coloring, and data processing
 
 from datetime import datetime
 import pytz
+import streamlit as st
+import yfinance as yf
+from config import TICKER_STOCKS
+from data_fetchers import get_stock_list
 
 
 def color_percentage(val):
@@ -67,3 +71,48 @@ def create_html_table(df_page):
     
     html_table += '</tbody></table>'
     return html_table
+
+
+@st.cache_data(ttl=60)  # Cache for 60 seconds
+def get_ticker_data():
+    """Fetch live data for ticker stocks"""
+    ticker_data = []
+    
+    # Get Nifty 50 stocks
+    nifty_50_stocks, _ = get_stock_list('Nifty 50')
+    stocks_to_fetch = nifty_50_stocks if nifty_50_stocks else TICKER_STOCKS
+    
+    # Fetch data for each stock
+    for symbol in stocks_to_fetch:
+        try:
+            ticker = yf.Ticker(symbol)
+            # Use 2-day history (most reliable method)
+            hist = ticker.history(period='2d')
+            
+            if len(hist) >= 2:
+                current_price = hist['Close'].iloc[-1]
+                prev_close = hist['Close'].iloc[-2]
+                change_pct = ((current_price - prev_close) / prev_close) * 100
+                
+                ticker_data.append({
+                    'symbol': symbol.replace('.NS', '').replace('.BO', ''),
+                    'price': float(current_price),
+                    'change': float(change_pct)
+                })
+            elif len(hist) == 1:
+                # If only 1 day, use open vs close
+                current_price = hist['Close'].iloc[-1]
+                open_price = hist['Open'].iloc[-1]
+                if open_price > 0:
+                    change_pct = ((current_price - open_price) / open_price) * 100
+                    ticker_data.append({
+                        'symbol': symbol.replace('.NS', '').replace('.BO', ''),
+                        'price': float(current_price),
+                        'change': float(change_pct)
+                    })
+        except Exception as e:
+            # Skip stocks that fail
+            continue
+    
+    print(f"📊 Ticker: Fetched {len(ticker_data)}/{len(stocks_to_fetch)} stocks")
+    return ticker_data

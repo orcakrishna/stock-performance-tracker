@@ -102,6 +102,11 @@ CUSTOM_CSS = """
     [data-testid="stHorizontalBlock"] {
         gap: 0.5rem !important;
     }
+    /* Base font size for better cross-platform consistency */
+    html {
+        font-size: 16px;
+    }
+    
     h1, h2, h3, p, label, div {
         color: #ffffff !important;
     }
@@ -109,17 +114,24 @@ CUSTOM_CSS = """
         margin-top: 0 !important;
         padding-top: 0 !important;
         color: #ffffff !important;
-        font-family: 'Segoe UI', 'Arial', sans-serif !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif !important;
         font-weight: 600 !important;
+        font-size: 2rem !important;
+        line-height: 1.3 !important;
     }
     h2, h3 {
-        margin-top: 0.25rem !important;
-        margin-bottom: 0.25rem !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
         padding-top: 0 !important;
         padding-bottom: 0 !important;
         color: #ffffff !important;
-        font-family: 'Segoe UI', 'Arial', sans-serif !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif !important;
         font-weight: 600 !important;
+        font-size: 1.5rem !important;
+        line-height: 1.4 !important;
+    }
+    h3 {
+        font-size: 1.25rem !important;
     }
     hr {
         margin: 0.25rem 0 !important;
@@ -157,15 +169,108 @@ CUSTOM_CSS = """
         font-weight: bold;
     }
     
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background-color: #262730 !important;
+    }
+    [data-testid="stSidebar"] > div:first-child {
+        background-color: #262730 !important;
+    }
+    .sidebar .sidebar-content {
+        background-color: #262730 !important;
+    }
+    /* Sidebar Headers */
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3 {
+        color: #ffffff !important;
+        font-size: 1.25rem !important;
+        font-weight: 600 !important;
+        margin-top: 1rem !important;
+        margin-bottom: 0.5rem !important;
+        padding: 0.5rem 0 !important;
+        border-bottom: 2px solid #3d3d4d;
+    }
+    /* Sidebar Text */
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] span {
+        color: #e0e0e0 !important;
+        font-size: 0.938rem !important;
+        line-height: 1.6 !important;
+    }
+    /* Sidebar Selectbox */
+    [data-testid="stSidebar"] [data-baseweb="select"] {
+        background-color: #1e1e2e !important;
+        border-radius: 8px !important;
+    }
+    /* Sidebar Radio Buttons */
+    [data-testid="stSidebar"] [data-testid="stRadio"] label {
+        font-size: 0.938rem !important;
+        padding: 0.25rem 0 !important;
+    }
+    /* Sidebar Checkbox */
+    [data-testid="stSidebar"] [data-testid="stCheckbox"] label {
+        font-size: 0.938rem !important;
+    }
+    /* Sidebar Buttons */
+    [data-testid="stSidebar"] button {
+        font-size: 0.875rem !important;
+        border-radius: 6px !important;
+        padding: 0.5rem 1rem !important;
+        font-weight: 500 !important;
+    }
+    /* Sidebar Info Box */
+    [data-testid="stSidebar"] [data-testid="stAlert"] {
+        background-color: #1e1e2e !important;
+        border-left: 4px solid #4a9eff !important;
+        border-radius: 6px !important;
+        padding: 1rem !important;
+        font-size: 0.875rem !important;
+        line-height: 1.6 !important;
+    }
+    /* Sidebar Success Box */
+    [data-testid="stSidebar"] [data-testid="stSuccess"] {
+        background-color: #1e2e1e !important;
+        border-left: 4px solid #00c853 !important;
+        border-radius: 6px !important;
+        padding: 0.75rem !important;
+        font-size: 0.875rem !important;
+    }
+    /* Sidebar Metrics */
+    [data-testid="stSidebar"] [data-testid="stMetric"] {
+        background-color: #1e1e2e !important;
+        border-radius: 8px !important;
+        padding: 0.75rem !important;
+        border: 1px solid #3d3d4d !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stMetricValue"] {
+        font-size: 1.5rem !important;
+        font-weight: 700 !important;
+        color: #4a9eff !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stMetricLabel"] {
+        font-size: 0.813rem !important;
+        color: #b0b0b0 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+    }
+    /* Sidebar Caption */
+    [data-testid="stSidebar"] .stCaption {
+        font-size: 0.75rem !important;
+        color: #888 !important;
+    }
+    
     /* Top Gainer/Loser Banner */
     .gainer-loser-banner {
         display: flex;
         justify-content: flex-start;
         gap: 40px;
-        padding: 8px 0;
-        margin: 0 0 10px 0;
-        font-size: 14px;
+        padding: 10px 0;
+        margin: 0 0 12px 0;
+        font-size: 0.938rem;
         font-weight: bold;
+        line-height: 1.5;
     }
     
     .gainer-item {
@@ -178,49 +283,55 @@ CUSTOM_CSS = """
         white-space: nowrap;
     }
     
-    /* Compact Gainer/Loser Metrics */
+    /* Compact Gainer/Loser Metrics - Using rem for better scaling */
     [data-testid="stMetricValue"] {
-        font-size: 16px !important;
+        font-size: 1.125rem !important;
+        line-height: 1.4 !important;
     }
     [data-testid="stMetricLabel"] {
-        font-size: 12px !important;
+        font-size: 0.875rem !important;
+        line-height: 1.5 !important;
     }
     .gainer-loser-metric [data-testid="stMetricValue"] {
         display: inline !important;
-        font-size: 15px !important;
+        font-size: 1rem !important;
     }
     .gainer-loser-metric [data-testid="stMetricDelta"] {
         display: inline !important;
         margin-left: 8px !important;
-        font-size: 15px !important;
+        font-size: 1rem !important;
     }
     
-    /* Rolling Ticker Styles */
+    /* Rolling Ticker Styles - Fixed for all 50 stocks */
     .ticker-container {
         background: linear-gradient(90deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
         border: 2px solid #0f3460;
         border-radius: 8px;
-        padding: 10px 0;
+        padding: 12px 0;
         margin: 0 0 15px 0;
         overflow: hidden;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        width: 100%;
+        position: relative;
     }
     
     .ticker-wrapper {
-        display: flex;
-        animation: scroll 15s linear infinite;
+        display: inline-flex;
+        animation: ticker-scroll 120s linear infinite;
         white-space: nowrap;
+        will-change: transform;
     }
     
     .ticker-item {
         display: inline-flex;
         align-items: center;
         margin: 0 30px;
-        padding: 8px 16px;
+        padding: 10px 18px;
         background: rgba(255, 255, 255, 0.05);
         border-radius: 6px;
         border-left: 3px solid #00d4ff;
         transition: all 0.3s ease;
+        min-height: 40px;
     }
     
     .ticker-item:hover {
@@ -230,32 +341,36 @@ CUSTOM_CSS = """
     
     .ticker-symbol {
         font-weight: bold;
-        font-size: 14px;
+        font-size: 0.938rem;
         color: #00d4ff;
         margin-right: 8px;
+        line-height: 1.5;
     }
     
     .ticker-price {
-        font-size: 14px;
+        font-size: 0.938rem;
         color: #ffffff;
         margin-right: 8px;
+        line-height: 1.5;
     }
     
     .ticker-change-positive {
-        font-size: 13px;
+        font-size: 0.875rem;
         color: #00ff00;
         font-weight: bold;
+        line-height: 1.5;
     }
     
     .ticker-change-negative {
-        font-size: 13px;
+        font-size: 0.875rem;
         color: #ff4444;
         font-weight: bold;
+        line-height: 1.5;
     }
     
-    @keyframes scroll {
+    @keyframes ticker-scroll {
         0% {
-            transform: translateX(0);
+            transform: translateX(0%);
         }
         100% {
             transform: translateX(-50%);
@@ -268,12 +383,12 @@ CUSTOM_CSS = """
 </style>
 """
 
-# Metric styling CSS
+# Metric styling CSS - Using rem for better cross-platform consistency
 METRIC_CSS = """
 <style>
-    [data-testid="stMetricValue"] { font-size: 20px !important; }
-    [data-testid="stMetricLabel"] { font-size: 14px !important; }
-    [data-testid="stMetricDelta"] { font-size: 14px !important; font-weight: bold !important; }
+    [data-testid="stMetricValue"] { font-size: 1.375rem !important; line-height: 1.4 !important; }
+    [data-testid="stMetricLabel"] { font-size: 0.938rem !important; line-height: 1.5 !important; }
+    [data-testid="stMetricDelta"] { font-size: 0.938rem !important; font-weight: bold !important; line-height: 1.5 !important; }
     [data-testid="stMetricDelta"]:has(svg[data-testid="stMetricDeltaIcon-Up"]) { color: #00ff00 !important; }
     [data-testid="stMetricDelta"] svg[data-testid="stMetricDeltaIcon-Up"] { fill: #00ff00 !important; }
     [data-testid="stMetricDelta"]:has(svg[data-testid="stMetricDeltaIcon-Down"]) { color: #ff4444 !important; }
