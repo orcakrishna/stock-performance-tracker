@@ -4,7 +4,8 @@ Streamlit UI rendering functions
 """
 
 import streamlit as st
-from config import INDICES_ROW1, INDICES_ROW2, METRIC_CSS
+import yfinance as yf
+from config import INDICES_ROW1, INDICES_ROW2, METRIC_CSS, TICKER_STOCKS
 from data_fetchers import get_index_performance, get_commodities_prices
 from utils import get_current_times, format_time_display
 
@@ -30,6 +31,7 @@ def render_header():
 def render_market_indices():
     """Render market indices performance section"""
     st.markdown("### 📈 Market Indices - Today's Performance")
+    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(METRIC_CSS, unsafe_allow_html=True)
     
     # Row 1: Major Indices
@@ -47,7 +49,9 @@ def render_market_indices():
                 st.metric(label=name, value="--", delta="--")
     
     # Row 2: Sectoral Indices
-    st.markdown("**Sectoral Indices:**")
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### <span style='color: #4a90e2; font-weight: bold;'>Sectoral Indices:</span>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     cols2 = st.columns(len(INDICES_ROW2))
     for idx, (name, symbol) in enumerate(INDICES_ROW2.items()):
         with cols2[idx]:
@@ -157,3 +161,100 @@ def render_pagination_controls(total_items, items_per_page):
     end_idx = min(start_idx + items_per_page, total_items)
     
     return start_idx, end_idx
+
+
+@st.cache_data(ttl=60)  # Cache for 60 seconds
+def get_ticker_data():
+    """Fetch live data for ticker stocks"""
+    ticker_data = []
+    
+    try:
+        # Fetch data for all ticker stocks at once
+        tickers = yf.Tickers(' '.join(TICKER_STOCKS))
+        
+        for symbol in TICKER_STOCKS:
+            try:
+                ticker = tickers.tickers[symbol]
+                info = ticker.info
+                
+                # Get current price and change
+                current_price = info.get('currentPrice') or info.get('regularMarketPrice')
+                prev_close = info.get('previousClose') or info.get('regularMarketPreviousClose')
+                
+                if current_price and prev_close:
+                    change_pct = ((current_price - prev_close) / prev_close) * 100
+                    
+                    ticker_data.append({
+                        'symbol': symbol.replace('.NS', ''),
+                        'price': current_price,
+                        'change': change_pct
+                    })
+            except Exception as e:
+                # Skip stocks that fail to fetch
+                continue
+                
+    except Exception as e:
+        st.warning(f"⚠️ Ticker data temporarily unavailable")
+    
+    return ticker_data
+
+
+def render_gainer_loser_banner():
+    """Render top gainer and loser banner from market indices"""
+    indices_data = []
+    
+    # Combine all indices but exclude VIX and international indices
+    all_indices = {**INDICES_ROW1, **INDICES_ROW2}
+    exclude_list = ['India VIX', 'Dow Jones', 'NASDAQ']
+    
+    for name, symbol in all_indices.items():
+        if name not in exclude_list:
+            price, change = get_index_performance(symbol)
+            if price and change:
+                indices_data.append({
+                    'name': name,
+                    'change': change
+                })
+    
+    if not indices_data:
+        return
+    
+    # Find top gainer and loser
+    top_gainer = max(indices_data, key=lambda x: x['change'])
+    top_loser = min(indices_data, key=lambda x: x['change'])
+    
+    # Display using compact inline format
+    col1, col2, col_spacer = st.columns([1.5, 1.5, 5])
+    
+    with col1:
+        st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
+        st.markdown(f"**🏆 Top Gainer:** <span style='color: #00ff00; font-size: 15px;'>{top_gainer['name']} ({top_gainer['change']:+.2f}%)</span>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
+        st.markdown(f"**⚠️ Top Loser:** <span style='color: #ff4444; font-size: 15px;'>{top_loser['name']} ({top_loser['change']:+.2f}%)</span>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
+def render_live_ticker():
+    """Render a live rolling stock ticker at the top"""
+    ticker_data = get_ticker_data()
+    
+    if not ticker_data:
+        return
+    
+    # Sort alphabetically by symbol
+    ticker_data_sorted = sorted(ticker_data, key=lambda x: x['symbol'])
+    
+    # Create ticker HTML - duplicate items for seamless loop
+    ticker_items = ""
+    for stock in ticker_data_sorted + ticker_data_sorted:  # Duplicate for seamless scrolling
+        change_class = "ticker-change-positive" if stock['change'] >= 0 else "ticker-change-negative"
+        change_symbol = "▲" if stock['change'] >= 0 else "▼"
+        
+        ticker_items += f"""<div class="ticker-item"><span class="ticker-symbol">{stock['symbol']}</span><span class="ticker-price">₹{stock['price']:.2f}</span><span class="{change_class}">{change_symbol} {abs(stock['change']):.2f}%</span></div>"""
+    
+    ticker_html = f"""<div class="ticker-container"><div class="ticker-wrapper">{ticker_items}</div></div>"""
+    
+    st.markdown(ticker_html, unsafe_allow_html=True)

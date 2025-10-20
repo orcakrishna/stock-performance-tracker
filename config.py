@@ -59,28 +59,74 @@ INDICES_ROW2 = {
     'Nifty Pharma': '^CNXPHARMA',
     'Nifty Auto': '^CNXAUTO',
     'Nifty FMCG': '^CNXFMCG',
-    'Nifty Metal': '^CNXMETAL'
+    'Nifty Metal': '^CNXMETAL',
+    'Nifty Realty': '^CNXREALTY',
+    'Nifty Energy': '^CNXENERGY'
 }
 
 # Commodities tickers
 COMMODITIES = {
     'oil': 'CL=F',
     'gold': 'GC=F',
+    'silver': 'SI=F',
     'btc': 'BTC-USD'
 }
+
+# Ticker stocks - all Nifty 50 stocks for rolling ticker
+TICKER_STOCKS = FALLBACK_NIFTY_50
 
 # Custom CSS for dark theme
 CUSTOM_CSS = """
 <style>
     .main {
         background-color: #1e1e1e;
-        padding: 2rem;
+        padding: 0.5rem 2rem 2rem 2rem;
     }
     .stApp {
         background-color: #1e1e1e;
     }
+    .block-container {
+        padding-top: 0rem !important;
+        padding-bottom: 0rem !important;
+    }
+    header {
+        background-color: transparent !important;
+    }
+    .main > div:first-child {
+        padding-top: 0 !important;
+    }
+    [data-testid="stVerticalBlock"] {
+        gap: 0.25rem !important;
+    }
+    [data-testid="stHorizontalBlock"] {
+        gap: 0.5rem !important;
+    }
     h1, h2, h3, p, label, div {
         color: #ffffff !important;
+    }
+    h1 {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+        color: #4a90e2 !important;
+    }
+    h2, h3 {
+        margin-top: 0.25rem !important;
+        margin-bottom: 0.25rem !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        color: #4a90e2 !important;
+    }
+    hr {
+        margin: 0.25rem 0 !important;
+    }
+    .element-container {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    .stMarkdown {
+        margin-bottom: 0.25rem !important;
     }
     .dataframe {
         background-color: #2d2d2d;
@@ -104,6 +150,115 @@ CUSTOM_CSS = """
     .negative {
         color: #ff4444 !important;
         font-weight: bold;
+    }
+    
+    /* Top Gainer/Loser Banner */
+    .gainer-loser-banner {
+        display: flex;
+        justify-content: flex-start;
+        gap: 40px;
+        padding: 8px 0;
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    
+    .gainer-item {
+        color: #00ff00;
+        white-space: nowrap;
+    }
+    
+    .loser-item {
+        color: #ff4444;
+        white-space: nowrap;
+    }
+    
+    /* Compact Gainer/Loser Metrics */
+    [data-testid="stMetricValue"] {
+        font-size: 16px !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 12px !important;
+    }
+    .gainer-loser-metric [data-testid="stMetricValue"] {
+        display: inline !important;
+        font-size: 15px !important;
+    }
+    .gainer-loser-metric [data-testid="stMetricDelta"] {
+        display: inline !important;
+        margin-left: 8px !important;
+        font-size: 15px !important;
+    }
+    
+    /* Rolling Ticker Styles */
+    .ticker-container {
+        background: linear-gradient(90deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+        border: 2px solid #0f3460;
+        border-radius: 8px;
+        padding: 10px 0;
+        margin: 0 0 15px 0;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    
+    .ticker-wrapper {
+        display: flex;
+        animation: scroll 15s linear infinite;
+        white-space: nowrap;
+    }
+    
+    .ticker-item {
+        display: inline-flex;
+        align-items: center;
+        margin: 0 30px;
+        padding: 8px 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        border-left: 3px solid #00d4ff;
+        transition: all 0.3s ease;
+    }
+    
+    .ticker-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.05);
+    }
+    
+    .ticker-symbol {
+        font-weight: bold;
+        font-size: 14px;
+        color: #00d4ff;
+        margin-right: 8px;
+    }
+    
+    .ticker-price {
+        font-size: 14px;
+        color: #ffffff;
+        margin-right: 8px;
+    }
+    
+    .ticker-change-positive {
+        font-size: 13px;
+        color: #00ff00;
+        font-weight: bold;
+    }
+    
+    .ticker-change-negative {
+        font-size: 13px;
+        color: #ff4444;
+        font-weight: bold;
+    }
+    
+    @keyframes scroll {
+        0% {
+            transform: translateX(0);
+        }
+        100% {
+            transform: translateX(-50%);
+        }
+    }
+    
+    .ticker-container:hover .ticker-wrapper {
+        animation-play-state: paused;
     }
 </style>
 """

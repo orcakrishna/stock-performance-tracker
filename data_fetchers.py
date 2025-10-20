@@ -194,7 +194,7 @@ def get_stock_performance(ticker, use_cache=True):
 
 
 def get_commodities_prices():
-    """Fetch current prices for oil, gold, and BTC"""
+    """Fetch current prices for oil, gold, silver, and BTC"""
     prices = {}
     
     try:
@@ -210,6 +210,13 @@ def get_commodities_prices():
         prices['gold'] = f"${gold_price:.2f}"
     except:
         prices['gold'] = "--"
+    
+    try:
+        silver = yf.Ticker(COMMODITIES['silver'])
+        silver_price = silver.history(period='1d')['Close'].iloc[-1]
+        prices['silver'] = f"${silver_price:.2f}"
+    except:
+        prices['silver'] = "--"
     
     try:
         btc = yf.Ticker(COMMODITIES['btc'])

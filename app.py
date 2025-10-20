@@ -15,7 +15,8 @@ from file_manager import load_all_saved_lists, save_list_to_csv, delete_list_csv
 from cache_manager import get_cache_stats, clear_cache
 from ui_components import (
     render_header, render_market_indices, render_sidebar_info,
-    render_top_bottom_performers, render_averages, render_pagination_controls
+    render_top_bottom_performers, render_averages, render_pagination_controls,
+    render_live_ticker, render_gainer_loser_banner
 )
 from utils import create_html_table
 
@@ -27,9 +28,6 @@ st.set_page_config(
     page_icon="📈",
     layout="wide"
 )
-
-# Apply custom CSS
-st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
 def render_stock_selection_sidebar():
@@ -213,6 +211,9 @@ def fetch_stocks_data(selected_stocks, use_parallel, use_cache=True):
 
 def main():
     """Main application logic"""
+    # Apply custom CSS first
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    
     # Initialize session state
     if 'saved_lists' not in st.session_state:
         st.session_state.saved_lists = load_all_saved_lists()
@@ -221,6 +222,12 @@ def main():
     
     # Render header
     render_header()
+    
+    # Render gainer/loser banner
+    render_gainer_loser_banner()
+    
+    # Render live ticker
+    render_live_ticker()
     
     # Sidebar: Stock selection
     category = render_stock_selection_sidebar()
