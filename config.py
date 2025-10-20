@@ -363,8 +363,8 @@ CUSTOM_CSS = """
         background: linear-gradient(90deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
         border: 2px solid #0f3460;
         border-radius: 8px;
-        padding: 12px 0;
-        margin: 0 0 15px 0;
+        padding: 6px 0;
+        margin: 0 0 10px 0;
         overflow: hidden;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         width: 100%;
@@ -382,12 +382,12 @@ CUSTOM_CSS = """
         display: inline-flex;
         align-items: center;
         margin: 0 30px;
-        padding: 10px 18px;
+        padding: 6px 18px;
         background: rgba(255, 255, 255, 0.05);
         border-radius: 6px;
         border-left: 3px solid #00d4ff;
         transition: all 0.3s ease;
-        min-height: 40px;
+        min-height: 32px;
     }
     
     .ticker-item:hover {
