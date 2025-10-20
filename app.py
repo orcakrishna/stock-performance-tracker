@@ -32,7 +32,7 @@ st.set_page_config(
 
 def render_stock_selection_sidebar():
     """Render sidebar for stock selection and options"""
-    st.sidebar.header("📋 Stock Selection")
+    st.sidebar.markdown("**📋 Stock Selection**")
     
     # Category selection
     category = st.sidebar.selectbox(
@@ -239,9 +239,9 @@ def main():
             available_stocks = selected_stocks
         
         if "✅" in fetch_status:
-            st.sidebar.success(fetch_status)
+            st.sidebar.markdown(f"<span style='color: #00c853;'>{fetch_status}</span>", unsafe_allow_html=True)
         else:
-            st.sidebar.warning(fetch_status)
+            st.sidebar.markdown(f"<span style='color: #ff9800;'>⚠️ {fetch_status}</span>", unsafe_allow_html=True)
     
     elif category == 'Upload File':
         selected_stocks, available_stocks = handle_file_upload()
@@ -260,7 +260,7 @@ def main():
     
     # Sorting options
     st.sidebar.markdown("---")
-    st.sidebar.header("Sorting Options")
+    st.sidebar.markdown("**Sorting Options**")
     sort_by = st.sidebar.selectbox(
         "Sort by",
         options=['3 Months %', '2 Months %', '1 Month %', '1 Week %', 'Stock Name'],
@@ -274,7 +274,7 @@ def main():
     
     # Performance options
     st.sidebar.markdown("---")
-    st.sidebar.header("⚡ Performance")
+    st.sidebar.markdown("**⚡ Performance**")
     use_parallel = st.sidebar.checkbox(
         "Use Parallel Fetching (3x faster)",
         value=False,
@@ -283,7 +283,7 @@ def main():
     
     # Cache management
     st.sidebar.markdown("---")
-    st.sidebar.header("💾 Cache Management")
+    st.sidebar.markdown("**💾 Cache Management**")
     cache_stats = get_cache_stats()
     st.sidebar.metric("Cached Stocks", cache_stats['valid'])
     st.sidebar.caption(f"Expired: {cache_stats['expired']} | Total: {cache_stats['total']}")

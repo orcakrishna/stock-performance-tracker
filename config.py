@@ -191,6 +191,15 @@ CUSTOM_CSS = """
         padding: 0.5rem 0 !important;
         border-bottom: 2px solid #3d3d4d;
     }
+    /* Sidebar Markdown Bold (for section headers) */
+    [data-testid="stSidebar"] strong {
+        color: #ffffff !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        display: block !important;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.75rem !important;
+    }
     /* Sidebar Text */
     [data-testid="stSidebar"] p,
     [data-testid="stSidebar"] label,
