@@ -188,25 +188,47 @@ def render_top_bottom_performers(df):
 
 
 def render_averages(df):
-    """Render average performance metrics"""
+    """Render key index 1-year performance"""
+    import yfinance as yf
+    from datetime import datetime, timedelta
+    
     st.markdown("---")
+    st.subheader("📊 Key Index Performance (1 Year)")
+    
+    # Define key indices
+    indices = {
+        'Nifty 50': '^NSEI',
+        'Bank Nifty': '^NSEBANK',
+        'Nifty IT': '^CNXIT',
+        'Nifty Pharma': '^CNXPHARMA'
+    }
+    
     col1, col2, col3, col4 = st.columns(4)
+    cols = [col1, col2, col3, col4]
     
-    with col1:
-        avg_1w = df['1 Week %'].mean()
-        st.metric("Average 1-Week Change", f"{avg_1w:.2f}%")
-    
-    with col2:
-        avg_1m = df['1 Month %'].mean()
-        st.metric("Average 1-Month Change", f"{avg_1m:.2f}%")
-    
-    with col3:
-        avg_2m = df['2 Months %'].mean()
-        st.metric("Average 2-Month Change", f"{avg_2m:.2f}%")
-    
-    with col4:
-        avg_3m = df['3 Months %'].mean()
-        st.metric("Average 3-Month Change", f"{avg_3m:.2f}%")
+    for idx, (name, symbol) in enumerate(indices.items()):
+        with cols[idx]:
+            try:
+                ticker = yf.Ticker(symbol)
+                end_date = datetime.now()
+                start_date = end_date - timedelta(days=365)
+                
+                hist = ticker.history(start=start_date, end=end_date)
+                
+                if not hist.empty and len(hist) > 1:
+                    start_price = hist['Close'].iloc[0]
+                    end_price = hist['Close'].iloc[-1]
+                    year_change = ((end_price - start_price) / start_price) * 100
+                    
+                    st.metric(
+                        label=name,
+                        value=f"{end_price:,.2f}",
+                        delta=f"{year_change:+.2f}%"
+                    )
+                else:
+                    st.metric(label=name, value="--", delta="--")
+            except Exception as e:
+                st.metric(label=name, value="--", delta="--")
 
 
 # =========================
