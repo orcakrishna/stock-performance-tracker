@@ -194,7 +194,7 @@ def get_stock_performance(ticker, use_cache=True):
 
 
 def get_commodities_prices():
-    """Fetch current prices for oil, gold, silver, and BTC"""
+    """Fetch current prices for oil, gold, silver, BTC, and USD/INR"""
     prices = {}
     
     try:
@@ -224,6 +224,14 @@ def get_commodities_prices():
         prices['btc'] = f"${btc_price:,.0f}"
     except:
         prices['btc'] = "--"
+    
+    try:
+        # Fetch USD to INR exchange rate
+        usd_inr = yf.Ticker('INR=X')
+        inr_rate = usd_inr.history(period='1d')['Close'].iloc[-1]
+        prices['usd_inr'] = f"₹{inr_rate:.2f}"
+    except:
+        prices['usd_inr'] = "--"
     
     return prices
 

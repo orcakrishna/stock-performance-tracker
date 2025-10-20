@@ -40,7 +40,7 @@ def format_time_display(ist_time, edt_time, commodities_prices):
     </br>
         <p style='margin: 0; font-size: 13px;'><span style='color: #888;'>🛢️ Oil: <strong>{commodities_prices['oil']}</strong></span> | <span style='color: #888;'>₿ BTC: <strong>{commodities_prices['btc']}</strong></span> | <span style='color: #fff;'>🕐 IST: <strong>{ist_time.strftime('%I:%M %p')}</strong></span></p>
         <p style='margin: 0; font-size: 13px;'><span style='color: #888;'>🥇 Gold: <strong>{commodities_prices['gold']}</strong></span> | <span style='color: #888;'>🪙 Silver: <strong>{commodities_prices['silver']}</strong></span> | <span style='color: #fff;'>🕐 EDT: <strong>{edt_time.strftime('%I:%M %p')}</strong></span></p>
-        <p style='margin: 0; font-size: 12px; color: #888;'>{ist_time.strftime('%d %b %Y')}</p>
+        <p style='margin: 0; font-size: 13px;'><span style='color: #888;'>💵 USD/INR: <strong>{commodities_prices['usd_inr']}</strong></span> | <span style='color: #888;'>📅 {ist_time.strftime('%d %b %Y')}</span></p>
     </div>
     """
 
