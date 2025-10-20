@@ -260,7 +260,6 @@ def main():
     
     # Sorting options
     st.sidebar.markdown("---")
-    st.sidebar.markdown("**Sorting Options**")
     sort_by = st.sidebar.selectbox(
         "Sort by",
         options=['3 Months %', '2 Months %', '1 Month %', '1 Week %', 'Stock Name'],
