@@ -26,57 +26,52 @@ def get_available_nse_indices():
     return indices
 
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
-def fetch_yahoo_finance_stocks(index_name):
-    """Fetch index constituents using yfinance library (most reliable)"""
+@st.cache_data(ttl=86400)  # Cache for 24 hours (refreshes daily)
+def fetch_nse_index_constituents(index_name):
+    """Fetch index constituents from NSE CSV (auto-updated when composition changes)"""
     try:
-        # Map to Yahoo Finance index tickers
-        index_tickers = {
-            'NIFTY 50': '^NSEI',
-            'NIFTY BANK': '^NSEBANK',
-            'NIFTY IT': '^CNXIT',
+        # Map to NSE CSV filenames
+        csv_map = {
+            'NIFTY 50': 'ind_nifty50list.csv',
+            'NIFTY BANK': 'ind_niftybanklist.csv',
+            'NIFTY IT': 'ind_niftyitlist.csv',
         }
         
-        if index_name not in index_tickers:
+        if index_name not in csv_map:
             return None
         
-        ticker_symbol = index_tickers[index_name]
+        csv_filename = csv_map[index_name]
         
-        # Use yfinance to get index info
-        index = yf.Ticker(ticker_symbol)
-        
-        # Try to get components/constituents
-        # Note: yfinance doesn't directly provide constituents for indices
-        # So we'll use a predefined list that we validate with yfinance
-        
-        # Hardcoded but validated lists (these are official constituents)
-        constituents = {
-            '^NSEI': [  # Nifty 50
-                'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'HINDUNILVR', 'ITC', 'SBIN',
-                'BHARTIARTL', 'KOTAKBANK', 'LT', 'AXISBANK', 'ASIANPAINT', 'MARUTI', 'HCLTECH',
-                'BAJFINANCE', 'TITAN', 'SUNPHARMA', 'ULTRACEMCO', 'WIPRO', 'ONGC', 'NTPC',
-                'POWERGRID', 'TATAMOTORS', 'NESTLEIND', 'ADANIENT', 'JSWSTEEL', 'COALINDIA',
-                'TATASTEEL', 'M&M', 'BAJAJFINSV', 'HINDALCO', 'INDUSINDBK', 'TECHM', 'DIVISLAB',
-                'DRREDDY', 'BRITANNIA', 'EICHERMOT', 'APOLLOHOSP', 'CIPLA', 'GRASIM', 'TATACONSUM',
-                'HEROMOTOCO', 'ADANIPORTS', 'BPCL', 'SBILIFE', 'HDFCLIFE', 'BAJAJ-AUTO', 'LTIM', 'SHRIRAMFIN'
-            ],
-            '^NSEBANK': [  # Nifty Bank
-                'HDFCBANK', 'ICICIBANK', 'SBIN', 'KOTAKBANK', 'AXISBANK', 'INDUSINDBK',
-                'BANDHANBNK', 'FEDERALBNK', 'AUBANK', 'IDFCFIRSTB', 'PNB', 'BANKBARODA'
-            ],
-            '^CNXIT': [  # Nifty IT
-                'TCS', 'INFY', 'HCLTECH', 'WIPRO', 'TECHM', 'LTIM', 'PERSISTENT',
-                'COFORGE', 'MPHASIS', 'LTTS'
-            ]
+        # Fetch from NSE archives (updated when index composition changes)
+        url = f"https://nsearchives.nseindia.com/content/indices/{csv_filename}"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+            'Accept': 'text/csv',
+            'Referer': 'https://www.nseindia.com/'
         }
         
-        if ticker_symbol in constituents:
-            stocks = [f"{symbol}.NS" for symbol in constituents[ticker_symbol]]
-            return stocks
+        with requests.Session() as session:
+            session.headers.update(headers)
+            # Visit homepage first to set cookies
+            session.get("https://www.nseindia.com", timeout=10)
+            time.sleep(1)
+            
+            response = session.get(url, timeout=10)
+            
+            if response.status_code == 200:
+                csv_content = response.content.decode('utf-8')
+                df = pd.read_csv(StringIO(csv_content))
+                
+                if 'Symbol' in df.columns:
+                    symbols = df['Symbol'].dropna().tolist()
+                    stocks = [f"{symbol}.NS" for symbol in symbols if pd.notna(symbol)]
+                    
+                    if len(stocks) >= 5:
+                        return stocks
         
         return None
     except Exception as e:
-        print(f"Yahoo Finance error for {index_name}: {str(e)}")
+        print(f"NSE CSV error for {index_name}: {str(e)}")
         return None
 
 
@@ -373,13 +368,13 @@ def get_stock_list(category_name):
     if category_name in available_indices:
         api_index_name = available_indices[category_name]
         
-        # Fetch from Yahoo Finance (live data)
-        yahoo_stocks = fetch_yahoo_finance_stocks(api_index_name)
+        # Fetch from NSE CSV (auto-updated when composition changes)
+        yahoo_stocks = fetch_nse_index_constituents(api_index_name)
         
         if yahoo_stocks:
-            return yahoo_stocks, f"✅ Fetched {len(yahoo_stocks)} stocks from {category_name} (🔴 Yahoo Finance - Live)"
+            return yahoo_stocks, f"✅ Fetched {len(yahoo_stocks)} stocks from {category_name} (🔴 NSE Official - Auto-Updated)"
         else:
-            return [], f"❌ Failed to fetch {category_name} from Yahoo Finance. Please try again."
+            return [], f"❌ Failed to fetch {category_name}. Please try again."
     
     return [], "❌ No data available"
 
