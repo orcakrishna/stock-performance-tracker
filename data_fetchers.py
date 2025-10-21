@@ -53,25 +53,34 @@ def fetch_nse_api_stocks(index_name):
         with requests.Session() as session:
             session.headers.update(headers)
             # Warm-up: Visit homepage to set cookies
-            session.get("https://www.nseindia.com", timeout=10)
-            time.sleep(1)
+            try:
+                session.get("https://www.nseindia.com", timeout=10)
+                time.sleep(1)
+            except:
+                pass  # Continue even if homepage fails
             
-            response = session.get(url, timeout=10)
+            response = session.get(url, timeout=15)
             
             if response.status_code == 200:
                 data = response.json()
-                if 'data' in data:
+                if 'data' in data and isinstance(data['data'], list):
                     stocks = []
                     for item in data['data']:
-                        if 'symbol' in item and item['symbol'] not in ['', index_name]:
-                            # Skip index itself, only get constituent stocks
-                            stocks.append(f"{item['symbol']}.NS")
+                        if isinstance(item, dict) and 'symbol' in item:
+                            symbol = item['symbol']
+                            # Skip index itself and empty symbols
+                            if symbol and symbol not in ['', index_name, index_name.replace(' ', '')]:
+                                stocks.append(f"{symbol}.NS")
                     
                     if len(stocks) >= 5:  # Validate
                         return stocks
+                    else:
+                        st.warning(f"⚠️ Only {len(stocks)} stocks found for {index_name}")
+            else:
+                st.error(f"❌ NSE API returned status {response.status_code} for {index_name}")
         return None
     except Exception as e:
-        print(f"NSE API error for {index_name}: {e}")
+        st.error(f"❌ NSE API error for {index_name}: {str(e)}")
         return None
 
 
@@ -359,7 +368,7 @@ def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True):
 
 
 def get_stock_list(category_name):
-    """Get stock list using NSE API (real-time data)"""
+    """Get stock list using NSE API with CSV fallback"""
     
     # Get available indices
     available_indices = get_available_nse_indices()
@@ -374,7 +383,41 @@ def get_stock_list(category_name):
         if stocks:
             return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name} (NSE API)"
         
-        return [], f"❌ Failed to fetch {category_name} from NSE. Please try again later."
+        # Fallback to CSV if API fails
+        st.warning(f"⚠️ NSE API failed for {category_name}, trying CSV fallback...")
+        
+        # Map to CSV filenames
+        csv_map = {
+            'NIFTY 50': 'ind_nifty50list.csv',
+            'NIFTY BANK': 'ind_niftybanklist.csv',
+            'NIFTY PSU BANK': 'ind_niftypsubanklist.csv',
+            'NIFTY IT': 'ind_niftyitlist.csv',
+            'NIFTY PHARMA': 'ind_niftypharmalist.csv',
+            'NIFTY AUTO': 'ind_niftyautolist.csv',
+            'NIFTY FMCG': 'ind_niftyfmcglist.csv',
+            'NIFTY METAL': 'ind_niftymetallist.csv',
+            'NIFTY REALTY': 'ind_niftyrealtylist.csv',
+            'NIFTY ENERGY': 'ind_niftyenergylist.csv',
+            'NIFTY MIDCAP 50': 'ind_niftymidcap50list.csv',
+            'NIFTY SMALLCAP 50': 'ind_niftysmallcap50list.csv',
+            'NIFTY TOTAL MARKET': 'ind_niftytotalmarket_list.csv',
+        }
+        
+        if api_index_name in csv_map:
+            csv_stocks = fetch_nse_csv_list(csv_map[api_index_name])
+            if csv_stocks:
+                return csv_stocks, f"✅ Fetched {len(csv_stocks)} stocks from {category_name} (CSV)"
+        
+        # Special handling for Private Bank (calculate from Bank - PSU)
+        if api_index_name == 'NIFTY PRIVATE BANK':
+            all_banks = fetch_nse_csv_list('ind_niftybanklist.csv')
+            psu_banks = fetch_nse_csv_list('ind_niftypsubanklist.csv')
+            if all_banks and psu_banks:
+                private_banks = [s for s in all_banks if s not in psu_banks]
+                if private_banks:
+                    return private_banks, f"✅ Fetched {len(private_banks)} private banks (calculated)"
+        
+        return [], f"❌ Failed to fetch {category_name}. Please try again later."
     
     return [], "❌ No data available"
 
