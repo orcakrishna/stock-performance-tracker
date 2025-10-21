@@ -327,9 +327,9 @@ def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True):
 def get_stock_list(category_name):
     """Get stock list with dynamic fetching only - no fallback"""
     
-    # Special handling for Private Bank (derive from Bank - PSU Bank)
+    # Special handling for Private Bank (NSE doesn't have separate CSV)
+    # Calculate: Private Banks = All Banks - PSU Banks
     if category_name == 'Nifty Private Bank':
-        # Fetch all bank stocks
         all_banks = fetch_nse_csv_list('ind_niftybanklist.csv')
         psu_banks = fetch_nse_csv_list('ind_niftypsubanklist.csv')
         
@@ -337,8 +337,8 @@ def get_stock_list(category_name):
             # Private banks = All banks - PSU banks
             private_banks = [stock for stock in all_banks if stock not in psu_banks]
             if private_banks:
-                return private_banks, f"✅ Fetched {len(private_banks)} stocks from {category_name}"
-        return [], f"❌ Failed to fetch {category_name}. Please try again later."
+                return private_banks, f"✅ Fetched {len(private_banks)} private bank stocks (Nifty Bank - PSU)"
+        return [], f"❌ Failed to calculate {category_name}. Please try again later."
     
     # Get available indices
     available_indices = get_available_nse_indices()
