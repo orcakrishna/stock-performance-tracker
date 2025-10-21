@@ -17,32 +17,67 @@ from cache_manager import load_from_cache, save_to_cache, load_bulk_cache, save_
 @st.cache_data(ttl=86400)  # Cache for 24 hours
 def get_available_nse_indices():
     """Dynamically fetch available NSE indices"""
-    # Common NSE index CSV files (verified to exist on NSE)
+    # NSE API index names (for equity-stockIndices endpoint)
     indices = {
-        'Nifty 50': 'ind_nifty50list.csv',
-        'Nifty Bank': 'ind_niftybanklist.csv',
-        'Nifty PSU Bank': 'ind_niftypsubanklist.csv',
-        'Nifty Private Bank': 'ind_niftyprivatebanklist.csv',  # Correct filename
-        'Nifty IT': 'ind_niftyitlist.csv',
-        'Nifty Pharma': 'ind_niftypharmalist.csv',
-        'Nifty Auto': 'ind_niftyautolist.csv',
-        'Nifty FMCG': 'ind_niftyfmcglist.csv',
-        'Nifty Metal': 'ind_niftymetallist.csv',
-        'Nifty Realty': 'ind_niftyrealtylist.csv',
-        'Nifty Energy': 'ind_niftyenergylist.csv',
-        'Nifty Midcap 50': 'ind_niftymidcap50list.csv',
-        'Nifty Smallcap 50': 'ind_niftysmallcap50list.csv',
-        'Nifty Total Market': 'ind_niftytotalmarket_list.csv',
+        'Nifty 50': 'NIFTY 50',
+        'Nifty Bank': 'NIFTY BANK',
+        'Nifty PSU Bank': 'NIFTY PSU BANK',
+        'Nifty Private Bank': 'NIFTY PRIVATE BANK',
+        'Nifty IT': 'NIFTY IT',
+        'Nifty Pharma': 'NIFTY PHARMA',
+        'Nifty Auto': 'NIFTY AUTO',
+        'Nifty FMCG': 'NIFTY FMCG',
+        'Nifty Metal': 'NIFTY METAL',
+        'Nifty Realty': 'NIFTY REALTY',
+        'Nifty Energy': 'NIFTY ENERGY',
+        'Nifty Midcap 50': 'NIFTY MIDCAP 50',
+        'Nifty Smallcap 50': 'NIFTY SMALLCAP 50',
+        'Nifty Total Market': 'NIFTY TOTAL MARKET',
     }
-    
-    # Filter out indices that don't fetch successfully (optional validation)
-    # This ensures only working indices appear in dropdown
     return indices
+
+
+@st.cache_data(ttl=3600)  # Cache for 1 hour (more frequent updates)
+def fetch_nse_api_stocks(index_name):
+    """Fetch stock list from NSE API (real-time data)"""
+    try:
+        url = f"https://www.nseindia.com/api/equity-stockIndices?index={index_name.replace(' ', '%20')}"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.nseindia.com/market-data/live-equity-market',
+            'Accept-Encoding': 'gzip, deflate, br'
+        }
+        
+        with requests.Session() as session:
+            session.headers.update(headers)
+            # Warm-up: Visit homepage to set cookies
+            session.get("https://www.nseindia.com", timeout=10)
+            time.sleep(1)
+            
+            response = session.get(url, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data:
+                    stocks = []
+                    for item in data['data']:
+                        if 'symbol' in item and item['symbol'] not in ['', index_name]:
+                            # Skip index itself, only get constituent stocks
+                            stocks.append(f"{item['symbol']}.NS")
+                    
+                    if len(stocks) >= 5:  # Validate
+                        return stocks
+        return None
+    except Exception as e:
+        print(f"NSE API error for {index_name}: {e}")
+        return None
 
 
 @st.cache_data(ttl=86400)  # Cache for 24 hours
 def fetch_nse_csv_list(csv_filename):
-    """Fetch stock list from NSE CSV endpoint (stable, avoids API 421 errors)"""
+    """Fetch stock list from NSE CSV endpoint (fallback method)"""
     try:
         url = f"https://nsearchives.nseindia.com/content/indices/{csv_filename}"
         headers = {
@@ -53,9 +88,8 @@ def fetch_nse_csv_list(csv_filename):
         
         with requests.Session() as session:
             session.headers.update(headers)
-            # Warm-up: Visit homepage to set cookies (prevents blocks)
             session.get("https://www.nseindia.com", timeout=10)
-            time.sleep(1)  # Brief pause for stability
+            time.sleep(1)
             
             response = session.get(url, timeout=10)
             
@@ -63,16 +97,11 @@ def fetch_nse_csv_list(csv_filename):
                 csv_content = response.content.decode('utf-8')
                 df = pd.read_csv(StringIO(csv_content))
                 stocks = [f"{symbol}.NS" for symbol in df['Symbol'].tolist() if pd.notna(symbol)]
-                if len(stocks) >= 5:  # Validate (lowered threshold for smaller indices)
+                if len(stocks) >= 5:
                     return stocks
-                else:
-                    return None
-            else:
-                return None
+        return None
     except Exception as e:
         return None
-    
-    return None
 
 
 # Removed hardcoded functions - now using dynamic get_stock_list()
@@ -325,31 +354,21 @@ def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True):
 
 
 def get_stock_list(category_name):
-    """Get stock list with dynamic fetching only - no fallback"""
-    
-    # Special handling for Private Bank (NSE doesn't have separate CSV)
-    # Calculate: Private Banks = All Banks - PSU Banks
-    if category_name == 'Nifty Private Bank':
-        all_banks = fetch_nse_csv_list('ind_niftybanklist.csv')
-        psu_banks = fetch_nse_csv_list('ind_niftypsubanklist.csv')
-        
-        if all_banks and psu_banks:
-            # Private banks = All banks - PSU banks
-            private_banks = [stock for stock in all_banks if stock not in psu_banks]
-            if private_banks:
-                return private_banks, f"✅ Fetched {len(private_banks)} private bank stocks (Nifty Bank - PSU)"
-        return [], f"❌ Failed to calculate {category_name}. Please try again later."
+    """Get stock list using NSE API (real-time data)"""
     
     # Get available indices
     available_indices = get_available_nse_indices()
     
     # Check if category exists in available indices
     if category_name in available_indices:
-        csv_filename = available_indices[category_name]
-        stocks = fetch_nse_csv_list(csv_filename)
+        api_index_name = available_indices[category_name]
+        
+        # Try NSE API first (real-time data)
+        stocks = fetch_nse_api_stocks(api_index_name)
         
         if stocks:
-            return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name}"
+            return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name} (NSE API)"
+        
         return [], f"❌ Failed to fetch {category_name} from NSE. Please try again later."
     
     return [], "❌ No data available"
