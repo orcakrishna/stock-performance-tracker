@@ -72,10 +72,6 @@ COMMODITIES = {
     'btc': 'BTC-USD'
 }
 
-# Ticker stocks - will be populated dynamically from Nifty 50
-# Using fallback as default, but app will fetch live list
-TICKER_STOCKS = FALLBACK_NIFTY_50
-
 # Custom CSS for dark theme
 CUSTOM_CSS = """
 <style>

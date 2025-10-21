@@ -4,8 +4,8 @@ Streamlit UI rendering functions
 """
 
 import streamlit as st
-from config import INDICES_ROW1, INDICES_ROW2, METRIC_CSS, TICKER_STOCKS
-from data_fetchers import get_index_performance, get_commodities_prices, get_stock_list
+from config import INDICES_ROW1, INDICES_ROW2, METRIC_CSS
+from data_fetchers import get_index_performance, get_commodities_prices, get_stock_list, get_next_nse_holiday
 from utils import get_current_times, format_time_display, get_ticker_data
 
 
@@ -23,11 +23,31 @@ def render_header():
     with col_time:
         ist_time, edt_time = get_current_times()
         commodities_prices = get_commodities_prices()
+        next_holiday = get_next_nse_holiday()
 
         st.markdown(
-            format_time_display(ist_time, edt_time, commodities_prices),
+            format_time_display(ist_time, edt_time, commodities_prices, next_holiday),
             unsafe_allow_html=True,
         )
+
+
+def render_holiday_and_pe_info():
+    """Render next NSE holiday date below today's date on the right side"""
+    from datetime import datetime
+    
+    # Get next holiday date
+    next_holiday_date = get_next_nse_holiday()
+    
+    # Build the display
+    holiday_text = f"🏖️ Nifty Holiday: {next_holiday_date}" if next_holiday_date else "🏖️ Nifty Holiday: N/A"
+    
+    # Display on the right side, below the date
+    st.markdown(
+        f"""<div style='text-align: right; margin-top: 5px; margin-bottom: 15px; padding-right: 10px;'>
+            <span style='color: #888; font-size: 0.85rem;'>{holiday_text}</span>
+        </div>""",
+        unsafe_allow_html=True
+    )
 
 
 # =========================

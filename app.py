@@ -6,11 +6,13 @@ Streamlit app for tracking Indian stock market performance
 import streamlit as st
 import pandas as pd
 import warnings
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 # Import custom modules
 from config import CUSTOM_CSS, ITEMS_PER_PAGE
-from data_fetchers import get_stock_list, get_stock_performance, fetch_stocks_bulk
+from data_fetchers import get_stock_list, get_stock_performance, fetch_stocks_bulk, validate_stock_symbol
 from file_manager import load_all_saved_lists, save_list_to_csv, delete_list_csv
 from cache_manager import get_cache_stats, clear_cache
 from ui_components import (
@@ -21,6 +23,19 @@ from ui_components import (
 from utils import create_html_table
 
 warnings.filterwarnings('ignore')
+
+# Load admin password from .env file
+def load_admin_password():
+    """Load admin password from .env file"""
+    env_file = Path(__file__).parent / '.env'
+    if env_file.exists():
+        with open(env_file, 'r') as f:
+            for line in f:
+                if line.startswith('ADMIN_PASSWORD='):
+                    return line.split('=', 1)[1].strip()
+    return "Admin@123"  # Default fallback
+
+ADMIN_PASSWORD = load_admin_password()
 
 # Page configuration
 st.set_page_config(
@@ -37,7 +52,7 @@ def render_stock_selection_sidebar():
     # Category selection
     category = st.sidebar.selectbox(
         "Select Category",
-        options=['Nifty 50', 'Nifty Next 50', 'Nifty Total Market', 'Custom Selection', 'Upload File'],
+        options=['Nifty 50', 'Nifty Next 50', 'Nifty Total Market', 'Upload File'],
         index=0
     )
     
@@ -49,9 +64,41 @@ def handle_file_upload():
     st.sidebar.markdown("---")
     st.sidebar.markdown("**📤 Manage Stock Lists**")
     
+    # Admin authentication
+    if 'admin_authenticated' not in st.session_state:
+        st.session_state.admin_authenticated = False
+    if 'admin_mode' not in st.session_state:
+        st.session_state.admin_mode = False
+    
+    # Admin login section
+    if not st.session_state.admin_authenticated:
+        with st.sidebar.expander("🔐 Admin Login"):
+            admin_password = st.text_input("Admin Password", type="password", key="admin_pass")
+            if st.button("Login"):
+                if admin_password == ADMIN_PASSWORD:
+                    st.session_state.admin_authenticated = True
+                    st.session_state.admin_mode = True
+                    st.success("✅ Admin access granted!")
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid password")
+    else:
+        # Show admin controls if authenticated
+        st.sidebar.markdown("**🔓 Admin Mode Active**")
+        st.session_state.admin_mode = st.sidebar.checkbox(
+            "💾 Save to Disk",
+            value=st.session_state.admin_mode,
+            help="Enable to save lists permanently to disk."
+        )
+        if st.sidebar.button("🚪 Logout"):
+            st.session_state.admin_authenticated = False
+            st.session_state.admin_mode = False
+            st.rerun()
+    
     # Display saved lists
     if st.session_state.saved_lists:
-        st.sidebar.markdown("**💾 Saved Lists:**")
+        list_type = "Saved to Disk" if st.session_state.admin_mode else "This Session"
+        st.sidebar.markdown(f"**💾 Saved Lists ({list_type}):**")
         for list_name, stocks in st.session_state.saved_lists.items():
             col1, col2 = st.sidebar.columns([3, 1])
             with col1:
@@ -61,7 +108,9 @@ def handle_file_upload():
             with col2:
                 if st.button("🗑️", key=f"del_{list_name}"):
                     del st.session_state.saved_lists[list_name]
-                    delete_list_csv(list_name)
+                    # Also delete from disk if in admin mode
+                    if st.session_state.admin_mode:
+                        delete_list_csv(list_name)
                     if st.session_state.current_list_name == list_name:
                         st.session_state.current_list_name = None
                     st.rerun()
@@ -108,12 +157,13 @@ def handle_file_upload():
             
             st.sidebar.info(f"📍 Using suffix: **{suffix}**")
             
-            valid_stocks = []
+            # Prepare stock symbols
+            prepared_stocks = []
             for symbol in uploaded_stocks:
                 if '.NS' in symbol or '.BO' in symbol:
-                    valid_stocks.append(symbol)
+                    prepared_stocks.append(symbol)
                 else:
-                    valid_stocks.append(f"{symbol}{suffix}")
+                    prepared_stocks.append(f"{symbol}{suffix}")
             
             list_name = st.sidebar.text_input(
                 "Enter a name for this list:",
@@ -123,16 +173,41 @@ def handle_file_upload():
             
             if st.sidebar.button("💾 Save List"):
                 if list_name.strip():
-                    st.session_state.saved_lists[list_name.strip()] = valid_stocks
-                    st.session_state.current_list_name = list_name.strip()
-                    save_list_to_csv(list_name.strip(), valid_stocks)
-                    st.sidebar.success(f"✅ Saved '{list_name}' with {len(valid_stocks)} stocks")
-                    st.rerun()  # Rerun to load the saved list
+                    # Validate stocks before saving
+                    with st.sidebar.spinner("🔍 Validating stocks..."):
+                        valid_stocks = []
+                        invalid_stocks = []
+                        
+                        for symbol in prepared_stocks:
+                            if validate_stock_symbol(symbol):
+                                valid_stocks.append(symbol)
+                            else:
+                                invalid_stocks.append(symbol)
+                        
+                        if valid_stocks:
+                            # Save to session
+                            st.session_state.saved_lists[list_name.strip()] = valid_stocks
+                            st.session_state.current_list_name = list_name.strip()
+                            
+                            # Save to disk if admin mode is enabled
+                            if st.session_state.admin_mode:
+                                save_list_to_csv(list_name.strip(), valid_stocks)
+                                save_location = "disk"
+                            else:
+                                save_location = "session only"
+                            
+                            if invalid_stocks:
+                                st.sidebar.warning(f"⚠️ Saved {len(valid_stocks)} valid stocks ({save_location}). Skipped {len(invalid_stocks)} invalid: {', '.join(invalid_stocks[:5])}")
+                            else:
+                                st.sidebar.success(f"✅ Saved '{list_name}' with {len(valid_stocks)} stocks ({save_location})")
+                            st.rerun()
+                        else:
+                            st.sidebar.error("❌ No valid stocks found. Please check your symbols.")
                 else:
                     st.sidebar.error("Please enter a list name")
             
             # Show preview but don't process until saved
-            st.sidebar.info(f"📋 Preview: {len(valid_stocks)} stocks ready. Click 'Save List' to proceed.")
+            st.sidebar.info(f"📋 Preview: {len(prepared_stocks)} stocks ready. Click 'Save List' to validate and proceed.")
             return [], []  # Return empty until saved
             
         except Exception as e:
@@ -219,6 +294,12 @@ def main():
     
     # Initialize session state
     if 'saved_lists' not in st.session_state:
+        st.session_state.saved_lists = {}  # Start empty, load on admin login
+    if 'admin_authenticated' not in st.session_state:
+        st.session_state.admin_authenticated = False
+    
+    # Load saved lists from disk if admin is authenticated
+    if st.session_state.admin_authenticated and not st.session_state.saved_lists:
         st.session_state.saved_lists = load_all_saved_lists()
     if 'current_list_name' not in st.session_state:
         st.session_state.current_list_name = None
@@ -261,23 +342,11 @@ def main():
     elif category == 'Upload File':
         selected_stocks, available_stocks = handle_file_upload()
     
-    else:  # Custom Selection
-        all_nifty_50, _ = get_stock_list('Nifty 50')
-        all_nifty_next_50, _ = get_stock_list('Nifty Next 50')
-        
-        available_stocks = list(set(all_nifty_50 + all_nifty_next_50))
-        selected_stocks = st.sidebar.multiselect(
-            "Select stocks",
-            options=available_stocks,
-            default=all_nifty_50[:10],
-            format_func=lambda x: x.replace('.NS', '').replace('.BO', '')
-        )
-    
     # Sorting options
     st.sidebar.markdown("---")
     sort_by = st.sidebar.selectbox(
         "Sort by",
-        options=['3 Months %', '2 Months %', '1 Month %', '1 Week %', 'Stock Name'],
+        options=['3 Months %', '2 Months %', '1 Month %', '1 Week %', 'Today %', 'Stock Name'],
         index=0
     )
     sort_order = st.sidebar.radio(

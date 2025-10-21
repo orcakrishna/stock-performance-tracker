@@ -10,7 +10,7 @@ from io import StringIO
 import time
 import yfinance as yf
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from config import FALLBACK_NIFTY_50, FALLBACK_NIFTY_NEXT_50, FALLBACK_BSE_SENSEX, COMMODITIES
+from config import COMMODITIES
 from cache_manager import load_from_cache, save_to_cache, load_bulk_cache, save_bulk_cache
 
 
@@ -149,6 +149,18 @@ def get_stock_performance(ticker, use_cache=True):
             current_price = hist['Close'].iloc[-1]
         current_date = hist.index[-1]
         
+        # Get previous close for today's change
+        if len(hist) >= 2:
+            previous_close = hist['Close'].iloc[-2]
+            change_today = ((current_price - previous_close) / previous_close) * 100
+        else:
+            # If only 1 day of data, use open price
+            open_price = hist['Open'].iloc[-1]
+            if open_price > 0:
+                change_today = ((current_price - open_price) / open_price) * 100
+            else:
+                change_today = 0.0
+        
         # Calculate prices for different periods
         # For 1 week: go back 5 trading days (1 week of trading)
         if len(hist) >= 5:
@@ -176,6 +188,7 @@ def get_stock_performance(ticker, use_cache=True):
         result = {
             'Stock Name': symbol,
             'Current Price': f"₹{current_price:.2f}",
+            'Today %': round(change_today, 2),
             '1 Week %': round(change_1w, 2),
             '1 Month %': round(change_1m, 2),
             '2 Months %': round(change_2m, 2),
@@ -226,12 +239,23 @@ def get_commodities_prices():
         prices['btc'] = "--"
     
     try:
-        # Fetch USD to INR exchange rate
+        # Fetch USD to INR exchange rate with 2-day history for change calculation
         usd_inr = yf.Ticker('INR=X')
-        inr_rate = usd_inr.history(period='1d')['Close'].iloc[-1]
-        prices['usd_inr'] = f"₹{inr_rate:.2f}"
+        hist = usd_inr.history(period='2d')
+        
+        if len(hist) >= 2:
+            current_rate = hist['Close'].iloc[-1]
+            previous_rate = hist['Close'].iloc[-2]
+            change = current_rate - previous_rate
+            
+            prices['usd_inr'] = f"₹{current_rate:.2f}"
+            prices['usd_inr_change'] = change  # Positive = INR weakened, Negative = INR strengthened
+        else:
+            prices['usd_inr'] = f"₹{hist['Close'].iloc[-1]:.2f}"
+            prices['usd_inr_change'] = 0
     except:
         prices['usd_inr'] = "--"
+        prices['usd_inr_change'] = 0
     
     return prices
 
@@ -287,25 +311,85 @@ def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True):
 
 
 def get_stock_list(category_name):
-    """Get stock list with dynamic fetching and fallback"""
+    """Get stock list with dynamic fetching only - no fallback"""
     
     if category_name == 'Nifty 50':
         stocks = fetch_nifty_50_from_nse()
         if stocks:
             return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name}"
-        return FALLBACK_NIFTY_50, f"⚠️ Using cached {category_name} list"
+        return [], f"❌ Failed to fetch {category_name} from NSE. Please try again later."
     
     elif category_name == 'Nifty Next 50':
         stocks = fetch_nifty_next_50_from_nse()
         if stocks:
             return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name}"
-        return FALLBACK_NIFTY_NEXT_50, f"⚠️ Using cached {category_name} list"
+        return [], f"❌ Failed to fetch {category_name} from NSE. Please try again later."
     
     elif category_name == 'Nifty Total Market':
         stocks = fetch_nifty_total_market_from_nse()
         if stocks:
             return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name}"
-        fallback = list(set(FALLBACK_NIFTY_50 + FALLBACK_NIFTY_NEXT_50))[:100]  # Sample fallback
-        return fallback, f"⚠️ Using cached {category_name} sample"
+        return [], f"❌ Failed to fetch {category_name} from NSE. Please try again later."
     
     return [], "❌ No data available"
+
+
+def validate_stock_symbol(symbol):
+    """Validate if a stock symbol exists on NSE/BSE using yfinance"""
+    try:
+        ticker = yf.Ticker(symbol)
+        # Try to get basic info - if it fails, stock doesn't exist
+        info = ticker.info
+        # Check if we got valid data
+        if info and ('symbol' in info or 'shortName' in info or 'longName' in info):
+            return True
+        return False
+    except:
+        return False
+
+
+@st.cache_data(ttl=86400)  # Cache for 24 hours
+def get_next_nse_holiday():
+    """Fetch the next upcoming NSE holiday dynamically from NSE website"""
+    from datetime import datetime
+    
+    try:
+        # Fetch from NSE website
+        url = "https://www.nseindia.com/api/holiday-master?type=trading"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.nseindia.com/regulations/holiday-master'
+        }
+        
+        with requests.Session() as session:
+            session.headers.update(headers)
+            # Warm-up: Visit homepage to set cookies
+            session.get("https://www.nseindia.com", timeout=10)
+            time.sleep(1)
+            
+            response = session.get(url, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                today = datetime.now().date()
+                
+                # Parse holidays from API response
+                if 'CM' in data:
+                    for holiday in data['CM']:
+                        holiday_date_str = holiday.get('tradingDate', '')
+                        
+                        if holiday_date_str:
+                            # Parse date (format: DD-MMM-YYYY)
+                            try:
+                                holiday_date = datetime.strptime(holiday_date_str, "%d-%b-%Y").date()
+                                if holiday_date > today:
+                                    return holiday_date.strftime("%d-%b-%Y")
+                            except:
+                                continue
+    except Exception as e:
+        print(f"Error fetching NSE holidays from API: {e}")
+    
+    # Return None if API fails - will display as N/A
+    return None

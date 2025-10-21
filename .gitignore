@@ -37,3 +37,6 @@ logs/
 # Cache
 cache/
 *.cache
+
+# Environment variables (contains admin password)
+.env

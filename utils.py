@@ -7,7 +7,6 @@ from datetime import datetime
 import pytz
 import streamlit as st
 import yfinance as yf
-from config import TICKER_STOCKS
 from data_fetchers import get_stock_list
 
 
@@ -37,14 +36,30 @@ def get_current_times():
     return ist_time, edt_time
 
 
-def format_time_display(ist_time, edt_time, commodities_prices):
+def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=None):
     """Format time and commodities display for header"""
+    holiday_line = ""
+    if next_holiday:
+        holiday_line = f"<p style='margin: 0; font-size: 13px;'><span style='color: #fff;'>🏖️ Nifty Holiday:</span> <span style='color: #ff4444; font-weight: bold;'>{next_holiday}</span></p>"
+    
+    # Determine USD/INR color based on change
+    # Positive change = INR weakened (bad) = Red
+    # Negative change = INR strengthened (good) = Green
+    usd_inr_change = commodities_prices.get('usd_inr_change', 0)
+    if usd_inr_change > 0:
+        usd_inr_color = '#ff4444'  # Red - INR weakened
+    elif usd_inr_change < 0:
+        usd_inr_color = '#00ff00'  # Green - INR strengthened
+    else:
+        usd_inr_color = '#95e1d3'  # Neutral - Mint green
+    
     return f"""
     <div style='text-align: right; padding-top: 20px;'>
     </br>
-        <p style='margin: 0; font-size: 13px;'><span style='color: #888;'>🛢️ Oil: <strong>{commodities_prices['oil']}</strong></span> | <span style='color: #888;'>₿ BTC: <strong>{commodities_prices['btc']}</strong></span> | <span style='color: #fff;'>🕐 IST: <strong>{ist_time.strftime('%I:%M %p')}</strong></span></p>
-        <p style='margin: 0; font-size: 13px;'><span style='color: #888;'>🥇 Gold: <strong>{commodities_prices['gold']}</strong></span> | <span style='color: #888;'>🪙 Silver: <strong>{commodities_prices['silver']}</strong></span> | <span style='color: #fff;'>🕐 EDT: <strong>{edt_time.strftime('%I:%M %p')}</strong></span></p>
-        <p style='margin: 0; font-size: 13px;'><span style='color: #888;'>💵 USD/INR: <strong>{commodities_prices['usd_inr']}</strong></span> | <span style='color: #888;'>📅 {ist_time.strftime('%d %b %Y')}</span></p>
+        <p style='margin: 0; font-size: 13px;'><span style='color: #fff;'>🛢️ Oil:</span> <span style='color: #ff6b6b; font-weight: bold;'>{commodities_prices['oil']}</span> | <span style='color: #fff;'>₿ BTC:</span> <span style='color: #ffa500; font-weight: bold;'>{commodities_prices['btc']}</span> | <span style='color: #fff;'>🕐 IST:</span> <span style='color: #fff; font-weight: bold;'>{ist_time.strftime('%I:%M %p')}</span></p>
+        <p style='margin: 0; font-size: 13px;'><span style='color: #fff;'>🥇 Gold:</span> <span style='color: #ffd700; font-weight: bold;'>{commodities_prices['gold']}</span> | <span style='color: #fff;'>🪙 Silver:</span> <span style='color: #c0c0c0; font-weight: bold;'>{commodities_prices['silver']}</span> | <span style='color: #fff;'>🕐 EDT:</span> <span style='color: #fff; font-weight: bold;'>{edt_time.strftime('%I:%M %p')}</span></p>
+        <p style='margin: 0; font-size: 13px;'><span style='color: #fff;'>💵 USD/INR:</span> <span style='color: {usd_inr_color}; font-weight: bold;'>{commodities_prices['usd_inr']}</span> | <span style='color: #fff;'>📅</span> <span style='color: #fff; font-weight: bold;'>{ist_time.strftime('%d %b %Y')}</span></p>
+        {holiday_line}
     </div>
     """
 
@@ -62,7 +77,7 @@ def create_html_table(df_page):
         html_table += '<tr>'
         for col in df_page.columns:
             value = row[col]
-            if col in ['1 Week %', '1 Month %', '2 Months %', '3 Months %']:
+            if col in ['Today %', '1 Week %', '1 Month %', '2 Months %', '3 Months %']:
                 colored_value = color_percentage(value)
                 html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff;">{colored_value}</td>'
             else:
@@ -78,9 +93,14 @@ def get_ticker_data():
     """Fetch live data for ticker stocks"""
     ticker_data = []
     
-    # Get Nifty 50 stocks
+    # Get Nifty 50 stocks dynamically
     nifty_50_stocks, _ = get_stock_list('Nifty 50')
-    stocks_to_fetch = nifty_50_stocks if nifty_50_stocks else TICKER_STOCKS
+    
+    # If no stocks fetched, return empty list
+    if not nifty_50_stocks:
+        return []
+    
+    stocks_to_fetch = nifty_50_stocks
     
     # Fetch data for each stock
     for symbol in stocks_to_fetch:

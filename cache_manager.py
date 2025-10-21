@@ -113,7 +113,6 @@ def load_bulk_cache(tickers: List[str]) -> Tuple[List[dict], List[str]]:
     
     try:
         all_cache = _load_cache_file()
-        current_time = datetime.now()
         
         for ticker in tickers:
             if ticker in all_cache['stocks']:
