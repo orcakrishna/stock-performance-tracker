@@ -22,7 +22,7 @@ def get_available_nse_indices():
         'Nifty 50': 'ind_nifty50list.csv',
         'Nifty Bank': 'ind_niftybanklist.csv',
         'Nifty PSU Bank': 'ind_niftypsubanklist.csv',
-        'Nifty Private Bank': 'ind_niftypvtbanklist.csv',
+        'Nifty Private Bank': 'ind_niftyprivatebanklist.csv',  # Correct filename
         'Nifty IT': 'ind_niftyitlist.csv',
         'Nifty Pharma': 'ind_niftypharmalist.csv',
         'Nifty Auto': 'ind_niftyautolist.csv',
