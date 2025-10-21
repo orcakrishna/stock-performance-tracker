@@ -368,7 +368,7 @@ def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True):
 
 
 def get_stock_list(category_name):
-    """Get stock list using NSE API with CSV fallback"""
+    """Get stock list using CSV (reliable method)"""
     
     # Get available indices
     available_indices = get_available_nse_indices()
@@ -377,16 +377,7 @@ def get_stock_list(category_name):
     if category_name in available_indices:
         api_index_name = available_indices[category_name]
         
-        # Try NSE API first (real-time data)
-        stocks = fetch_nse_api_stocks(api_index_name)
-        
-        if stocks:
-            return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name} (NSE API)"
-        
-        # Fallback to CSV if API fails
-        st.warning(f"⚠️ NSE API failed for {category_name}, trying CSV fallback...")
-        
-        # Map to CSV filenames
+        # Map to CSV filenames - use CSV directly (more reliable)
         csv_map = {
             'NIFTY 50': 'ind_nifty50list.csv',
             'NIFTY BANK': 'ind_niftybanklist.csv',
@@ -403,11 +394,6 @@ def get_stock_list(category_name):
             'NIFTY TOTAL MARKET': 'ind_niftytotalmarket_list.csv',
         }
         
-        if api_index_name in csv_map:
-            csv_stocks = fetch_nse_csv_list(csv_map[api_index_name])
-            if csv_stocks:
-                return csv_stocks, f"✅ Fetched {len(csv_stocks)} stocks from {category_name} (CSV)"
-        
         # Special handling for Private Bank (calculate from Bank - PSU)
         if api_index_name == 'NIFTY PRIVATE BANK':
             all_banks = fetch_nse_csv_list('ind_niftybanklist.csv')
@@ -415,7 +401,14 @@ def get_stock_list(category_name):
             if all_banks and psu_banks:
                 private_banks = [s for s in all_banks if s not in psu_banks]
                 if private_banks:
-                    return private_banks, f"✅ Fetched {len(private_banks)} private banks (calculated)"
+                    return private_banks, f"✅ Fetched {len(private_banks)} private banks"
+            return [], f"❌ Failed to calculate {category_name}"
+        
+        # Fetch from CSV
+        if api_index_name in csv_map:
+            csv_stocks = fetch_nse_csv_list(csv_map[api_index_name])
+            if csv_stocks:
+                return csv_stocks, f"✅ Fetched {len(csv_stocks)} stocks from {category_name}"
         
         return [], f"❌ Failed to fetch {category_name}. Please try again later."
     
