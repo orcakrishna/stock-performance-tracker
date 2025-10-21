@@ -211,12 +211,17 @@ def get_stock_performance(ticker, use_cache=True):
         else:
             price_1w = hist['Close'].iloc[0]
         
-        # For longer periods: use date-based lookup
+        # For longer periods: use date-based lookup with better accuracy
         def get_price_by_days_back(days):
             target_date = current_date - pd.Timedelta(days=days)
-            # Find the closest date in history
-            idx = hist.index.get_indexer([target_date], method='nearest')[0]
-            return hist['Close'].iloc[max(0, min(idx, len(hist)-1))]
+            # Filter data before or on target date
+            past_data = hist[hist.index <= target_date]
+            if len(past_data) > 0:
+                # Get the closest date that's on or before target
+                return past_data['Close'].iloc[-1]
+            else:
+                # If no data before target, use earliest available
+                return hist['Close'].iloc[0]
         
         price_1m = get_price_by_days_back(30)
         price_2m = get_price_by_days_back(60)
