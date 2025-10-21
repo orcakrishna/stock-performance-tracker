@@ -15,6 +15,29 @@ from cache_manager import load_from_cache, save_to_cache, load_bulk_cache, save_
 
 
 @st.cache_data(ttl=86400)  # Cache for 24 hours
+def get_available_nse_indices():
+    """Dynamically fetch available NSE indices"""
+    # Common NSE index CSV files
+    indices = {
+        'Nifty 50': 'ind_nifty50list.csv',
+        'Nifty Bank': 'ind_niftybanklist.csv',
+        'Nifty PSU Bank': 'ind_niftypsubanklist.csv',
+        'Nifty Private Bank': 'ind_niftypvtbanklist.csv',
+        'Nifty IT': 'ind_niftyitlist.csv',
+        'Nifty Pharma': 'ind_niftypharmalist.csv',
+        'Nifty Auto': 'ind_niftyautolist.csv',
+        'Nifty FMCG': 'ind_niftyfmcglist.csv',
+        'Nifty Metal': 'ind_niftymetallist.csv',
+        'Nifty Realty': 'ind_niftyrealtylist.csv',
+        'Nifty Energy': 'ind_niftyenergylist.csv',
+        'Nifty Midcap 50': 'ind_niftymidcap50list.csv',
+        'Nifty Smallcap 50': 'ind_niftysmallcap50list.csv',
+        'Nifty Total Market': 'ind_niftytotalmarket_list.csv',
+    }
+    return indices
+
+
+@st.cache_data(ttl=86400)  # Cache for 24 hours
 def fetch_nse_csv_list(csv_filename):
     """Fetch stock list from NSE CSV endpoint (stable, avoids API 421 errors)"""
     try:
@@ -37,7 +60,7 @@ def fetch_nse_csv_list(csv_filename):
                 csv_content = response.content.decode('utf-8')
                 df = pd.read_csv(StringIO(csv_content))
                 stocks = [f"{symbol}.NS" for symbol in df['Symbol'].tolist() if pd.notna(symbol)]
-                if len(stocks) >= 40:  # Validate
+                if len(stocks) >= 5:  # Validate (lowered threshold for smaller indices)
                     return stocks
                 else:
                     return None
@@ -49,19 +72,7 @@ def fetch_nse_csv_list(csv_filename):
     return None
 
 
-@st.cache_data(ttl=86400)
-def fetch_nifty_50_from_nse():
-    return fetch_nse_csv_list('ind_nifty50list.csv')
-
-
-@st.cache_data(ttl=86400)
-def fetch_nifty_next_50_from_nse():
-    return fetch_nse_csv_list('ind_niftynext50list.csv')
-
-
-@st.cache_data(ttl=86400)
-def fetch_nifty_total_market_from_nse():
-    return fetch_nse_csv_list('ind_niftytotalmarket_list.csv')
+# Removed hardcoded functions - now using dynamic get_stock_list()
 
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
@@ -313,20 +324,14 @@ def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True):
 def get_stock_list(category_name):
     """Get stock list with dynamic fetching only - no fallback"""
     
-    if category_name == 'Nifty 50':
-        stocks = fetch_nifty_50_from_nse()
-        if stocks:
-            return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name}"
-        return [], f"❌ Failed to fetch {category_name} from NSE. Please try again later."
+    # Get available indices
+    available_indices = get_available_nse_indices()
     
-    elif category_name == 'Nifty Next 50':
-        stocks = fetch_nifty_next_50_from_nse()
-        if stocks:
-            return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name}"
-        return [], f"❌ Failed to fetch {category_name} from NSE. Please try again later."
-    
-    elif category_name == 'Nifty Total Market':
-        stocks = fetch_nifty_total_market_from_nse()
+    # Check if category exists in available indices
+    if category_name in available_indices:
+        csv_filename = available_indices[category_name]
+        stocks = fetch_nse_csv_list(csv_filename)
+        
         if stocks:
             return stocks, f"✅ Fetched {len(stocks)} stocks from {category_name}"
         return [], f"❌ Failed to fetch {category_name} from NSE. Please try again later."

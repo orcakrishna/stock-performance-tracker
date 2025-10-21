@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Import custom modules
 from config import CUSTOM_CSS, ITEMS_PER_PAGE
-from data_fetchers import get_stock_list, get_stock_performance, fetch_stocks_bulk, validate_stock_symbol
+from data_fetchers import get_stock_list, get_stock_performance, fetch_stocks_bulk, validate_stock_symbol, get_available_nse_indices
 from file_manager import load_all_saved_lists, save_list_to_csv, delete_list_csv
 from cache_manager import get_cache_stats, clear_cache
 from ui_components import (
@@ -49,10 +49,14 @@ def render_stock_selection_sidebar():
     """Render sidebar for stock selection and options"""
     st.sidebar.markdown("**📋 Stock Selection**")
     
+    # Get dynamic list of available indices
+    available_indices = get_available_nse_indices()
+    index_options = list(available_indices.keys()) + ['Upload File']
+    
     # Category selection
     category = st.sidebar.selectbox(
         "Select Category",
-        options=['Nifty 50', 'Nifty Next 50', 'Nifty Total Market', 'Upload File'],
+        options=index_options,
         index=0
     )
     
@@ -329,7 +333,10 @@ def main():
         st.session_state.last_category = category
     
     # Determine stock list based on category
-    if category in ['Nifty 50', 'Nifty Next 50', 'Nifty Total Market']:
+    if category == 'Upload File':
+        selected_stocks, available_stocks = handle_file_upload()
+    else:
+        # Dynamic category - fetch from NSE
         with st.spinner(f"Fetching {category} stock list..."):
             selected_stocks, fetch_status = get_stock_list(category)
             available_stocks = selected_stocks
@@ -338,9 +345,6 @@ def main():
             st.sidebar.markdown(f"<span style='color: #00c853;'>{fetch_status}</span>", unsafe_allow_html=True)
         else:
             st.sidebar.markdown(f"<span style='color: #ff9800;'>⚠️ {fetch_status}</span>", unsafe_allow_html=True)
-    
-    elif category == 'Upload File':
-        selected_stocks, available_stocks = handle_file_upload()
     
     # Sorting options
     st.sidebar.markdown("---")
