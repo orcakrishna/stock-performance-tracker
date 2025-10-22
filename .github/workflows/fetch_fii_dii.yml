@@ -6,6 +6,8 @@ on:
     - cron: '0 13 * * *'
   workflow_dispatch: # Allow manual trigger
 
+permissions:
+  contents: write
 jobs:
   fetch-data:
     runs-on: ubuntu-latest
