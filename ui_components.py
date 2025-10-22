@@ -301,21 +301,43 @@ def render_pagination_controls(total_items, items_per_page):
     if 'current_page' not in st.session_state:
         st.session_state.current_page = 1
     
-    col1, col2, col3 = st.columns([1, 6, 1])
+    col1, col2, col3 = st.columns([0.3, 11, 0.3])
     
     with col1:
-        if st.button("⬅️ Previous", disabled=(st.session_state.current_page == 1)):
+        st.markdown("""
+            <style>
+            div[data-testid="column"]:nth-of-type(1) button {
+                background-color: #00d4ff !important;
+                color: white !important;
+                border: none !important;
+                font-size: 1.2rem !important;
+                padding: 5px 10px !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        if st.button("⬅️", disabled=(st.session_state.current_page == 1), key="prev_page"):
             st.session_state.current_page -= 1
             st.rerun()
     
     with col2:
         st.markdown(
-            f"<h4 style='text-align: center; margin-top: 5px;'>Page {st.session_state.current_page} of {total_pages}</h4>",
+            f"<p style='text-align: center; margin-top: 8px; font-size: 0.9rem; color: white; font-weight: bold;'>Page {st.session_state.current_page} of {total_pages}</p>",
             unsafe_allow_html=True
         )
     
     with col3:
-        if st.button("Next ➡️", disabled=(st.session_state.current_page == total_pages)):
+        st.markdown("""
+            <style>
+            div[data-testid="column"]:nth-of-type(3) button {
+                background-color: #00ff88 !important;
+                color: white !important;
+                border: none !important;
+                font-size: 1.2rem !important;
+                padding: 5px 10px !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        if st.button("➡️", disabled=(st.session_state.current_page == total_pages), key="next_page"):
             st.session_state.current_page += 1
             st.rerun()
     
