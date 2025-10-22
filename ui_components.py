@@ -20,7 +20,7 @@ def render_header():
         st.title("📊 Indian Stock Performance Tracker")
         st.markdown(
             """<div style='margin-top: -10px;'>
-                <span style='color: #ff8c00; font-weight: bold; font-size: 1rem;'>
+                <span style='color: #00ff88; font-weight: bold; font-size: 1rem;'>
                     View 1-month, 2-month, and 3-month performance of NSE/BSE stocks.
                 </span>
             </div>""",
