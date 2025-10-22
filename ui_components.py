@@ -18,7 +18,14 @@ def render_header():
 
     with col_title:
         st.title("📊 Indian Stock Performance Tracker")
-        st.markdown("View 1-month, 2-month, and 3-month performance of NSE/BSE stocks.")
+        st.markdown(
+            """<div style='margin-top: -10px;'>
+                <span style='color: #ff8c00; font-weight: bold; font-size: 1rem;'>
+                    View 1-month, 2-month, and 3-month performance of NSE/BSE stocks.
+                </span>
+            </div>""",
+            unsafe_allow_html=True
+        )
 
     with col_time:
         ist_time, edt_time = get_current_times()
@@ -319,9 +326,12 @@ def render_pagination_controls(total_items, items_per_page):
             st.session_state.current_page -= 1
             st.rerun()
     
+    start_idx = (st.session_state.current_page - 1) * items_per_page
+    end_idx = min(start_idx + items_per_page, total_items)
+    
     with col2:
         st.markdown(
-            f"<p style='text-align: center; margin-top: 8px; font-size: 0.9rem; color: white; font-weight: bold;'>Page {st.session_state.current_page} of {total_pages}</p>",
+            f"<p style='text-align: center; margin-top: 8px; font-size: 0.9rem; color: white; font-weight: bold;'>Page {st.session_state.current_page} of {total_pages} <span style='color: #95e1d3; font-weight: normal;'>(Showing {start_idx + 1}-{end_idx} of {total_items})</span></p>",
             unsafe_allow_html=True
         )
     
@@ -340,12 +350,6 @@ def render_pagination_controls(total_items, items_per_page):
         if st.button("➡️", disabled=(st.session_state.current_page == total_pages), key="next_page"):
             st.session_state.current_page += 1
             st.rerun()
-    
-    start_idx = (st.session_state.current_page - 1) * items_per_page
-    end_idx = min(start_idx + items_per_page, total_items)
-    
-    # Display data range below pagination
-    st.caption(f"Showing {start_idx + 1}-{end_idx} of {total_items} stocks")
     
     return start_idx, end_idx
 
