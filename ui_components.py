@@ -344,6 +344,9 @@ def render_pagination_controls(total_items, items_per_page):
     start_idx = (st.session_state.current_page - 1) * items_per_page
     end_idx = min(start_idx + items_per_page, total_items)
     
+    # Display data range below pagination
+    st.caption(f"Showing {start_idx + 1}-{end_idx} of {total_items} stocks")
+    
     return start_idx, end_idx
 
 
