@@ -565,10 +565,40 @@ def get_fii_dii_data():
     """
     Fetch FII/DII buy/sell data with multiple fallback sources
     Returns data in INR Crores
-    Sources: 1) NSE API 2) NSE Website Scraping 3) MoneyControl
+    Sources: 1) JSON File (GitHub Actions) 2) NSE API 3) NSE Website 4) MoneyControl
     """
     
-    # Method 1: Try NSE API first (may fail on cloud due to IP blocking)
+    # Method 0: Try reading from JSON file first (updated daily by GitHub Actions)
+    try:
+        import json
+        import os
+        json_file = os.path.join(os.path.dirname(__file__), 'fii_dii_data.json')
+        if os.path.exists(json_file):
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+                if data.get('status') == 'success' and (data.get('fii') or data.get('dii')):
+                    print(f"FII/DII: Loaded from JSON file (fetched at {data.get('fetched_at', 'unknown')})")
+                    # Cache to session state
+                    try:
+                        from datetime import datetime
+                        st.session_state['last_fii_dii_data'] = {
+                            'fii': data.get('fii'),
+                            'dii': data.get('dii'),
+                            'source': f"{data.get('source', 'JSON')} (File)",
+                            'cached_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        }
+                    except:
+                        pass
+                    return {
+                        'fii': data.get('fii'),
+                        'dii': data.get('dii'),
+                        'status': 'success',
+                        'source': f"{data.get('source', 'JSON')} (File)"
+                    }
+    except Exception as e:
+        print(f"JSON file read failed: {e}")
+    
+    # Method 1: Try NSE API (may fail on cloud due to IP blocking)
     try:
         url = "https://www.nseindia.com/api/fiidiiTradeReact"
         headers = {
