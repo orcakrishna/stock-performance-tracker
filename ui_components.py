@@ -164,26 +164,34 @@ def render_gainer_loser_banner():
     
     with col3:
         st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
-        if fii_dii_data['status'] == 'success' and fii_dii_data['fii']:
+        if fii_dii_data['status'] in ['success', 'cached', 'placeholder'] and fii_dii_data['fii']:
             fii = fii_dii_data['fii']
             net_color = '#00ff00' if fii['net'] >= 0 else '#ff4444'
             net_abs = abs(fii['net'])
             action = 'Buy' if fii['net'] >= 0 else 'Sell'
-            st.markdown(f"**🌍 FII:** <span style='color: {net_color}; font-size: 1rem; line-height: 1.5;'>₹{net_abs:.0f} Cr ({action})</span>", unsafe_allow_html=True)
+            # Show N/A for placeholder (0.0 values)
+            if fii_dii_data['status'] == 'placeholder':
+                st.markdown(f"**🌍 FII:** <span style='color: #888; font-size: 1rem; line-height: 1.5;'>N/A</span>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"**🌍 FII:** <span style='color: {net_color}; font-size: 1rem; line-height: 1.5;'>₹{net_abs:.0f} Cr ({action})</span>", unsafe_allow_html=True)
         else:
-            st.markdown("**🌍 FII:** <span style='color: #888; font-size: 1rem;'>Loading...</span>", unsafe_allow_html=True)
+            st.markdown("**🌍 FII:** <span style='color: #888; font-size: 1rem;'>N/A</span>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col4:
         st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
-        if fii_dii_data['status'] == 'success' and fii_dii_data['dii']:
+        if fii_dii_data['status'] in ['success', 'cached', 'placeholder'] and fii_dii_data['dii']:
             dii = fii_dii_data['dii']
             net_color = '#00ff00' if dii['net'] >= 0 else '#ff4444'
             net_abs = abs(dii['net'])
             action = 'Buy' if dii['net'] >= 0 else 'Sell'
-            st.markdown(f"**🏦 DII:** <span style='color: {net_color}; font-size: 1rem; line-height: 1.5;'>₹{net_abs:.0f} Cr ({action})</span>", unsafe_allow_html=True)
+            # Show N/A for placeholder (0.0 values)
+            if fii_dii_data['status'] == 'placeholder':
+                st.markdown(f"**🏦 DII:** <span style='color: #888; font-size: 1rem; line-height: 1.5;'>N/A</span>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"**🏦 DII:** <span style='color: {net_color}; font-size: 1rem; line-height: 1.5;'>₹{net_abs:.0f} Cr ({action})</span>", unsafe_allow_html=True)
         else:
-            st.markdown("**🏦 DII:** <span style='color: #888; font-size: 1rem;'>Loading...</span>", unsafe_allow_html=True)
+            st.markdown("**🏦 DII:** <span style='color: #888; font-size: 1rem;'>N/A</span>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
     # Return FII/DII data source for combined caption

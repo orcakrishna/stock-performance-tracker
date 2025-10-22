@@ -797,5 +797,19 @@ def get_fii_dii_data():
     except:
         pass
     
-    print("FII/DII: No cached data available")
-    return {'fii': None, 'dii': None, 'status': 'error', 'source': 'none'}
+    # Last resort: Return placeholder data so UI doesn't show "Loading..."
+    print("FII/DII: No cached data available, using placeholder")
+    return {
+        'fii': {
+            'buy': 0.0,
+            'sell': 0.0,
+            'net': 0.0
+        },
+        'dii': {
+            'buy': 0.0,
+            'sell': 0.0,
+            'net': 0.0
+        },
+        'status': 'placeholder',
+        'source': 'Unavailable'
+    }
