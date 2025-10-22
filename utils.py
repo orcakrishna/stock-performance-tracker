@@ -37,29 +37,73 @@ def get_current_times():
 
 
 def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=None):
-    """Format time and commodities display for header"""
-    holiday_line = ""
-    if next_holiday:
-        holiday_line = f"<p style='margin: 0; font-size: 13px;'><span style='color: #fff; font-weight: bold;'>🏖️ Nifty Holiday:</span> <span style='color: #ff4444; font-weight: bold;'>{next_holiday}</span></p>"
-    
+    """Format time and commodities display for header with arrows and colors"""
     # Determine USD/INR color based on change
-    # Positive change = INR weakened (bad) = Red
-    # Negative change = INR strengthened (good) = Green
     usd_inr_change = commodities_prices.get('usd_inr_change', 0)
     if usd_inr_change > 0:
         usd_inr_color = '#ff4444'  # Red - INR weakened
     elif usd_inr_change < 0:
         usd_inr_color = '#00ff00'  # Green - INR strengthened
     else:
-        usd_inr_color = '#95e1d3'  # Neutral - Mint green
+        usd_inr_color = '#95e1d3'  # Neutral
+    
+    # Get commodity data with defaults
+    oil_price = commodities_prices.get('oil', '--')
+    oil_arrow = commodities_prices.get('oil_arrow', '')
+    oil_color = commodities_prices.get('oil_color', '#ffffff')
+    
+    btc_price = commodities_prices.get('btc', '--')
+    btc_arrow = commodities_prices.get('btc_arrow', '')
+    btc_color = commodities_prices.get('btc_color', '#ffffff')
+    # Add space before arrow if it exists
+    btc_display = f"{btc_price} {btc_arrow}" if btc_arrow else btc_price
+    
+    gold_price = commodities_prices.get('gold', '--')
+    gold_inr = commodities_prices.get('gold_inr', '--')
+    gold_arrow = commodities_prices.get('gold_arrow', '')
+    gold_color = commodities_prices.get('gold_color', '#ffffff')
+    
+    silver_price = commodities_prices.get('silver', '--')
+    silver_inr = commodities_prices.get('silver_inr', '--')
+    silver_arrow = commodities_prices.get('silver_arrow', '')
+    silver_color = commodities_prices.get('silver_color', '#ffffff')
+    
+    usd_inr = commodities_prices.get('usd_inr', '--')
+    
+    # Build USD/INR and Holiday line
+    holiday_text = ""
+    if next_holiday:
+        holiday_text = f" | <span style='color: #fff; font-weight: bold;'>🏖️ Holiday:</span> <span style='color: #ff4444; font-weight: bold;'>{next_holiday}</span>"
     
     return f"""
     <div style='text-align: right; padding-top: 20px;'>
     </br>
-        <p style='margin: 0; font-size: 13px;'><span style='color: #fff; font-weight: bold;'>🛢️ Oil:</span> <span style='color: #ff6b6b; font-weight: bold;'>{commodities_prices['oil']}</span> | <span style='color: #fff; font-weight: bold;'>₿ BTC:</span> <span style='color: #ffa500; font-weight: bold;'>{commodities_prices['btc']}</span> | <span style='color: #fff; font-weight: bold;'>🕐 IST:</span> <span style='color: #fff; font-weight: bold;'>{ist_time.strftime('%I:%M %p')}</span></p>
-        <p style='margin: 0; font-size: 13px;'><span style='color: #fff; font-weight: bold;'>🥇 Gold:</span> <span style='color: #ffd700; font-weight: bold;'>{commodities_prices['gold']}</span> | <span style='color: #fff; font-weight: bold;'>🪙 Silver:</span> <span style='color: #c0c0c0; font-weight: bold;'>{commodities_prices['silver']}</span> | <span style='color: #fff; font-weight: bold;'>🕐 EDT:</span> <span style='color: #fff; font-weight: bold;'>{edt_time.strftime('%I:%M %p')}</span></p>
-        <p style='margin: 0; font-size: 13px;'><span style='color: #fff; font-weight: bold;'>💵 USD/INR:</span> <span style='color: {usd_inr_color}; font-weight: bold;'>{commodities_prices['usd_inr']}</span> | <span style='color: #fff; font-weight: bold;'>📅</span> <span style='color: #fff; font-weight: bold;'>{ist_time.strftime('%d %b %Y')}</span></p>
-        {holiday_line}
+        <p style='margin: 0; font-size: 13px;'>
+            <span style='color: #fff; font-weight: bold;'>🛢️ Oil:</span> 
+            <span style='color: {oil_color}; font-weight: bold;'>{oil_price} {oil_arrow}</span> | 
+            <span style='color: #fff; font-weight: bold;'>₿ BTC:</span> 
+            <span style='color: {btc_color}; font-weight: bold;'>{btc_display}</span> | 
+            <span style='color: #fff; font-weight: bold;'>🕐 IST:</span> 
+            <span style='color: #fff; font-weight: bold;'>{ist_time.strftime('%I:%M %p')}</span>
+        </p>
+        <p style='margin: 0; font-size: 13px;'>
+            <span style='color: #fff; font-weight: bold;'>🥇 Gold:</span> 
+            <span style='color: {gold_color}; font-weight: bold;'>{gold_price} {gold_arrow}</span>
+            <span style='color: #ffd700; font-weight: normal;'> ({gold_inr})</span> | 
+            <span style='color: #fff; font-weight: bold;'>🕐 EDT:</span> 
+            <span style='color: #fff; font-weight: bold;'>{edt_time.strftime('%I:%M %p')}</span>
+        </p>
+        <p style='margin: 0; font-size: 13px;'>
+            <span style='color: #fff; font-weight: bold;'>🪙 Silver:</span> 
+            <span style='color: {silver_color}; font-weight: bold;'>{silver_price} {silver_arrow}</span>
+            <span style='color: #c0c0c0; font-weight: normal;'> ({silver_inr})</span> | 
+            <span style='color: #fff; font-weight: bold;'>📅</span> 
+            <span style='color: #fff; font-weight: bold;'>{ist_time.strftime('%d %b %Y')}</span>
+        </p>
+        <p style='margin: 0; font-size: 13px;'>
+            <span style='color: #fff; font-weight: bold;'>💵 USD/INR:</span> 
+            <span style='color: {usd_inr_color}; font-weight: bold;'>{usd_inr}</span>{holiday_text}
+        </p>
     </div>
     """
 

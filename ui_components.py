@@ -5,7 +5,7 @@ Streamlit UI rendering functions
 
 import streamlit as st
 from config import INDICES_ROW1, INDICES_ROW2, METRIC_CSS
-from data_fetchers import get_index_performance, get_commodities_prices, get_stock_list, get_next_nse_holiday
+from data_fetchers import get_index_performance, get_commodities_prices, get_stock_list, get_next_nse_holiday, get_fii_dii_data
 from utils import get_current_times, format_time_display, get_ticker_data
 
 
@@ -92,8 +92,8 @@ def render_market_indices():
 # =========================
 # LIVE TICKER
 # =========================
-def render_live_ticker():
-    """Render a live rolling stock ticker at the top"""
+def render_live_ticker(fii_dii_source=None):
+    """Render a live rolling stock ticker at the top with FII/DII source at the end"""
     ticker_data = get_ticker_data()
 
     if not ticker_data:
@@ -115,14 +115,14 @@ def render_live_ticker():
     ticker_html = f'<div class="ticker-container"><div class="ticker-wrapper">{ticker_items}</div></div>'
     
     st.markdown(ticker_html, unsafe_allow_html=True)
-    st.caption(f"📊 Live Ticker: {stock_count} stocks • Updates every 60 seconds • Hover to pause")
+    return stock_count
 
 
 # =========================
 # GAINER/LOSER BANNER
 # =========================
 def render_gainer_loser_banner():
-    """Render top gainer and loser banner from market indices"""
+    """Render top gainer and loser banner from market indices with FII/DII data"""
     indices_data = []
     
     # Combine all indices but exclude VIX and international indices
@@ -145,8 +145,12 @@ def render_gainer_loser_banner():
     top_gainer = max(indices_data, key=lambda x: x['change'])
     top_loser = min(indices_data, key=lambda x: x['change'])
     
-    # Display using compact inline format
-    col1, col2, col_spacer = st.columns([1.5, 1.5, 5])
+    # Fetch FII/DII data
+    fii_dii_data = get_fii_dii_data()
+    
+    # Display using compact inline format with FII/DII data
+    # Adjust column widths: move DII left by making col3 smaller and col4 larger
+    col1, col2, col3, col4 = st.columns([1.5, 1.5, 1.3, 1.7])
     
     with col1:
         st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
@@ -157,6 +161,33 @@ def render_gainer_loser_banner():
         st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
         st.markdown(f"**⚠️ Top Loser:** <span style='color: #ff4444; font-size: 1rem; line-height: 1.5;'>{top_loser['name']} ({top_loser['change']:+.2f}%)</span>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
+        if fii_dii_data['status'] == 'success' and fii_dii_data['fii']:
+            fii = fii_dii_data['fii']
+            net_color = '#00ff00' if fii['net'] >= 0 else '#ff4444'
+            net_abs = abs(fii['net'])
+            action = 'Buy' if fii['net'] >= 0 else 'Sell'
+            st.markdown(f"**🌍 FII:** <span style='color: {net_color}; font-size: 1rem; line-height: 1.5;'>₹{net_abs:.0f} Cr ({action})</span>", unsafe_allow_html=True)
+        else:
+            st.markdown("**🌍 FII:** <span style='color: #888; font-size: 1rem;'>Loading...</span>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
+        if fii_dii_data['status'] == 'success' and fii_dii_data['dii']:
+            dii = fii_dii_data['dii']
+            net_color = '#00ff00' if dii['net'] >= 0 else '#ff4444'
+            net_abs = abs(dii['net'])
+            action = 'Buy' if dii['net'] >= 0 else 'Sell'
+            st.markdown(f"**🏦 DII:** <span style='color: {net_color}; font-size: 1rem; line-height: 1.5;'>₹{net_abs:.0f} Cr ({action})</span>", unsafe_allow_html=True)
+        else:
+            st.markdown("**🏦 DII:** <span style='color: #888; font-size: 1rem;'>Loading...</span>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Return FII/DII data source for combined caption
+    return fii_dii_data.get('source')
 
 
 # =========================

@@ -255,39 +255,159 @@ def get_stock_performance(ticker, use_cache=True):
 
 
 def get_commodities_prices():
-    """Fetch current prices for oil, gold, silver, BTC, and USD/INR"""
+    """Fetch current prices for oil, gold, silver, BTC, and USD/INR with change indicators"""
     prices = {}
     
+    # Oil
     try:
         oil = yf.Ticker(COMMODITIES['oil'])
-        oil_price = oil.history(period='1d')['Close'].iloc[-1]
-        prices['oil'] = f"${oil_price:.2f}"
+        hist = oil.history(period='2d')
+        if len(hist) >= 2:
+            current = hist['Close'].iloc[-1]
+            previous = hist['Close'].iloc[-2]
+            change_pct = ((current - previous) / previous) * 100
+            arrow = '↑' if change_pct >= 0 else '↓'
+            color = '#00ff00' if change_pct >= 0 else '#ff4444'
+            prices['oil'] = f"${current:.2f}"
+            prices['oil_change'] = change_pct
+            prices['oil_arrow'] = arrow
+            prices['oil_color'] = color
+        else:
+            prices['oil'] = f"${hist['Close'].iloc[-1]:.2f}"
+            prices['oil_change'] = 0
+            prices['oil_arrow'] = ''
+            prices['oil_color'] = '#ffffff'
     except:
         prices['oil'] = "--"
+        prices['oil_change'] = 0
+        prices['oil_arrow'] = ''
+        prices['oil_color'] = '#ffffff'
     
+    # Gold (USD and INR)
     try:
         gold = yf.Ticker(COMMODITIES['gold'])
-        gold_price = gold.history(period='1d')['Close'].iloc[-1]
-        prices['gold'] = f"${gold_price:.2f}"
+        hist = gold.history(period='2d')
+        usd_inr_rate = 83.5  # Approximate rate, will be updated below
+        
+        # Try to get actual USD/INR rate
+        try:
+            usd_inr = yf.Ticker('INR=X')
+            usd_inr_hist = usd_inr.history(period='1d')
+            if not usd_inr_hist.empty:
+                usd_inr_rate = usd_inr_hist['Close'].iloc[-1]
+        except:
+            pass
+        
+        if len(hist) >= 2:
+            current = hist['Close'].iloc[-1]
+            previous = hist['Close'].iloc[-2]
+            change_pct = ((current - previous) / previous) * 100
+            arrow = '↑' if change_pct >= 0 else '↓'
+            color = '#00ff00' if change_pct >= 0 else '#ff4444'
+            
+            # Gold is per troy ounce, convert to per 10 grams for INR
+            # 1 troy ounce = 31.1035 grams
+            gold_per_gram_usd = current / 31.1035
+            gold_per_10g_inr = gold_per_gram_usd * 10 * usd_inr_rate
+            
+            prices['gold'] = f"${current:.2f}"
+            prices['gold_inr'] = f"₹{gold_per_10g_inr:,.0f}/10g"
+            prices['gold_change'] = change_pct
+            prices['gold_arrow'] = arrow
+            prices['gold_color'] = color
+        else:
+            current = hist['Close'].iloc[-1]
+            gold_per_gram_usd = current / 31.1035
+            gold_per_10g_inr = gold_per_gram_usd * 10 * usd_inr_rate
+            
+            prices['gold'] = f"${current:.2f}"
+            prices['gold_inr'] = f"₹{gold_per_10g_inr:,.0f}/10g"
+            prices['gold_change'] = 0
+            prices['gold_arrow'] = ''
+            prices['gold_color'] = '#ffffff'
     except:
         prices['gold'] = "--"
+        prices['gold_inr'] = "--"
+        prices['gold_change'] = 0
+        prices['gold_arrow'] = ''
+        prices['gold_color'] = '#ffffff'
     
+    # Silver (USD and INR)
     try:
         silver = yf.Ticker(COMMODITIES['silver'])
-        silver_price = silver.history(period='1d')['Close'].iloc[-1]
-        prices['silver'] = f"${silver_price:.2f}"
+        hist = silver.history(period='2d')
+        usd_inr_rate = 83.5  # Will use the rate from gold calculation
+        
+        # Try to get actual USD/INR rate
+        try:
+            usd_inr = yf.Ticker('INR=X')
+            usd_inr_hist = usd_inr.history(period='1d')
+            if not usd_inr_hist.empty:
+                usd_inr_rate = usd_inr_hist['Close'].iloc[-1]
+        except:
+            pass
+        
+        if len(hist) >= 2:
+            current = hist['Close'].iloc[-1]
+            previous = hist['Close'].iloc[-2]
+            change_pct = ((current - previous) / previous) * 100
+            arrow = '↑' if change_pct >= 0 else '↓'
+            color = '#00ff00' if change_pct >= 0 else '#ff4444'
+            
+            # Silver is per troy ounce, convert to per kg for INR
+            # 1 troy ounce = 31.1035 grams, 1 kg = 1000 grams
+            silver_per_gram_usd = current / 31.1035
+            silver_per_kg_inr = silver_per_gram_usd * 1000 * usd_inr_rate
+            
+            prices['silver'] = f"${current:.2f}"
+            prices['silver_inr'] = f"₹{silver_per_kg_inr:,.0f}/kg"
+            prices['silver_change'] = change_pct
+            prices['silver_arrow'] = arrow
+            prices['silver_color'] = color
+        else:
+            current = hist['Close'].iloc[-1]
+            silver_per_gram_usd = current / 31.1035
+            silver_per_kg_inr = silver_per_gram_usd * 1000 * usd_inr_rate
+            
+            prices['silver'] = f"${current:.2f}"
+            prices['silver_inr'] = f"₹{silver_per_kg_inr:,.0f}/kg"
+            prices['silver_change'] = 0
+            prices['silver_arrow'] = ''
+            prices['silver_color'] = '#ffffff'
     except:
         prices['silver'] = "--"
+        prices['silver_inr'] = "--"
+        prices['silver_change'] = 0
+        prices['silver_arrow'] = ''
+        prices['silver_color'] = '#ffffff'
     
+    # Bitcoin
     try:
         btc = yf.Ticker(COMMODITIES['btc'])
-        btc_price = btc.history(period='1d')['Close'].iloc[-1]
-        prices['btc'] = f"${btc_price:,.0f}"
+        hist = btc.history(period='2d')
+        if len(hist) >= 2:
+            current = hist['Close'].iloc[-1]
+            previous = hist['Close'].iloc[-2]
+            change_pct = ((current - previous) / previous) * 100
+            arrow = '↑' if change_pct >= 0 else '↓'
+            color = '#00ff00' if change_pct >= 0 else '#ff4444'
+            prices['btc'] = f"${current:,.0f}"
+            prices['btc_change'] = change_pct
+            prices['btc_arrow'] = arrow
+            prices['btc_color'] = color
+        else:
+            prices['btc'] = f"${hist['Close'].iloc[-1]:,.0f}"
+            prices['btc_change'] = 0
+            prices['btc_arrow'] = ''
+            prices['btc_color'] = '#ffffff'
     except:
         prices['btc'] = "--"
+        prices['btc_change'] = 0
+        prices['btc_arrow'] = ''
+        prices['btc_color'] = '#ffffff'
     
+    # USD/INR
     try:
-        # Fetch USD to INR exchange rate with 2-day history for change calculation
         usd_inr = yf.Ticker('INR=X')
         hist = usd_inr.history(period='2d')
         
@@ -438,3 +558,202 @@ def get_next_nse_holiday():
     
     # Return None if API fails - will display as N/A
     return None
+
+
+@st.cache_data(ttl=3600)  # Cache for 1 hour
+def get_fii_dii_data():
+    """
+    Fetch FII/DII buy/sell data with multiple fallback sources
+    Returns data in INR Crores
+    Sources: 1) NSE API 2) NSE Website Scraping 3) MoneyControl
+    """
+    
+    # Method 1: Try NSE API first
+    try:
+        url = "https://www.nseindia.com/api/fiidiiTradeReact"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.nseindia.com/reports/fii-dii',
+            'Accept-Encoding': 'gzip, deflate, br'
+        }
+        
+        with requests.Session() as session:
+            session.headers.update(headers)
+            # Set cookies by visiting homepage
+            session.get("https://www.nseindia.com", timeout=10)
+            time.sleep(2)
+            
+            response = session.get(url, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                fii_data = None
+                dii_data = None
+                
+                # Data is in flat format with category field
+                if isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, dict):
+                            category = item.get('category', '').upper()
+                            
+                            # Parse FII/FPI data
+                            if 'FII' in category or 'FPI' in category:
+                                fii_buy = float(str(item.get('buyValue', 0) or 0).replace(',', ''))
+                                fii_sell = float(str(item.get('sellValue', 0) or 0).replace(',', ''))
+                                fii_net = float(str(item.get('netValue', 0) or 0).replace(',', ''))
+                                fii_data = {
+                                    'buy': round(fii_buy, 2),
+                                    'sell': round(fii_sell, 2),
+                                    'net': round(fii_net, 2)
+                                }
+                            
+                            # Parse DII data
+                            elif 'DII' in category:
+                                dii_buy = float(str(item.get('buyValue', 0) or 0).replace(',', ''))
+                                dii_sell = float(str(item.get('sellValue', 0) or 0).replace(',', ''))
+                                dii_net = float(str(item.get('netValue', 0) or 0).replace(',', ''))
+                                dii_data = {
+                                    'buy': round(dii_buy, 2),
+                                    'sell': round(dii_sell, 2),
+                                    'net': round(dii_net, 2)
+                                }
+                
+                if fii_data or dii_data:
+                    print(f"FII/DII: Fetched from NSE API - FII Net: {fii_data['net'] if fii_data else 'N/A'} Cr, DII Net: {dii_data['net'] if dii_data else 'N/A'} Cr")
+                    return {
+                        'fii': fii_data,
+                        'dii': dii_data,
+                        'status': 'success',
+                        'source': 'NSE API'
+                    }
+                else:
+                    print(f"NSE API: No FII/DII data found in response")
+    except Exception as e:
+        print(f"NSE API failed: {e}")
+    
+    # Method 2: Try scraping NSE reports page
+    try:
+        from bs4 import BeautifulSoup
+        
+        url = "https://www.nseindia.com/reports/fii-dii"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Referer': 'https://www.nseindia.com/'
+        }
+        
+        with requests.Session() as session:
+            session.headers.update(headers)
+            session.get("https://www.nseindia.com", timeout=10)
+            time.sleep(1.5)
+            
+            response = session.get(url, timeout=10)
+            
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # Look for table data
+                tables = soup.find_all('table')
+                for table in tables:
+                    rows = table.find_all('tr')
+                    for row in rows:
+                        cells = row.find_all(['td', 'th'])
+                        if len(cells) >= 4:
+                            text = ' '.join([cell.get_text().strip() for cell in cells])
+                            
+                            # Try to extract FII/DII data from table
+                            if 'FII' in text or 'FPI' in text:
+                                try:
+                                    values = [cell.get_text().strip() for cell in cells]
+                                    # Parse numeric values
+                                    nums = []
+                                    for val in values:
+                                        try:
+                                            nums.append(float(val.replace(',', '')))
+                                        except:
+                                            pass
+                                    
+                                    if len(nums) >= 3:
+                                        print("FII/DII: Fetched from NSE Website")
+                                        return {
+                                            'fii': {
+                                                'buy': round(nums[0], 2),
+                                                'sell': round(nums[1], 2),
+                                                'net': round(nums[2], 2)
+                                            },
+                                            'dii': None,
+                                            'status': 'success',
+                                            'source': 'NSE Website'
+                                        }
+                                except:
+                                    pass
+    except Exception as e:
+        print(f"NSE Website scraping failed: {e}")
+    
+    # Method 3: Try MoneyControl as final fallback
+    try:
+        from bs4 import BeautifulSoup
+        
+        url = "https://www.moneycontrol.com/stocks/marketstats/fii_dii_activity/index.php"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Look for FII/DII data in tables
+            tables = soup.find_all('table', class_=['tbldata14', 'mctable1'])
+            
+            fii_data = None
+            dii_data = None
+            
+            for table in tables:
+                rows = table.find_all('tr')
+                for row in rows:
+                    cells = row.find_all(['td', 'th'])
+                    if len(cells) >= 4:
+                        row_text = cells[0].get_text().strip()
+                        
+                        try:
+                            if 'FII' in row_text or 'FPI' in row_text:
+                                buy_val = float(cells[1].get_text().strip().replace(',', ''))
+                                sell_val = float(cells[2].get_text().strip().replace(',', ''))
+                                net_val = float(cells[3].get_text().strip().replace(',', ''))
+                                fii_data = {
+                                    'buy': round(buy_val, 2),
+                                    'sell': round(sell_val, 2),
+                                    'net': round(net_val, 2)
+                                }
+                            
+                            if 'DII' in row_text:
+                                buy_val = float(cells[1].get_text().strip().replace(',', ''))
+                                sell_val = float(cells[2].get_text().strip().replace(',', ''))
+                                net_val = float(cells[3].get_text().strip().replace(',', ''))
+                                dii_data = {
+                                    'buy': round(buy_val, 2),
+                                    'sell': round(sell_val, 2),
+                                    'net': round(net_val, 2)
+                                }
+                        except:
+                            pass
+            
+            if fii_data or dii_data:
+                print("FII/DII: Fetched from MoneyControl")
+                return {
+                    'fii': fii_data,
+                    'dii': dii_data,
+                    'status': 'success',
+                    'source': 'MoneyControl'
+                }
+    except Exception as e:
+        print(f"MoneyControl fallback failed: {e}")
+    
+    # All methods failed
+    print("FII/DII: All sources failed")
+    return {'fii': None, 'dii': None, 'status': 'error', 'source': 'none'}

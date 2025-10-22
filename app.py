@@ -317,11 +317,19 @@ def main():
     # Render header
     render_header()
     
-    # Render gainer/loser banner
-    render_gainer_loser_banner()
+    # Render gainer/loser banner and get FII/DII source
+    fii_dii_source = render_gainer_loser_banner()
     
     # Render live ticker
-    render_live_ticker()
+    stock_count = render_live_ticker()
+    
+    # Display ticker caption with FII/DII source at extreme right
+    col_left, col_right = st.columns([5, 1])
+    with col_left:
+        st.caption(f"📊 Live Ticker: {stock_count} stocks • Updates every 60 seconds • Hover to pause")
+    with col_right:
+        if fii_dii_source:
+            st.markdown(f"<p style='text-align: right; font-size: 0.8rem; color: #888;'>📊 FII/DII: {fii_dii_source}</p>", unsafe_allow_html=True)
     
     # Sidebar: Stock selection
     category = render_stock_selection_sidebar()
