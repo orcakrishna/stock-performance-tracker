@@ -623,12 +623,24 @@ def get_fii_dii_data():
                 
                 if fii_data or dii_data:
                     print(f"FII/DII: Fetched from NSE API - FII Net: {fii_data['net'] if fii_data else 'N/A'} Cr, DII Net: {dii_data['net'] if dii_data else 'N/A'} Cr")
-                    return {
+                    result = {
                         'fii': fii_data,
                         'dii': dii_data,
                         'status': 'success',
                         'source': 'NSE API'
                     }
+                    # Cache successful data
+                    try:
+                        from datetime import datetime
+                        st.session_state['last_fii_dii_data'] = {
+                            'fii': fii_data,
+                            'dii': dii_data,
+                            'source': 'NSE API',
+                            'cached_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        }
+                    except:
+                        pass
+                    return result
                 else:
                     print(f"NSE API: No FII/DII data found in response")
     except Exception as e:
@@ -747,15 +759,43 @@ def get_fii_dii_data():
             
             if fii_data or dii_data:
                 print("FII/DII: Fetched from MoneyControl")
-                return {
+                result = {
                     'fii': fii_data,
                     'dii': dii_data,
                     'status': 'success',
                     'source': 'MoneyControl'
                 }
+                # Cache successful data
+                try:
+                    from datetime import datetime
+                    st.session_state['last_fii_dii_data'] = {
+                        'fii': fii_data,
+                        'dii': dii_data,
+                        'source': 'MoneyControl',
+                        'cached_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                except:
+                    pass
+                return result
     except Exception as e:
         print(f"MoneyControl fallback failed: {e}")
     
-    # All methods failed
-    print("FII/DII: All sources failed")
+    # All methods failed - try to return last known value from session state
+    print("FII/DII: All sources failed, checking for cached data...")
+    
+    # Try to get last successful data from session state
+    try:
+        if hasattr(st, 'session_state') and 'last_fii_dii_data' in st.session_state:
+            cached = st.session_state['last_fii_dii_data']
+            print(f"FII/DII: Using cached data from {cached.get('cached_at', 'unknown time')}")
+            return {
+                'fii': cached.get('fii'),
+                'dii': cached.get('dii'),
+                'status': 'cached',
+                'source': f"{cached.get('source', 'Cache')} (Cached)"
+            }
+    except:
+        pass
+    
+    print("FII/DII: No cached data available")
     return {'fii': None, 'dii': None, 'status': 'error', 'source': 'none'}
