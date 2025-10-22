@@ -568,7 +568,7 @@ def get_fii_dii_data():
     Sources: 1) NSE API 2) NSE Website Scraping 3) MoneyControl
     """
     
-    # Method 1: Try NSE API first
+    # Method 1: Try NSE API first (may fail on cloud due to IP blocking)
     try:
         url = "https://www.nseindia.com/api/fiidiiTradeReact"
         headers = {
@@ -582,10 +582,10 @@ def get_fii_dii_data():
         with requests.Session() as session:
             session.headers.update(headers)
             # Set cookies by visiting homepage
-            session.get("https://www.nseindia.com", timeout=10)
-            time.sleep(2)
+            session.get("https://www.nseindia.com", timeout=5)
+            time.sleep(1)
             
-            response = session.get(url, timeout=15)
+            response = session.get(url, timeout=8)
             
             if response.status_code == 200:
                 data = response.json()
@@ -634,7 +634,7 @@ def get_fii_dii_data():
     except Exception as e:
         print(f"NSE API failed: {e}")
     
-    # Method 2: Try scraping NSE reports page
+    # Method 2: Try scraping NSE reports page (skip on cloud - usually blocked)
     try:
         from bs4 import BeautifulSoup
         
@@ -647,10 +647,10 @@ def get_fii_dii_data():
         
         with requests.Session() as session:
             session.headers.update(headers)
-            session.get("https://www.nseindia.com", timeout=10)
-            time.sleep(1.5)
+            session.get("https://www.nseindia.com", timeout=3)
+            time.sleep(0.5)
             
-            response = session.get(url, timeout=10)
+            response = session.get(url, timeout=5)
             
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
@@ -693,16 +693,18 @@ def get_fii_dii_data():
     except Exception as e:
         print(f"NSE Website scraping failed: {e}")
     
-    # Method 3: Try MoneyControl as final fallback
+    # Method 3: Try MoneyControl as final fallback (most reliable for cloud)
     try:
         from bs4 import BeautifulSoup
         
         url = "https://www.moneycontrol.com/stocks/marketstats/fii_dii_activity/index.php"
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         }
         
-        response = requests.get(url, headers=headers, timeout=10)
+        print("Trying MoneyControl for FII/DII data...")
+        response = requests.get(url, headers=headers, timeout=15)
         
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
