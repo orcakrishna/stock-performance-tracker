@@ -66,7 +66,7 @@ def render_stock_selection_sidebar():
 def handle_file_upload():
     """Handle file upload and saved lists management"""
     st.sidebar.markdown("---")
-    st.sidebar.markdown("**📤 Manage Stock Lists**")
+    st.sidebar.markdown("<p style='color: #ff4444; font-weight: 600;'>📤 Manage Stock Lists</p>", unsafe_allow_html=True)
     
     # Admin authentication
     if 'admin_authenticated' not in st.session_state:
@@ -99,29 +99,49 @@ def handle_file_upload():
             st.session_state.admin_mode = False
             st.rerun()
     
-    # Display saved lists
+    # Display disk lists (available to all users)
+    if st.session_state.disk_lists:
+        st.sidebar.markdown(f"**💾 Permanent Lists:**", unsafe_allow_html=True)
+        for list_name, stocks in st.session_state.disk_lists.items():
+            col1, col2 = st.sidebar.columns([3, 1])
+            with col1:
+                if st.button(f"📋 {list_name} ({len(stocks)})", key=f"load_disk_{list_name}"):
+                    st.session_state.current_list_name = list_name
+                    st.session_state.current_list_source = 'disk'
+                    st.rerun()
+            with col2:
+                # Only show delete button for admins
+                if st.session_state.admin_mode:
+                    if st.button("🗑️", key=f"del_disk_{list_name}"):
+                        del st.session_state.disk_lists[list_name]
+                        delete_list_csv(list_name)
+                        if st.session_state.current_list_name == list_name:
+                            st.session_state.current_list_name = None
+                            st.session_state.current_list_source = None
+                        st.rerun()
+        st.sidebar.markdown("---")
+    
+    # Display session lists (temporary uploads by non-admin users)
     if st.session_state.saved_lists:
-        list_type = "Saved to Disk" if st.session_state.admin_mode else "This Session"
-        st.sidebar.markdown(f"**💾 Saved Lists ({list_type}):**")
+        st.sidebar.markdown(f"<p style='color: #ff4444; font-weight: 600; margin-bottom: 0.75rem;'>📝 My Lists (This Session):</p>", unsafe_allow_html=True)
         for list_name, stocks in st.session_state.saved_lists.items():
             col1, col2 = st.sidebar.columns([3, 1])
             with col1:
-                if st.button(f"📋 {list_name} ({len(stocks)})", key=f"load_{list_name}"):
+                if st.button(f"📋 {list_name} ({len(stocks)})", key=f"load_session_{list_name}"):
                     st.session_state.current_list_name = list_name
+                    st.session_state.current_list_source = 'session'
                     st.rerun()
             with col2:
-                if st.button("🗑️", key=f"del_{list_name}"):
+                if st.button("🗑️", key=f"del_session_{list_name}"):
                     del st.session_state.saved_lists[list_name]
-                    # Also delete from disk if in admin mode
-                    if st.session_state.admin_mode:
-                        delete_list_csv(list_name)
                     if st.session_state.current_list_name == list_name:
                         st.session_state.current_list_name = None
-                    st.rerun()
+                        st.session_state.current_list_source = None
+                    # Don't rerun, just remove from list
         st.sidebar.markdown("---")
     
     # Upload new list
-    st.sidebar.markdown("**📤 Upload New List**")
+    st.sidebar.markdown("<p style='color: #ff4444; font-weight: 600; margin-top: 0.5rem;'>📤 Upload New List</p>", unsafe_allow_html=True)
     
     sample_content = "RELIANCE.NS\nTCS.NS\nHDFCBANK.NS\nICICIBANK.NS\nINFY.NS"
     st.sidebar.download_button(
@@ -131,10 +151,22 @@ def handle_file_upload():
         mime="text/plain"
     )
     
+    # Check if a list is already selected (after Quick Save)
+    if st.session_state.current_list_name:
+        # Check both disk and session lists
+        if st.session_state.current_list_source == 'disk' and st.session_state.current_list_name in st.session_state.disk_lists:
+            selected_stocks = st.session_state.disk_lists[st.session_state.current_list_name]
+            st.sidebar.success(f"✅ Using '{st.session_state.current_list_name}' ({len(selected_stocks)} stocks)")
+            return selected_stocks, selected_stocks
+        elif st.session_state.current_list_source == 'session' and st.session_state.current_list_name in st.session_state.saved_lists:
+            selected_stocks = st.session_state.saved_lists[st.session_state.current_list_name]
+            st.sidebar.success(f"✅ Using '{st.session_state.current_list_name}' ({len(selected_stocks)} stocks)")
+            return selected_stocks, selected_stocks
+    
     uploaded_file = st.sidebar.file_uploader(
         "Choose a file",
         type=['csv', 'txt'],
-        help="Upload a file with stock symbols (one per line)"
+        help="One symbol per line. Add .NS for NSE or .BO for BSE (e.g., RELIANCE.NS, INFY.BO)"
     )
     
     # Exchange selector
@@ -159,7 +191,7 @@ def handle_file_upload():
                 is_bse = 'bse' in uploaded_file.name.lower()
                 suffix = '.BO' if is_bse else '.NS'
             
-            st.sidebar.info(f"📍 Using suffix: **{suffix}**")
+            st.sidebar.markdown(f"📍 Using suffix: **{suffix}**")
             
             # Prepare stock symbols
             prepared_stocks = []
@@ -175,68 +207,86 @@ def handle_file_upload():
                 key="new_list_name"
             )
             
-            if st.sidebar.button("💾 Save List"):
+            # Option to skip validation for large lists
+            skip_validation = st.sidebar.checkbox(
+                "⚡ Skip validation (faster for large lists)",
+                value=len(prepared_stocks) > 500,
+                help="Skip symbol validation to load faster. Invalid symbols will be filtered during data fetch."
+            )
+            
+            # Dynamic button text based on admin mode
+            if st.session_state.admin_mode:
+                button_text = "💾 Save to Disk"
+                button_help = "Save permanently to disk (available to all users)"
+                button_type = "primary"
+            else:
+                button_text = "⚡ Quick Save"
+                button_help = "Save for this session (temporary, lost on browser close)"
+                button_type = "primary"
+            
+            if st.sidebar.button(button_text, help=button_help, type=button_type):
                 if list_name.strip():
-                    # Validate stocks before saving
-                    with st.sidebar.spinner("🔍 Validating stocks..."):
-                        valid_stocks = []
-                        invalid_stocks = []
+                    if skip_validation:
+                        # Save without validation
+                        st.session_state.saved_lists[list_name.strip()] = prepared_stocks
+                        st.session_state.current_list_name = list_name.strip()
                         
-                        for symbol in prepared_stocks:
-                            if validate_stock_symbol(symbol):
-                                valid_stocks.append(symbol)
-                            else:
-                                invalid_stocks.append(symbol)
-                        
-                        if valid_stocks:
-                            # Save to session
-                            st.session_state.saved_lists[list_name.strip()] = valid_stocks
-                            st.session_state.current_list_name = list_name.strip()
-                            
-                            # Save to disk if admin mode is enabled
-                            if st.session_state.admin_mode:
-                                save_list_to_csv(list_name.strip(), valid_stocks)
-                                save_location = "disk"
-                            else:
-                                save_location = "session only"
-                            
-                            if invalid_stocks:
-                                st.sidebar.warning(f"⚠️ Saved {len(valid_stocks)} valid stocks ({save_location}). Skipped {len(invalid_stocks)} invalid: {', '.join(invalid_stocks[:5])}")
-                            else:
-                                st.sidebar.success(f"✅ Saved '{list_name}' with {len(valid_stocks)} stocks ({save_location})")
-                            st.rerun()
+                        # Save to disk if admin mode is enabled
+                        if st.session_state.admin_mode:
+                            save_list_to_csv(list_name.strip(), prepared_stocks)
+                            st.session_state.disk_lists[list_name.strip()] = prepared_stocks
+                            st.session_state.current_list_source = 'disk'
                         else:
-                            st.sidebar.error("❌ No valid stocks found. Please check your symbols.")
+                            st.session_state.current_list_source = 'session'
+                        
+                        st.sidebar.success(f"✅ Loaded '{list_name}' with {len(prepared_stocks)} stocks!")
+                        st.rerun()
+                    else:
+                        # Validate stocks before saving
+                        with st.spinner("🔍 Validating stocks..."):
+                            valid_stocks = []
+                            invalid_stocks = []
+                            
+                            for symbol in prepared_stocks:
+                                if validate_stock_symbol(symbol):
+                                    valid_stocks.append(symbol)
+                                else:
+                                    invalid_stocks.append(symbol)
+                            
+                            if valid_stocks:
+                                # Save to session
+                                st.session_state.saved_lists[list_name.strip()] = valid_stocks
+                                st.session_state.current_list_name = list_name.strip()
+                                
+                                # Save to disk if admin mode is enabled
+                                if st.session_state.admin_mode:
+                                    save_list_to_csv(list_name.strip(), valid_stocks)
+                                    st.session_state.disk_lists[list_name.strip()] = valid_stocks
+                                    st.session_state.current_list_source = 'disk'
+                                else:
+                                    st.session_state.current_list_source = 'session'
+                                
+                                if invalid_stocks:
+                                    st.sidebar.warning(f"⚠️ Loaded {len(valid_stocks)} valid stocks. Skipped {len(invalid_stocks)} invalid: {', '.join(invalid_stocks[:5])}")
+                                else:
+                                    st.sidebar.success(f"✅ Loaded '{list_name}' with {len(valid_stocks)} stocks!")
+                                st.rerun()
+                            else:
+                                st.sidebar.error("❌ No valid stocks found. Please check your symbols.")
                 else:
                     st.sidebar.error("Please enter a list name")
             
             # Show preview but don't process until saved
-            st.sidebar.info(f"📋 Preview: {len(prepared_stocks)} stocks ready. Click 'Save List' to validate and proceed.")
+            save_btn_text = "Quick Save" if not st.session_state.admin_mode else "Save to Disk"
+            st.sidebar.markdown(f"<p style='font-size: 0.875rem; color: #e0e0e0;'>📋 Preview: <strong>{len(prepared_stocks)} stocks</strong> ready. Click '{save_btn_text}' to load.</p>", unsafe_allow_html=True)
             return [], []  # Return empty until saved
             
         except Exception as e:
             st.sidebar.error(f"Error reading file: {str(e)}")
             return [], []
     
-    elif st.session_state.current_list_name and st.session_state.current_list_name in st.session_state.saved_lists:
-        selected_stocks = st.session_state.saved_lists[st.session_state.current_list_name]
-        st.sidebar.success(f"✅ Using '{st.session_state.current_list_name}' ({len(selected_stocks)} stocks)")
-        return selected_stocks, selected_stocks
-    else:
-        st.sidebar.info(
-            "📋 **Upload a stock list:**\n\n"
-            "**Format:**\n"
-            "- One symbol per line\n"
-            "- Add .NS for NSE stocks\n"
-            "- Add .BO for BSE stocks\n\n"
-            "**Example:**\n"
-            "```\n"
-            "RELIANCE.NS\n"
-            "TCS.NS\n"
-            "INFY.BO\n"
-            "```"
-        )
-        return [], []
+    # No list selected or uploaded
+    return [], []
 
 
 def fetch_stocks_data(selected_stocks, use_parallel, use_cache=True):
@@ -298,15 +348,15 @@ def main():
     
     # Initialize session state
     if 'saved_lists' not in st.session_state:
-        st.session_state.saved_lists = {}  # Start empty, load on admin login
+        st.session_state.saved_lists = {}  # Session-only lists
+    if 'disk_lists' not in st.session_state:
+        st.session_state.disk_lists = load_all_saved_lists()  # Disk lists (read-only for non-admins)
     if 'admin_authenticated' not in st.session_state:
         st.session_state.admin_authenticated = False
-    
-    # Load saved lists from disk if admin is authenticated
-    if st.session_state.admin_authenticated and not st.session_state.saved_lists:
-        st.session_state.saved_lists = load_all_saved_lists()
     if 'current_list_name' not in st.session_state:
         st.session_state.current_list_name = None
+    if 'current_list_source' not in st.session_state:
+        st.session_state.current_list_source = None  # 'disk' or 'session'
     if 'cached_stocks_data' not in st.session_state:
         st.session_state.cached_stocks_data = None
     if 'cached_stocks_list' not in st.session_state:
@@ -370,7 +420,7 @@ def main():
     
     # Performance options
     st.sidebar.markdown("---")
-    st.sidebar.markdown("**⚡ Performance**")
+    st.sidebar.markdown("<p style='color: #ff4444; font-weight: 600;'>⚡ Performance</p>", unsafe_allow_html=True)
     use_parallel = st.sidebar.checkbox(
         "Use Parallel Fetching (3x faster)",
         value=False,
@@ -385,7 +435,8 @@ def main():
     
     col1, col2 = st.sidebar.columns(2)
     with col1:
-        if st.button("🔄 Refresh All"):
+        refresh_button = st.button("🔄 Refresh All", type="secondary")
+        if refresh_button:
             clear_cache()
             st.session_state.cached_stocks_data = None  # Clear session cache
             st.session_state.cached_stocks_list = None
@@ -398,7 +449,17 @@ def main():
     
     # Check if stocks are selected
     if not selected_stocks:
-        st.warning("⚠️ Please select at least one stock to view performance.")
+        if category == 'Upload File':
+            # Check if there are any saved lists
+            has_permanent_lists = bool(st.session_state.disk_lists)
+            has_session_lists = bool(st.session_state.saved_lists)
+            
+            if has_permanent_lists or has_session_lists:
+                st.warning("⚠️ **Select a stock list:** Click on a list from the sidebar (💾 Permanent Lists or 📝 My Lists) to view performance.")
+            else:
+                st.warning("⚠️ **Get started:** Upload a file from the sidebar and click 'Quick Save' to view stock performance.")
+        else:
+            st.warning(f"⚠️ No stocks found in {category}. Please try another category.")
         return
     
     # Display Market Indices

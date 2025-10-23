@@ -432,6 +432,17 @@ CUSTOM_CSS = """
     .ticker-container:hover .ticker-wrapper {
         animation-play-state: paused;
     }
+    
+    /* Custom button colors */
+    /* Refresh All button - green */
+    button[kind="secondary"]:has(p:contains("Refresh All")) {
+        background-color: #00c853 !important;
+        color: white !important;
+        border: none !important;
+    }
+    button[kind="secondary"]:has(p:contains("Refresh All")):hover {
+        background-color: #00e676 !important;
+    }
 </style>
 """
 
