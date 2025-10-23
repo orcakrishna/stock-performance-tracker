@@ -202,40 +202,60 @@ def create_html_table(df_page):
     
     html_script = '''
     <script>
-        function showTradingViewPopup(symbol) {
-            // Create overlay
-            let overlay = document.getElementById('tradingview-overlay');
-            if (!overlay) {
-                overlay = document.createElement('div');
-                overlay.id = 'tradingview-overlay';
-                overlay.className = 'popup-overlay';
-                overlay.onclick = closeTradingViewPopup;
-                document.body.appendChild(overlay);
+        let hoverTimeout = null;
+        let isPopupOpen = false;
+        
+        function showTradingViewPopup(symbol, event) {
+            // Clear any existing timeout
+            if (hoverTimeout) {
+                clearTimeout(hoverTimeout);
             }
             
-            // Create popup
-            let popup = document.getElementById('tradingview-popup');
-            if (!popup) {
-                popup = document.createElement('div');
-                popup.id = 'tradingview-popup';
-                popup.className = 'tradingview-popup';
-                document.body.appendChild(popup);
+            // Add delay to prevent accidental triggers
+            hoverTimeout = setTimeout(() => {
+                // Create overlay
+                let overlay = document.getElementById('tradingview-overlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'tradingview-overlay';
+                    overlay.className = 'popup-overlay';
+                    overlay.onclick = closeTradingViewPopup;
+                    document.body.appendChild(overlay);
+                }
+                
+                // Create popup
+                let popup = document.getElementById('tradingview-popup');
+                if (!popup) {
+                    popup = document.createElement('div');
+                    popup.id = 'tradingview-popup';
+                    popup.className = 'tradingview-popup';
+                    document.body.appendChild(popup);
+                }
+                
+                // Add close button and iframe
+                popup.innerHTML = \`
+                    <button class="popup-close" onclick="closeTradingViewPopup()">✕ Close</button>
+                    <iframe 
+                        src="https://www.tradingview.com/chart/?symbol=NSE:\${symbol}" 
+                        style="width: 100%; height: 100%; border: none; border-radius: 8px;"
+                        frameborder="0"
+                        allowfullscreen>
+                    </iframe>
+                \`;
+                
+                // Show popup and overlay
+                overlay.classList.add('active');
+                popup.classList.add('active');
+                isPopupOpen = true;
+            }, 500); // 500ms delay before showing popup
+        }
+        
+        function hidePopupOnMouseLeave() {
+            // Clear timeout if mouse leaves before popup shows
+            if (hoverTimeout) {
+                clearTimeout(hoverTimeout);
+                hoverTimeout = null;
             }
-            
-            // Add close button and iframe
-            popup.innerHTML = `
-                <button class="popup-close" onclick="closeTradingViewPopup()">✕ Close</button>
-                <iframe 
-                    src="https://www.tradingview.com/chart/?symbol=NSE:${symbol}" 
-                    style="width: 100%; height: 100%; border: none; border-radius: 8px;"
-                    frameborder="0"
-                    allowfullscreen>
-                </iframe>
-            `;
-            
-            // Show popup and overlay
-            overlay.classList.add('active');
-            popup.classList.add('active');
         }
         
         function closeTradingViewPopup() {
@@ -243,10 +263,34 @@ def create_html_table(df_page):
             const popup = document.getElementById('tradingview-popup');
             if (overlay) overlay.classList.remove('active');
             if (popup) popup.classList.remove('active');
+            isPopupOpen = false;
+            
+            // Clear any pending timeout
+            if (hoverTimeout) {
+                clearTimeout(hoverTimeout);
+                hoverTimeout = null;
+            }
         }
         
-        function openTradingViewChart(symbol) {
-            window.open(`https://www.tradingview.com/chart/?symbol=NSE:${symbol}`, '_blank');
+        function openTradingViewChart(symbol, event) {
+            // Prevent event bubbling
+            if (event) {
+                event.stopPropagation();
+            }
+            
+            // Close popup if open
+            if (isPopupOpen) {
+                closeTradingViewPopup();
+            }
+            
+            // Clear any pending hover timeout
+            if (hoverTimeout) {
+                clearTimeout(hoverTimeout);
+                hoverTimeout = null;
+            }
+            
+            // Open in new tab
+            window.open(\`https://www.tradingview.com/chart/?symbol=NSE:\${symbol}\`, '_blank');
         }
     </script>
     '''
@@ -285,9 +329,10 @@ def create_html_table(df_page):
             if col == 'Stock Name':
                 sparkline_svg = create_sparkline_svg(sparkline_data)
                 html_table += f'''<td class="sparkline-cell" 
-                    onmouseover="showTradingViewPopup('{stock_symbol}')" 
-                    onclick="openTradingViewChart('{stock_symbol}')"
-                    title="Hover to preview | Click to open full chart"
+                    onmouseover="showTradingViewPopup('{stock_symbol}', event)" 
+                    onmouseleave="hidePopupOnMouseLeave()"
+                    onclick="openTradingViewChart('{stock_symbol}', event)"
+                    title="Hover to preview (0.5s delay) | Click to open full chart"
                     style="text-align: center; padding: 12px; border: 1px solid #555;">
                     {sparkline_svg}
                 </td>'''
