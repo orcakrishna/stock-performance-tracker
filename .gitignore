@@ -33,6 +33,7 @@ logs/
 *.csv
 *.xlsx
 !sample_stocks.txt
+!saved_stock_lists/*.csv
 
 # Cache
 cache/
