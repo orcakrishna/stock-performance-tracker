@@ -108,7 +108,7 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     """
 
 
-def create_sparkline_svg(sparkline_data, today_change, width=80, height=30):
+def create_sparkline_svg(sparkline_data, today_change, stock_symbol, width=80, height=30):
     """Create an SVG sparkline from normalized data with color based on today's performance"""
     if not sparkline_data or len(sparkline_data) < 2:
         return ""
@@ -133,9 +133,16 @@ def create_sparkline_svg(sparkline_data, today_change, width=80, height=30):
         # Fallback to trend-based color if today_change is invalid
         color = "#00ff00" if sparkline_data[-1] >= sparkline_data[0] else "#ff4444"
     
-    svg = f'''<svg width="{width}" height="{height}" style="display: block;">
-        <path d="{path_data}" fill="none" stroke="{color}" stroke-width="1.5" />
-    </svg>'''
+    # Create clickable SVG with direct link
+    tradingview_url = f"https://www.tradingview.com/chart/?symbol=NSE:{stock_symbol}"
+    
+    svg = f'''<a href="{tradingview_url}" target="_blank" style="text-decoration: none;">
+        <svg width="{width}" height="{height}" style="display: block; cursor: pointer;" 
+             onmouseover="this.style.opacity='0.7'" 
+             onmouseout="this.style.opacity='1'">
+            <path d="{path_data}" fill="none" stroke="{color}" stroke-width="2" />
+        </svg>
+    </a>'''
     
     return svg
 
@@ -143,191 +150,7 @@ def create_sparkline_svg(sparkline_data, today_change, width=80, height=30):
 def create_html_table(df_page):
     """Create HTML table with colored percentage values and mini charts"""
     
-    # Add CSS and JavaScript for TradingView popup
-    html_styles = '''
-    <style>
-        .sparkline-cell {
-            cursor: pointer;
-            position: relative;
-            padding: 12px;
-            border: 1px solid #555;
-        }
-        .sparkline-cell:hover {
-            background-color: #3d3d3d;
-        }
-        .tradingview-popup {
-            display: none;
-            position: fixed !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            width: 800px !important;
-            height: 600px !important;
-            background-color: #1e1e1e !important;
-            border: 2px solid #00ff88 !important;
-            border-radius: 8px !important;
-            box-shadow: 0 4px 20px rgba(0, 255, 136, 0.3) !important;
-            z-index: 999999 !important;
-            padding: 10px !important;
-        }
-        .tradingview-popup.active {
-            display: block;
-        }
-        .popup-overlay {
-            display: none;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            background-color: rgba(0, 0, 0, 0.7) !important;
-            z-index: 999998 !important;
-        }
-        .popup-overlay.active {
-            display: block;
-        }
-        .popup-close {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #ff4444;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 5px 10px;
-            cursor: pointer;
-            font-weight: bold;
-            z-index: 10001;
-        }
-        .popup-close:hover {
-            background-color: #ff6666;
-        }
-    </style>
-    '''
-    
-    html_script = '''
-    <script>
-        let hoverTimeout = null;
-        let isPopupOpen = false;
-        
-        function showTradingViewPopup(symbol, event) {
-            // Clear any existing timeout
-            if (hoverTimeout) {
-                clearTimeout(hoverTimeout);
-            }
-            
-            // Add delay to prevent accidental triggers
-            hoverTimeout = setTimeout(() => {
-                // Create overlay
-                let overlay = document.getElementById('tradingview-overlay');
-                if (!overlay) {
-                    overlay = document.createElement('div');
-                    overlay.id = 'tradingview-overlay';
-                    overlay.className = 'popup-overlay';
-                    overlay.onclick = closeTradingViewPopup;
-                    document.body.appendChild(overlay);
-                }
-                
-                // Create popup
-                let popup = document.getElementById('tradingview-popup');
-                if (!popup) {
-                    popup = document.createElement('div');
-                    popup.id = 'tradingview-popup';
-                    popup.className = 'tradingview-popup';
-                    document.body.appendChild(popup);
-                }
-                
-                // Add close button and message with link
-                popup.innerHTML = \`
-                    <button class="popup-close" onclick="closeTradingViewPopup()">✕ Close</button>
-                    <div style="text-align: center; padding: 40px; color: white;">
-                        <h2 style="color: #00ff88; margin-bottom: 20px;">📊 \${symbol}</h2>
-                        <p style="font-size: 18px; margin-bottom: 30px;">Click the chart to view full TradingView analysis</p>
-                        <button 
-                            onclick="openTradingViewChart('\${symbol}', event); closeTradingViewPopup();"
-                            style="background: linear-gradient(135deg, #00ff88 0%, #00cc70 100%); 
-                                   color: #000; 
-                                   border: none; 
-                                   padding: 15px 40px; 
-                                   font-size: 16px; 
-                                   font-weight: bold; 
-                                   border-radius: 8px; 
-                                   cursor: pointer;
-                                   box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);">
-                            🚀 Open TradingView Chart
-                        </button>
-                        <p style="font-size: 14px; margin-top: 30px; color: #888;">
-                            Or simply click anywhere on the sparkline
-                        </p>
-                    </div>
-                \`;
-                
-                // Show popup and overlay
-                overlay.classList.add('active');
-                popup.classList.add('active');
-                isPopupOpen = true;
-            }, 500); // 500ms delay before showing popup
-        }
-        
-        function hidePopupOnMouseLeave() {
-            // Clear timeout if mouse leaves before popup shows
-            if (hoverTimeout) {
-                clearTimeout(hoverTimeout);
-                hoverTimeout = null;
-            }
-        }
-        
-        function closeTradingViewPopup() {
-            const overlay = document.getElementById('tradingview-overlay');
-            const popup = document.getElementById('tradingview-popup');
-            if (overlay) overlay.classList.remove('active');
-            if (popup) popup.classList.remove('active');
-            isPopupOpen = false;
-            
-            // Clear any pending timeout
-            if (hoverTimeout) {
-                clearTimeout(hoverTimeout);
-                hoverTimeout = null;
-            }
-        }
-        
-        function openTradingViewChart(symbol, event) {
-            console.log('Click detected on chart for symbol:', symbol);
-            
-            // Prevent event bubbling
-            if (event) {
-                event.stopPropagation();
-                event.preventDefault();
-            }
-            
-            // Close popup if open
-            if (isPopupOpen) {
-                console.log('Closing popup before opening new tab');
-                closeTradingViewPopup();
-            }
-            
-            // Clear any pending hover timeout
-            if (hoverTimeout) {
-                clearTimeout(hoverTimeout);
-                hoverTimeout = null;
-            }
-            
-            // Open in new tab
-            const url = `https://www.tradingview.com/chart/?symbol=NSE:${symbol}`;
-            console.log('Opening URL:', url);
-            const newWindow = window.open(url, '_blank');
-            
-            if (!newWindow) {
-                console.error('Popup blocked! Please allow popups for this site.');
-                alert('Please allow popups to open TradingView charts');
-            } else {
-                console.log('Successfully opened new tab');
-            }
-        }
-    </script>
-    '''
-    
-    html_table = html_styles + html_script
+    html_table = ''
     html_table += '<table style="width:100%; border-collapse: collapse; background-color: #2d2d2d;">'
     html_table += '<thead><tr style="background-color: #3d3d3d;">'
     
@@ -360,13 +183,8 @@ def create_html_table(df_page):
             
             # Add sparkline cell after Stock Name
             if col == 'Stock Name':
-                sparkline_svg = create_sparkline_svg(sparkline_data, today_change)
-                html_table += f'''<td class="sparkline-cell" 
-                    onmouseover="showTradingViewPopup('{stock_symbol}', event)" 
-                    onmouseleave="hidePopupOnMouseLeave()"
-                    onclick="openTradingViewChart('{stock_symbol}', event)"
-                    title="Click to open TradingView chart in new tab"
-                    style="text-align: center; padding: 12px; border: 1px solid #555;">
+                sparkline_svg = create_sparkline_svg(sparkline_data, today_change, stock_symbol)
+                html_table += f'''<td style="text-align: center; padding: 12px; border: 1px solid #555;">
                     {sparkline_svg}
                 </td>'''
         
