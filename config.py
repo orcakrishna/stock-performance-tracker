@@ -135,14 +135,25 @@ CUSTOM_CSS = """
             max-width: 100% !important;
         }
         
+        /* Keep horizontal blocks as flex row for metrics */
         [data-testid="stHorizontalBlock"] {
-            flex-direction: column !important;
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
             gap: 0.5rem !important;
         }
         
-        /* Make metrics stack vertically on mobile */
+        /* Make each column take ~48% width for 2-column layout */
+        [data-testid="stHorizontalBlock"] > div {
+            flex: 1 1 48% !important;
+            min-width: 48% !important;
+            max-width: 48% !important;
+        }
+        
+        /* Make metrics display properly in their containers */
         [data-testid="stMetric"] {
             width: 100% !important;
+            margin-bottom: 0.5rem !important;
         }
         
         /* Ensure main content area is not affected by sidebar */

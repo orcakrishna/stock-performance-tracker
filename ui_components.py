@@ -80,15 +80,22 @@ def render_market_indices():
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(METRIC_CSS, unsafe_allow_html=True)
 
-    # Row 1: Major Indices
-    cols1 = st.columns(len(INDICES_ROW1))
-    for idx, (name, symbol) in enumerate(INDICES_ROW1.items()):
-        with cols1[idx]:
-            price, change = get_index_performance(symbol)
-            if price is not None and change is not None:
-                st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f}%")
-            else:
-                st.metric(label=name, value="--", delta="--")
+    # Row 1: Major Indices - Use 2 columns on mobile, full on desktop
+    # Desktop: 8 columns, Mobile: 2 columns
+    indices_list = list(INDICES_ROW1.items())
+    num_cols = 2  # 2 columns on mobile
+    
+    for i in range(0, len(indices_list), num_cols):
+        cols = st.columns(num_cols)
+        for j in range(num_cols):
+            if i + j < len(indices_list):
+                name, symbol = indices_list[i + j]
+                with cols[j]:
+                    price, change = get_index_performance(symbol)
+                    if price is not None and change is not None:
+                        st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f}%")
+                    else:
+                        st.metric(label=name, value="--", delta="--")
 
     # Row 2: Sectoral Indices
     st.markdown("<br>", unsafe_allow_html=True)
@@ -98,14 +105,19 @@ def render_market_indices():
     )
     st.markdown("<br>", unsafe_allow_html=True)
 
-    cols2 = st.columns(len(INDICES_ROW2))
-    for idx, (name, symbol) in enumerate(INDICES_ROW2.items()):
-        with cols2[idx]:
-            price, change = get_index_performance(symbol)
-            if price is not None and change is not None:
-                st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f}%")
-            else:
-                st.metric(label=name, value="--", delta="--")
+    # Sectoral indices - 2 columns on mobile
+    sectoral_list = list(INDICES_ROW2.items())
+    for i in range(0, len(sectoral_list), num_cols):
+        cols = st.columns(num_cols)
+        for j in range(num_cols):
+            if i + j < len(sectoral_list):
+                name, symbol = sectoral_list[i + j]
+                with cols[j]:
+                    price, change = get_index_performance(symbol)
+                    if price is not None and change is not None:
+                        st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f}%")
+                    else:
+                        st.metric(label=name, value="--", delta="--")
     
     st.markdown("---")
 
