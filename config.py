@@ -75,6 +75,12 @@ COMMODITIES = {
 # Custom CSS for dark theme
 CUSTOM_CSS = """
 <style>
+    /* Mobile viewport optimization */
+    @viewport {
+        width: device-width;
+        zoom: 1.0;
+    }
+    
     .main {
         background-color: #1e1e1e;
         padding: 0.5rem 1rem 1rem 1rem;
@@ -111,6 +117,32 @@ CUSTOM_CSS = """
         }
     }
     
+    /* Mobile responsive adjustments */
+    @media (max-width: 768px) {
+        html {
+            font-size: 12px;
+        }
+        
+        .main {
+            padding: 0.25rem 0.5rem 0.5rem 0.5rem;
+        }
+        
+        .block-container {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+        
+        [data-testid="stHorizontalBlock"] {
+            flex-direction: column !important;
+            gap: 0.5rem !important;
+        }
+        
+        /* Make metrics stack vertically on mobile */
+        [data-testid="stMetric"] {
+            width: 100% !important;
+        }
+    }
+    
     h1, h2, h3, p, label, div {
         color: #ffffff !important;
     }
@@ -136,6 +168,19 @@ CUSTOM_CSS = """
     }
     h3 {
         font-size: 1.15rem !important;
+    }
+    
+    /* Mobile heading adjustments */
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.4rem !important;
+        }
+        h2, h3 {
+            font-size: 1.15rem !important;
+        }
+        h3 {
+            font-size: 1rem !important;
+        }
     }
     hr {
         margin: 0.25rem 0 !important;
@@ -271,6 +316,19 @@ CUSTOM_CSS = """
         border-radius: 6px !important;
         padding: 0.5rem 1rem !important;
         font-weight: 500 !important;
+        min-height: 44px !important; /* Touch-friendly size */
+    }
+    
+    /* Mobile sidebar adjustments */
+    @media (max-width: 768px) {
+        [data-testid="stSidebar"] {
+            min-width: 100% !important;
+        }
+        
+        [data-testid="stSidebar"] button {
+            width: 100% !important;
+            padding: 0.75rem 1rem !important;
+        }
     }
     /* Sidebar Info Box */
     [data-testid="stSidebar"] [data-testid="stAlert"] {
@@ -333,6 +391,15 @@ CUSTOM_CSS = """
     .loser-item {
         color: #ff4444;
         white-space: nowrap;
+    }
+    
+    /* Mobile banner adjustments */
+    @media (max-width: 768px) {
+        .gainer-loser-banner {
+            flex-direction: column;
+            gap: 10px;
+            font-size: 0.813rem;
+        }
     }
     
     /* Compact Gainer/Loser Metrics - Using rem for better scaling */
@@ -442,6 +509,62 @@ CUSTOM_CSS = """
     }
     button[kind="secondary"]:has(p:contains("Refresh All")):hover {
         background-color: #00e676 !important;
+    }
+    
+    /* Mobile table responsiveness */
+    @media (max-width: 768px) {
+        table {
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            white-space: nowrap;
+        }
+        
+        table th,
+        table td {
+            padding: 8px !important;
+            font-size: 12px !important;
+        }
+        
+        /* Hide chart column on very small screens */
+        @media (max-width: 480px) {
+            table th:nth-child(3),
+            table td:nth-child(3) {
+                display: none;
+            }
+        }
+    }
+    
+    /* Touch-friendly buttons */
+    @media (max-width: 768px) {
+        button {
+            min-height: 44px !important;
+            padding: 0.75rem 1rem !important;
+        }
+    }
+    
+    /* Mobile ticker adjustments */
+    @media (max-width: 768px) {
+        .ticker-container {
+            padding: 4px 0;
+            margin: 0 0 8px 0;
+        }
+        
+        .ticker-item {
+            margin: 0 15px;
+            padding: 4px 12px;
+            min-height: 28px;
+        }
+        
+        .ticker-symbol,
+        .ticker-price {
+            font-size: 0.813rem;
+        }
+        
+        .ticker-change-positive,
+        .ticker-change-negative {
+            font-size: 0.75rem;
+        }
     }
 </style>
 """

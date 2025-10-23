@@ -41,7 +41,8 @@ ADMIN_PASSWORD = load_admin_password()
 st.set_page_config(
     page_title="NSE Stock Performance",
     page_icon="📈",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="auto"  # Auto-collapse on mobile
 )
 
 

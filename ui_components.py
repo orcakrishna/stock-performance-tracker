@@ -14,13 +14,27 @@ from utils import get_current_times, format_time_display, get_ticker_data
 # =========================
 def render_header():
     """Render app header with title, time, and commodities"""
+    # Use single column layout on mobile, two columns on desktop
+    st.markdown("""
+    <style>
+        @media (max-width: 768px) {
+            .header-title {
+                font-size: 1.4rem !important;
+            }
+            .header-subtitle {
+                font-size: 0.875rem !important;
+            }
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
     col_title, col_time = st.columns([3, 1])
 
     with col_title:
-        st.title("📊 Indian Stock Performance Tracker")
+        st.markdown('<h1 class="header-title">📊 Indian Stock Performance Tracker</h1>', unsafe_allow_html=True)
         st.markdown(
             """<div style='margin-top: -10px;'>
-                <span style='color: #00ff88; font-weight: bold; font-size: 1rem;'>
+                <span class='header-subtitle' style='color: #00ff88; font-weight: bold; font-size: 1rem;'>
                     View 1-month, 2-month, and 3-month performance of NSE/BSE stocks.
                 </span>
             </div>""",

@@ -76,9 +76,29 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
         holiday_text = f" | <span style='color: #fff; font-weight: bold;'>🏖️ Holiday:</span> <span style='color: #ff4444; font-weight: bold;'>{next_holiday}</span>"
     
     return f"""
-    <div style='text-align: right; padding-top: 20px;'>
+    <style>
+        .header-info {{
+            text-align: right;
+            padding-top: 20px;
+        }}
+        .header-info p {{
+            margin: 0;
+            font-size: 13px;
+        }}
+        @media (max-width: 768px) {{
+            .header-info {{
+                text-align: left;
+                padding-top: 10px;
+            }}
+            .header-info p {{
+                font-size: 11px;
+                line-height: 1.6;
+            }}
+        }}
+    </style>
+    <div class='header-info'>
     </br>
-        <p style='margin: 0; font-size: 13px;'>
+        <p>
             <span style='color: #fff; font-weight: bold;'>🛢️ Oil:</span> 
             <span style='color: {oil_color}; font-weight: bold;'>{oil_price} {oil_arrow}</span> | 
             <span style='color: #fff; font-weight: bold;'>₿ BTC:</span> 
@@ -86,21 +106,21 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
             <span style='color: #fff; font-weight: bold;'>🕐 IST:</span> 
             <span style='color: #fff; font-weight: bold;'>{ist_time.strftime('%I:%M %p')}</span>
         </p>
-        <p style='margin: 0; font-size: 13px;'>
+        <p>
             <span style='color: #fff; font-weight: bold;'>🥇 Gold:</span> 
             <span style='color: {gold_color}; font-weight: bold;'>{gold_price} {gold_arrow}</span>
             <span style='color: #ffd700; font-weight: normal;'> ({gold_inr})</span> | 
             <span style='color: #fff; font-weight: bold;'>🕐 EDT:</span> 
             <span style='color: #fff; font-weight: bold;'>{edt_time.strftime('%I:%M %p')}</span>
         </p>
-        <p style='margin: 0; font-size: 13px;'>
+        <p>
             <span style='color: #fff; font-weight: bold;'>🪙 Silver:</span> 
             <span style='color: {silver_color}; font-weight: bold;'>{silver_price} {silver_arrow}</span>
             <span style='color: #c0c0c0; font-weight: normal;'> ({silver_inr})</span> | 
             <span style='color: #fff; font-weight: bold;'>📅</span> 
             <span style='color: #fff; font-weight: bold;'>{ist_time.strftime('%d %b %Y')}</span>
         </p>
-        <p style='margin: 0; font-size: 13px;'>
+        <p>
             <span style='color: #fff; font-weight: bold;'>💵 USD/INR:</span> 
             <span style='color: {usd_inr_color}; font-weight: bold;'>{usd_inr}</span>{holiday_text}
         </p>
@@ -151,7 +171,8 @@ def create_html_table(df_page):
     """Create HTML table with colored percentage values and mini charts"""
     
     html_table = ''
-    html_table += '<table style="width:100%; border-collapse: collapse; background-color: #2d2d2d; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif;">'
+    html_table += '''<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+    <table style="width:100%; border-collapse: collapse; background-color: #2d2d2d; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">'''
     html_table += '<thead><tr style="background-color: #3d3d3d;">'
     
     # Add "Chart" column header after "Stock Name"
@@ -190,7 +211,7 @@ def create_html_table(df_page):
         
         html_table += '</tr>'
     
-    html_table += '</tbody></table>'
+    html_table += '</tbody></table></div>'
     return html_table
 
 
