@@ -150,6 +150,29 @@ CUSTOM_CSS = """
             max-width: 48% !important;
         }
         
+        /* Exception: Keep pagination controls horizontal */
+        .pagination-container [data-testid="stHorizontalBlock"] {
+            flex-wrap: nowrap !important;
+        }
+        
+        .pagination-container [data-testid="stHorizontalBlock"] > div {
+            flex: 0 0 auto !important;
+            min-width: auto !important;
+            max-width: none !important;
+        }
+        
+        .pagination-container [data-testid="stHorizontalBlock"] > div:first-child {
+            flex: 0 0 60px !important;
+        }
+        
+        .pagination-container [data-testid="stHorizontalBlock"] > div:nth-child(2) {
+            flex: 1 1 auto !important;
+        }
+        
+        .pagination-container [data-testid="stHorizontalBlock"] > div:last-child {
+            flex: 0 0 60px !important;
+        }
+        
         /* Make metrics display properly in their containers */
         [data-testid="stMetric"] {
             width: 100% !important;
