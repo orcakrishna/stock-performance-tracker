@@ -108,24 +108,86 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     """
 
 
+def create_sparkline_svg(sparkline_data, today_change, stock_symbol, width=80, height=30):
+    """Create an SVG sparkline from normalized data with color based on today's performance"""
+    if not sparkline_data or len(sparkline_data) < 2:
+        return ""
+    
+    # Create SVG path
+    points = []
+    step = width / (len(sparkline_data) - 1)
+    
+    for i, value in enumerate(sparkline_data):
+        x = i * step
+        # Invert Y axis (SVG coordinates start from top)
+        y = height - (value / 100 * height)
+        points.append(f"{x:.2f},{y:.2f}")
+    
+    path_data = "M " + " L ".join(points)
+    
+    # Determine color based on today's performance (Today % column)
+    try:
+        today_pct = float(today_change)
+        color = "#00ff00" if today_pct >= 0 else "#ff4444"
+    except:
+        # Fallback to trend-based color if today_change is invalid
+        color = "#00ff00" if sparkline_data[-1] >= sparkline_data[0] else "#ff4444"
+    
+    # Create clickable SVG with direct link
+    tradingview_url = f"https://www.tradingview.com/chart/?symbol=NSE:{stock_symbol}"
+    
+    svg = f'''<a href="{tradingview_url}" target="_blank" style="text-decoration: none;">
+        <svg width="{width}" height="{height}" style="display: block; cursor: pointer;" 
+             onmouseover="this.style.opacity='0.7'" 
+             onmouseout="this.style.opacity='1'">
+            <path d="{path_data}" fill="none" stroke="{color}" stroke-width="2" />
+        </svg>
+    </a>'''
+    
+    return svg
+
+
 def create_html_table(df_page):
-    """Create HTML table with colored percentage values"""
-    html_table = '<table style="width:100%; border-collapse: collapse; background-color: #2d2d2d;">'
+    """Create HTML table with colored percentage values and mini charts"""
+    
+    html_table = ''
+    html_table += '<table style="width:100%; border-collapse: collapse; background-color: #2d2d2d; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif;">'
     html_table += '<thead><tr style="background-color: #3d3d3d;">'
     
+    # Add "Chart" column header after "Stock Name"
     for col in df_page.columns:
-        html_table += f'<th style="padding: 12px; text-align: left; border: 1px solid #555; color: #ffffff; font-weight: bold;">{col}</th>'
+        if col != 'sparkline_data':  # Skip the raw data column
+            html_table += f'<th style="padding: 12px; text-align: left; border: 1px solid #555; color: #ffffff; font-weight: bold; font-size: 14px;">{col}</th>'
+            if col == 'Stock Name':
+                html_table += '<th style="padding: 12px; text-align: center; border: 1px solid #555; color: #ffffff; font-weight: bold; font-size: 14px;">Chart</th>'
+    
     html_table += '</tr></thead><tbody>'
     
     for _, row in df_page.iterrows():
         html_table += '<tr>'
+        stock_symbol = row.get('Stock Name', '')
+        sparkline_data = row.get('sparkline_data', [])
+        today_change = row.get('Today %', 0)  # Get today's performance for color
+        
         for col in df_page.columns:
+            if col == 'sparkline_data':
+                continue  # Skip the raw data column
+                
             value = row[col]
+            
             if col in ['Today %', '1 Week %', '1 Month %', '2 Months %', '3 Months %']:
                 colored_value = color_percentage(value)
-                html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff;">{colored_value}</td>'
+                html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff; font-size: 14px;">{colored_value}</td>'
             else:
-                html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff;">{value}</td>'
+                html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff; font-size: 14px;">{value}</td>'
+            
+            # Add sparkline cell after Stock Name
+            if col == 'Stock Name':
+                sparkline_svg = create_sparkline_svg(sparkline_data, today_change, stock_symbol)
+                html_table += f'''<td style="text-align: center; padding: 12px; border: 1px solid #555;">
+                    {sparkline_svg}
+                </td>'''
+        
         html_table += '</tr>'
     
     html_table += '</tbody></table>'
