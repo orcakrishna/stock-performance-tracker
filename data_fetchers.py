@@ -578,7 +578,7 @@ def get_next_nse_holiday():
     return None
 
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
+@st.cache_data(ttl=300)  # Cache for 5 minutes (try to fetch fresh data more often)
 def get_fii_dii_data():
     """
     Fetch FII/DII buy/sell data with multiple fallback sources
@@ -620,20 +620,23 @@ def get_fii_dii_data():
     try:
         url = "https://www.nseindia.com/api/fiidiiTradeReact"
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
-            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': '*/*',
             'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': 'https://www.nseindia.com/reports/fii-dii',
-            'Accept-Encoding': 'gzip, deflate, br'
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': 'https://www.nseindia.com/',
+            'Connection': 'keep-alive',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
         }
         
         with requests.Session() as session:
             session.headers.update(headers)
-            # Set cookies by visiting homepage
-            session.get("https://www.nseindia.com", timeout=5)
-            time.sleep(1)
+            # Set cookies by visiting homepage first
+            homepage_response = session.get("https://www.nseindia.com", timeout=10)
+            time.sleep(2)  # Increased delay
             
-            response = session.get(url, timeout=8)
+            response = session.get(url, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
