@@ -108,24 +108,190 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     """
 
 
+def create_sparkline_svg(sparkline_data, width=80, height=30):
+    """Create an SVG sparkline from normalized data"""
+    if not sparkline_data or len(sparkline_data) < 2:
+        return ""
+    
+    # Create SVG path
+    points = []
+    step = width / (len(sparkline_data) - 1)
+    
+    for i, value in enumerate(sparkline_data):
+        x = i * step
+        # Invert Y axis (SVG coordinates start from top)
+        y = height - (value / 100 * height)
+        points.append(f"{x:.2f},{y:.2f}")
+    
+    path_data = "M " + " L ".join(points)
+    
+    # Determine color based on trend (first vs last value)
+    color = "#00ff00" if sparkline_data[-1] >= sparkline_data[0] else "#ff4444"
+    
+    svg = f'''<svg width="{width}" height="{height}" style="display: block;">
+        <path d="{path_data}" fill="none" stroke="{color}" stroke-width="1.5" />
+    </svg>'''
+    
+    return svg
+
+
 def create_html_table(df_page):
-    """Create HTML table with colored percentage values"""
-    html_table = '<table style="width:100%; border-collapse: collapse; background-color: #2d2d2d;">'
+    """Create HTML table with colored percentage values and mini charts"""
+    
+    # Add CSS and JavaScript for TradingView popup
+    html_styles = '''
+    <style>
+        .sparkline-cell {
+            cursor: pointer;
+            position: relative;
+            padding: 12px;
+            border: 1px solid #555;
+        }
+        .sparkline-cell:hover {
+            background-color: #3d3d3d;
+        }
+        .tradingview-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 600px;
+            background-color: #1e1e1e;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 255, 136, 0.3);
+            z-index: 10000;
+            padding: 10px;
+        }
+        .tradingview-popup.active {
+            display: block;
+        }
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+        }
+        .popup-overlay.active {
+            display: block;
+        }
+        .popup-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-weight: bold;
+            z-index: 10001;
+        }
+        .popup-close:hover {
+            background-color: #ff6666;
+        }
+    </style>
+    '''
+    
+    html_script = '''
+    <script>
+        function showTradingViewPopup(symbol) {
+            // Create overlay
+            let overlay = document.getElementById('tradingview-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'tradingview-overlay';
+                overlay.className = 'popup-overlay';
+                overlay.onclick = closeTradingViewPopup;
+                document.body.appendChild(overlay);
+            }
+            
+            // Create popup
+            let popup = document.getElementById('tradingview-popup');
+            if (!popup) {
+                popup = document.createElement('div');
+                popup.id = 'tradingview-popup';
+                popup.className = 'tradingview-popup';
+                document.body.appendChild(popup);
+            }
+            
+            // Add close button and iframe
+            popup.innerHTML = `
+                <button class="popup-close" onclick="closeTradingViewPopup()">✕ Close</button>
+                <iframe 
+                    src="https://www.tradingview.com/chart/?symbol=NSE:${symbol}" 
+                    style="width: 100%; height: 100%; border: none; border-radius: 8px;"
+                    frameborder="0"
+                    allowfullscreen>
+                </iframe>
+            `;
+            
+            // Show popup and overlay
+            overlay.classList.add('active');
+            popup.classList.add('active');
+        }
+        
+        function closeTradingViewPopup() {
+            const overlay = document.getElementById('tradingview-overlay');
+            const popup = document.getElementById('tradingview-popup');
+            if (overlay) overlay.classList.remove('active');
+            if (popup) popup.classList.remove('active');
+        }
+        
+        function openTradingViewChart(symbol) {
+            window.open(`https://www.tradingview.com/chart/?symbol=NSE:${symbol}`, '_blank');
+        }
+    </script>
+    '''
+    
+    html_table = html_styles + html_script
+    html_table += '<table style="width:100%; border-collapse: collapse; background-color: #2d2d2d;">'
     html_table += '<thead><tr style="background-color: #3d3d3d;">'
     
+    # Add "Chart" column header after "Stock Name"
     for col in df_page.columns:
-        html_table += f'<th style="padding: 12px; text-align: left; border: 1px solid #555; color: #ffffff; font-weight: bold;">{col}</th>'
+        if col != 'sparkline_data':  # Skip the raw data column
+            html_table += f'<th style="padding: 12px; text-align: left; border: 1px solid #555; color: #ffffff; font-weight: bold;">{col}</th>'
+            if col == 'Stock Name':
+                html_table += '<th style="padding: 12px; text-align: center; border: 1px solid #555; color: #ffffff; font-weight: bold;">Chart</th>'
+    
     html_table += '</tr></thead><tbody>'
     
     for _, row in df_page.iterrows():
         html_table += '<tr>'
+        stock_symbol = row.get('Stock Name', '')
+        sparkline_data = row.get('sparkline_data', [])
+        
         for col in df_page.columns:
+            if col == 'sparkline_data':
+                continue  # Skip the raw data column
+                
             value = row[col]
+            
             if col in ['Today %', '1 Week %', '1 Month %', '2 Months %', '3 Months %']:
                 colored_value = color_percentage(value)
                 html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff;">{colored_value}</td>'
             else:
                 html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff;">{value}</td>'
+            
+            # Add sparkline cell after Stock Name
+            if col == 'Stock Name':
+                sparkline_svg = create_sparkline_svg(sparkline_data)
+                html_table += f'''<td class="sparkline-cell" 
+                    onmouseover="showTradingViewPopup('{stock_symbol}')" 
+                    onclick="openTradingViewChart('{stock_symbol}')"
+                    title="Hover to preview | Click to open full chart"
+                    style="text-align: center; padding: 12px; border: 1px solid #555;">
+                    {sparkline_svg}
+                </td>'''
+        
         html_table += '</tr>'
     
     html_table += '</tbody></table>'

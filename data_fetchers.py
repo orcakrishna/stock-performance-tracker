@@ -233,6 +233,23 @@ def get_stock_performance(ticker, use_cache=True):
         change_2m = ((current_price - price_2m) / price_2m) * 100
         change_3m = ((current_price - price_3m) / price_3m) * 100
         
+        # Get sparkline data (last 30 trading days for mini chart)
+        sparkline_data = []
+        if len(hist) >= 30:
+            sparkline_prices = hist['Close'].iloc[-30:].tolist()
+        else:
+            sparkline_prices = hist['Close'].tolist()
+        
+        # Normalize sparkline data to 0-100 range for consistent display
+        if sparkline_prices:
+            min_price = min(sparkline_prices)
+            max_price = max(sparkline_prices)
+            price_range = max_price - min_price
+            if price_range > 0:
+                sparkline_data = [((p - min_price) / price_range) * 100 for p in sparkline_prices]
+            else:
+                sparkline_data = [50] * len(sparkline_prices)  # Flat line if no change
+        
         result = {
             'Stock Name': symbol,
             'Current Price': f"₹{current_price:.2f}",
@@ -240,7 +257,8 @@ def get_stock_performance(ticker, use_cache=True):
             '1 Week %': round(change_1w, 2),
             '1 Month %': round(change_1m, 2),
             '2 Months %': round(change_2m, 2),
-            '3 Months %': round(change_3m, 2)
+            '3 Months %': round(change_3m, 2),
+            'sparkline_data': sparkline_data  # Add sparkline data
         }
         
         # Save to cache
