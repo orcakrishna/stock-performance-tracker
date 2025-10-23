@@ -95,6 +95,14 @@ CUSTOM_CSS = """
     header {
         background-color: transparent !important;
     }
+    
+    /* Hide GitHub fork button */
+    .viewerBadge_container__1QSob,
+    .viewerBadge_link__1S137,
+    a[href*="github.com"][target="_blank"]:has(svg),
+    header a[href*="github"] {
+        display: none !important;
+    }
     .main > div:first-child {
         padding-top: 0 !important;
     }
@@ -135,42 +143,52 @@ CUSTOM_CSS = """
             max-width: 100% !important;
         }
         
-        /* Keep horizontal blocks as flex row for metrics */
+        /* Make metrics wrap to 2 columns on mobile */
         [data-testid="stHorizontalBlock"] {
             display: flex !important;
-            flex-direction: row !important;
             flex-wrap: wrap !important;
-            gap: 0.5rem !important;
         }
         
-        /* Make each column take ~48% width for 2-column layout */
         [data-testid="stHorizontalBlock"] > div {
-            flex: 1 1 48% !important;
+            flex: 0 0 48% !important;
             min-width: 48% !important;
             max-width: 48% !important;
         }
         
-        /* Exception: Keep pagination controls horizontal */
+        /* Exception: Keep pagination controls horizontal - CRITICAL */
         .pagination-container [data-testid="stHorizontalBlock"] {
             flex-wrap: nowrap !important;
+            flex-direction: row !important;
+            display: flex !important;
         }
         
         .pagination-container [data-testid="stHorizontalBlock"] > div {
             flex: 0 0 auto !important;
-            min-width: auto !important;
+            min-width: 50px !important;
             max-width: none !important;
         }
         
         .pagination-container [data-testid="stHorizontalBlock"] > div:first-child {
-            flex: 0 0 60px !important;
+            flex: 0 0 12.5% !important;
+            min-width: 50px !important;
+            max-width: 80px !important;
         }
         
         .pagination-container [data-testid="stHorizontalBlock"] > div:nth-child(2) {
-            flex: 1 1 auto !important;
+            flex: 1 1 75% !important;
+            min-width: 0 !important;
         }
         
         .pagination-container [data-testid="stHorizontalBlock"] > div:last-child {
-            flex: 0 0 60px !important;
+            flex: 0 0 12.5% !important;
+            min-width: 50px !important;
+            max-width: 80px !important;
+        }
+        
+        /* Force pagination buttons to stay in their columns */
+        .pagination-container button {
+            width: 100% !important;
+            max-width: 100% !important;
         }
         
         /* Make metrics display properly in their containers */
