@@ -151,15 +151,15 @@ def create_html_table(df_page):
     """Create HTML table with colored percentage values and mini charts"""
     
     html_table = ''
-    html_table += '<table style="width:100%; border-collapse: collapse; background-color: #2d2d2d;">'
+    html_table += '<table style="width:100%; border-collapse: collapse; background-color: #2d2d2d; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif;">'
     html_table += '<thead><tr style="background-color: #3d3d3d;">'
     
     # Add "Chart" column header after "Stock Name"
     for col in df_page.columns:
         if col != 'sparkline_data':  # Skip the raw data column
-            html_table += f'<th style="padding: 12px; text-align: left; border: 1px solid #555; color: #ffffff; font-weight: bold;">{col}</th>'
+            html_table += f'<th style="padding: 12px; text-align: left; border: 1px solid #555; color: #ffffff; font-weight: bold; font-size: 14px;">{col}</th>'
             if col == 'Stock Name':
-                html_table += '<th style="padding: 12px; text-align: center; border: 1px solid #555; color: #ffffff; font-weight: bold;">Chart</th>'
+                html_table += '<th style="padding: 12px; text-align: center; border: 1px solid #555; color: #ffffff; font-weight: bold; font-size: 14px;">Chart</th>'
     
     html_table += '</tr></thead><tbody>'
     
@@ -177,9 +177,9 @@ def create_html_table(df_page):
             
             if col in ['Today %', '1 Week %', '1 Month %', '2 Months %', '3 Months %']:
                 colored_value = color_percentage(value)
-                html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff;">{colored_value}</td>'
+                html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff; font-size: 14px;">{colored_value}</td>'
             else:
-                html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff;">{value}</td>'
+                html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff; font-size: 14px;">{value}</td>'
             
             # Add sparkline cell after Stock Name
             if col == 'Stock Name':
