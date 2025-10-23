@@ -125,11 +125,14 @@ CUSTOM_CSS = """
         
         .main {
             padding: 0.25rem 0.5rem 0.5rem 0.5rem;
+            margin-left: 0 !important;
+            width: 100% !important;
         }
         
         .block-container {
             padding-left: 0.5rem !important;
             padding-right: 0.5rem !important;
+            max-width: 100% !important;
         }
         
         [data-testid="stHorizontalBlock"] {
@@ -139,6 +142,12 @@ CUSTOM_CSS = """
         
         /* Make metrics stack vertically on mobile */
         [data-testid="stMetric"] {
+            width: 100% !important;
+        }
+        
+        /* Ensure main content area is not affected by sidebar */
+        section[data-testid="stMain"] {
+            margin-left: 0 !important;
             width: 100% !important;
         }
     }
@@ -323,11 +332,22 @@ CUSTOM_CSS = """
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {
             min-width: 100% !important;
+            z-index: 999999 !important;
         }
         
         [data-testid="stSidebar"] button {
             width: 100% !important;
             padding: 0.75rem 1rem !important;
+        }
+        
+        /* Ensure sidebar doesn't overlay content when collapsed */
+        [data-testid="stSidebar"][aria-expanded="false"] {
+            display: none !important;
+        }
+        
+        /* Main content should take full width when sidebar is collapsed */
+        [data-testid="stSidebar"][aria-expanded="false"] ~ [data-testid="stMain"] {
+            margin-left: 0 !important;
         }
     }
     /* Sidebar Info Box */
