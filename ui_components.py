@@ -334,6 +334,32 @@ def render_pagination_controls(total_items, items_per_page):
     if 'current_page' not in st.session_state:
         st.session_state.current_page = 1
     
+    # Add CSS to keep pagination horizontal on mobile
+    st.markdown("""
+        <style>
+        /* Keep pagination buttons horizontal on mobile */
+        .pagination-container [data-testid="stHorizontalBlock"] {
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+        }
+        .pagination-container [data-testid="stHorizontalBlock"] > div {
+            flex: 0 0 auto !important;
+            min-width: auto !important;
+            max-width: none !important;
+        }
+        .pagination-container [data-testid="stHorizontalBlock"] > div:nth-child(1) {
+            flex: 0 0 50px !important;
+        }
+        .pagination-container [data-testid="stHorizontalBlock"] > div:nth-child(2) {
+            flex: 1 1 auto !important;
+        }
+        .pagination-container [data-testid="stHorizontalBlock"] > div:nth-child(3) {
+            flex: 0 0 50px !important;
+        }
+        </style>
+        <div class="pagination-container">
+    """, unsafe_allow_html=True)
+    
     col1, col2, col3 = st.columns([0.3, 11, 0.3])
     
     with col1:
@@ -376,6 +402,9 @@ def render_pagination_controls(total_items, items_per_page):
         if st.button("➡️", disabled=(st.session_state.current_page == total_pages), key="next_page"):
             st.session_state.current_page += 1
             st.rerun()
+    
+    # Close pagination container
+    st.markdown("</div>", unsafe_allow_html=True)
     
     return start_idx, end_idx
 
