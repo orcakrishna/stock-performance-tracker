@@ -104,22 +104,19 @@ CUSTOM_CSS = """
         display: none !important;
     }
     
-    /* Make sidebar toggle button always visible */
+    /* Style sidebar toggle button */
     button[kind="header"] {
-        opacity: 1 !important;
-        visibility: visible !important;
-        display: block !important;
-        background-color: #667eea !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
         color: white !important;
         border: 2px solid #ffffff !important;
-        border-radius: 6px !important;
+        border-radius: 8px !important;
         padding: 8px 12px !important;
         font-size: 1.1rem !important;
         font-weight: bold !important;
         box-shadow: 0 2px 8px rgba(102, 126, 234, 0.6) !important;
     }
     button[kind="header"]:hover {
-        background-color: #5568d3 !important;
+        background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%) !important;
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.8) !important;
         transform: scale(1.05) !important;
     }
@@ -421,6 +418,12 @@ CUSTOM_CSS = """
         /* Main content should take full width when sidebar is collapsed */
         [data-testid="stSidebar"][aria-expanded="false"] ~ [data-testid="stMain"] {
             margin-left: 0 !important;
+        }
+        
+        /* 3-column layout for market indices and sectors on mobile */
+        [data-testid="stHorizontalBlock"] [data-testid="column"] {
+            flex: 0 0 33.333% !important;
+            max-width: 33.333% !important;
         }
     }
     /* Sidebar Info Box */
