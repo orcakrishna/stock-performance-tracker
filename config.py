@@ -420,16 +420,26 @@ CUSTOM_CSS = """
             margin-left: 0 !important;
         }
         
-        /* 3-column layout for market indices, sectors, and top/bottom performers on mobile */
+        /* 4-column layout for market indices, sectors, and top/bottom performers on mobile */
         [data-testid="stHorizontalBlock"] {
             display: grid !important;
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 0.5rem !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 0.25rem !important;
         }
         [data-testid="stHorizontalBlock"] [data-testid="column"] {
             width: 100% !important;
             flex: none !important;
             min-width: 0 !important;
+        }
+        /* Reduce font size for mobile metrics */
+        [data-testid="stMetric"] {
+            font-size: 0.75rem !important;
+        }
+        [data-testid="stMetricLabel"] {
+            font-size: 0.7rem !important;
+        }
+        [data-testid="stMetricValue"] {
+            font-size: 0.85rem !important;
         }
         
         /* Single line ticker on mobile */
