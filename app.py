@@ -394,7 +394,7 @@ def main():
     
     ticker_caption = f"📊 Live Ticker: {stock_count} stocks • Updates every 60 seconds • Hover to pause"
     if fii_dii_source:
-        ticker_caption += f" • FII/DII: {fii_dii_source}"
+        ticker_caption += f"&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;&nbsp;FII/DII: {fii_dii_source}"
     st.markdown(f"<p class='ticker-info'>{ticker_caption}</p>", unsafe_allow_html=True)
     
     # Sidebar: Stock selection
