@@ -72,109 +72,144 @@ COMMODITIES = {
     'btc': 'BTC-USD'
 }
 
-# Custom CSS for dark theme and responsive UI
+# Custom CSS for mobile-optimized UI
 CUSTOM_CSS = """<style>
-/* ✅ Mobile viewport optimization */
+/* Mobile viewport optimization */
 @viewport { width: device-width; zoom: 1.0; }
 
-/* Global background */
-.main, .stApp { background-color: #1e1e1e; }
-.block-container {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
+/* Global styles */
+.main, .stApp { 
+    background-color: #1e1e1e;
+    padding: 0.5rem 0.75rem !important;
 }
 
-/* Hide GitHub or Streamlit badges */
-.viewerBadge_container__1QSob, .viewerBadge_link__1S137,
-a[href*="github.com"][target="_blank"]:has(svg),
-header a[href*="github"] { display: none !important; }
-
-/* Buttons */
-button[kind="header"] {
-    background: linear-gradient(135deg, #667eea, #764ba2) !important;
-    color: white !important;
-    border-radius: 8px !important;
-    padding: 8px 12px !important;
-    font-weight: bold !important;
-}
-button[kind="header"]:hover {
-    background: linear-gradient(135deg, #5568d3, #6a3f8f) !important;
-    transform: scale(1.05) !important;
+/* Grid layout for sectors and indices */
+.stHorizontalBlock {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -0.25rem;
 }
 
-/* Font & layout */
-html { font-size: 13px; }
-@media (min-width: 1920px) { html { font-size: 14px; } }
-@media (max-width: 768px) {
-    html { font-size: 12px; }
-    .main { padding: 0.25rem 0.5rem; width: 100% !important; }
+.stHorizontalBlock > div {
+    padding: 0 0.25rem;
+    margin-bottom: 0.5rem;
 }
 
-/* Typography */
-h1, h2, h3, p, label, div { color: #fff !important; }
-h1 { font-size: 1.75rem !important; font-weight: 600 !important; }
-@media (max-width: 768px) {
-    h1 { font-size: 1.4rem !important; }
+/* Mobile-first typography */
+html { font-size: 12px; }
+@media (min-width: 768px) { 
+    html { font-size: 13px; }
+    .main { padding: 0.5rem 1rem !important; }
+}
+@media (min-width: 1920px) { 
+    html { font-size: 14px; }
+}
+
+/* Headers and text */
+h1, h2, h3, p, label, div { 
+    color: #fff !important; 
+    margin: 0.25rem 0;
+}
+h1 { 
+    font-size: 1.4rem !important; 
+    font-weight: 600 !important;
+    margin-bottom: 0.5rem !important;
+}
+@media (min-width: 768px) {
+    h1 { 
+        font-size: 1.75rem !important;
+        margin-bottom: 1rem !important;
+    }
 }
 
 /* Tables */
-.dataframe { background-color: #2d2d2d; color: #fff; }
+.dataframe { 
+    background-color: #2d2d2d; 
+    color: #fff; 
+    font-size: 0.9rem;
+}
 thead tr th, tbody tr td {
     border: 1px solid #555 !important;
-    padding: 6px 8px !important;
+    padding: 4px 6px !important;
 }
-thead tr th { background-color: #3d3d3d !important; }
-
-/* Ticker */
-.ticker-container {
-    background: linear-gradient(90deg,#1a1a2e,#16213e,#1a1a2e);
-    border: 2px solid #0f3460;
-    border-radius: 8px;
-    padding: 6px 0;
-    margin-bottom: 10px;
-    overflow: hidden;
-}
-.ticker-wrapper {
-    display: inline-flex;
-    animation: ticker-scroll 120s linear infinite;
-    white-space: nowrap;
-}
-@keyframes ticker-scroll {
-    0% { transform: translateX(0%); }
-    100% { transform: translateX(-50%); }
-}
-.ticker-container:hover .ticker-wrapper { animation-play-state: paused; }
-.ticker-item {
-    display: inline-flex; align-items: center;
-    margin: 0 30px; padding: 6px 18px;
-    background: rgba(255,255,255,0.05);
-    border-radius: 6px;
-    transition: 0.3s ease;
-}
-.ticker-symbol { color: #00d4ff; font-weight: bold; margin-right: 8px; }
-.ticker-price { color: #fff; margin-right: 8px; }
-.ticker-change-positive { color: #00ff00; }
-.ticker-change-negative { color: #ff4444; }
-
-/* ✅ Mobile ticker */
-@media (max-width: 768px) {
-    .ticker-container { padding: 4px 0; }
-    .ticker-item { margin: 0 15px; padding: 4px 12px; }
-    .ticker-symbol, .ticker-price { font-size: 0.813rem; }
+thead tr th { 
+    background-color: #3d3d3d !important; 
+    font-size: 0.9rem;
 }
 
-/* ✅ Sidebar */
-[data-testid="stSidebar"] {
-    background-color: #262730 !important;
-}
-[data-testid="stSidebar"] p, label, span {
-    color: #e0e0e0 !important;
-    font-size: 0.938rem !important;
+/* Mobile-specific styles */
+@media (max-width: 767px) {
+    .block-container {
+        padding: 0.25rem 0.5rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Top section - 4 lines layout */
+    .stHorizontalBlock:first-of-type > div {
+        width: 100% !important;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Sector and Indices - 4 columns */
+    .stHorizontalBlock:not(:first-of-type) > div {
+        width: 50% !important;
+        padding: 0 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Make buttons more touch-friendly */
+    button {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.9rem !important;
+        min-height: 2.5rem;
+        width: 100%;
+        margin: 0.25rem 0;
+    }
+    
+    /* Adjust form elements */
+    .stTextInput > div > div > input,
+    .stSelectbox > div > div > div {
+        padding: 0.5rem !important;
+        font-size: 0.9rem !important;
+    }
+    
+    /* Ensure tables are scrollable */
+    .dataframe {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        font-size: 0.85rem;
+    }
+    
+    /* Metric cards in top section */
+    .stMetric {
+        margin: 0.25rem 0;
+    }
 }
 
-/* ✅ Metrics */
-[data-testid="stMetricValue"] { font-size: 1.125rem !important; }
-[data-testid="stMetricLabel"] { font-size: 0.875rem !important; }
+/* Hide GitHub/Streamlit badges on mobile */
+.viewerBadge_container__1QSob, 
+.viewerBadge_link__1S137,
+a[href*="github.com"][target="_blank"]:has(svg),
+header a[href*="github"] { 
+    display: none !important; 
+}
+
+/* Metric cards */
+[data-testid="stMetricValue"] { 
+    font-size: 1.125rem !important; 
+}
+[data-testid="stMetricLabel"] { 
+    font-size: 0.875rem !important; 
+}
+[data-testid="stMetricDelta"] { 
+    font-size: 0.875rem !important; 
+}
+
+/* Color indicators */
+.positive { color: #00ff00 !important; }
+.negative { color: #ff4444 !important; }
 [data-testid="stMetricDelta"]:has(svg[data-testid="stMetricDeltaIcon-Up"]) {
     color: #00ff00 !important;
 }
@@ -184,9 +219,9 @@ thead tr th { background-color: #3d3d3d !important; }
 </style>
 """
 
-# Metric styling CSS
+# Metric styling CSS (kept for backward compatibility)
 METRIC_CSS = """<style>
-[data-testid="stMetricValue"] { font-size: 1.375rem !important; }
+[data-testid="stMetricValue"] { font-size: 1.25rem !important; }
 [data-testid="stMetricLabel"] { font-size: 0.938rem !important; }
 [data-testid="stMetricDelta"]:has(svg[data-testid="stMetricDeltaIcon-Up"]) {
     color: #00ff00 !important;
