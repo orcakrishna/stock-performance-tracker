@@ -399,18 +399,23 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
     # Wrap pagination in a container div for specific styling
     st.markdown('<div class="pagination-container">', unsafe_allow_html=True)
     
-    # Adjust column widths - give more space for text on mobile
-    col1, col2, col3 = st.columns([1, 10, 1])
+    # Adjust column widths - push arrows to absolute extreme edges
+    col1, col2, col3 = st.columns([0.5, 11, 0.4])
     
     with col1:
         st.markdown("""
             <style>
+            div[data-testid="column"]:nth-of-type(1) {
+                display: flex !important;
+                justify-content: flex-start !important;
+            }
             div[data-testid="column"]:nth-of-type(1) button {
                 background-color: #00d4ff !important;
                 color: white !important;
                 border: none !important;
                 font-size: 1.2rem !important;
                 padding: 5px 10px !important;
+                margin-left: 0 !important;
             }
             </style>
         """, unsafe_allow_html=True)
@@ -426,26 +431,29 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
             <style>
                 .pagination-text {
                     text-align: center;
-                    margin: 0 !important;
-                    padding-top: 10px !important;
+                    margin: 0 0 -15px 0 !important;
+                    padding: 10px 0 5px 0 !important;
                     font-size: 0.9rem;
                     color: white;
                     font-weight: bold;
                     white-space: nowrap;
                     line-height: 1.2;
+                    vertical-align: middle;
                 }
                 @media (max-width: 768px) {
                     .pagination-text {
                         font-size: 0.65rem !important;
                         white-space: nowrap !important;
-                        padding-top: 12px !important;
-                        padding: 0 2px !important;
-                        margin: 0 !important;
+                        padding: 8px 2px 3px 2px !important;
+                        margin: 0 0 -10px 0 !important;
+                        line-height: 1.2 !important;
                     }
                 }
                 @media (max-width: 480px) {
                     .pagination-text {
                         font-size: 0.6rem !important;
+                        padding: 6px 2px 2px 2px !important;
+                        margin: 0 0 -8px 0 !important;
                     }
                 }
             </style>
@@ -458,12 +466,17 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
     with col3:
         st.markdown("""
             <style>
+            div[data-testid="column"]:nth-of-type(3) {
+                display: flex !important;
+                justify-content: flex-end !important;
+            }
             div[data-testid="column"]:nth-of-type(3) button {
                 background-color: #00ff88 !important;
                 color: white !important;
                 border: none !important;
                 font-size: 1.2rem !important;
                 padding: 5px 10px !important;
+                margin-right: 0 !important;
             }
             </style>
         """, unsafe_allow_html=True)
