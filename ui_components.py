@@ -306,38 +306,51 @@ def render_top_bottom_performers(df):
     st.markdown("---")
     st.subheader("🏆 Top & Bottom Performers (3 Months)")
     
-    # Wrap in a container that overrides grid layout for mobile
+    # CSS for responsive layout: 2 columns on desktop, stacked on mobile
     st.markdown("""
     <style>
-        .performers-container [data-testid="stHorizontalBlock"] {
-            display: block !important;
-            grid-template-columns: none !important;
+        .performers-section [data-testid="stHorizontalBlock"] {
+            display: flex;
         }
         @media (max-width: 768px) {
-            .performers-container [data-testid="column"] {
+            .performers-section [data-testid="stHorizontalBlock"] {
+                flex-direction: column !important;
+            }
+            .performers-section [data-testid="column"] {
                 width: 100% !important;
                 flex: 1 1 100% !important;
                 min-width: 100% !important;
-                display: block !important;
+            }
+            /* Keep performer text on single line */
+            .performers-section [data-testid="stAlert"] {
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            .performers-section [data-testid="stAlert"] > div {
+                white-space: nowrap !important;
             }
         }
     </style>
-    <div class="performers-container">
+    <div class="performers-section">
     """, unsafe_allow_html=True)
     
-    # Top performers
-    st.markdown("**🔝 Top 3 Performers**")
-    top_3 = df.nlargest(3, '3 Months %')[['Stock Name', '3 Months %']]
-    for idx, row in top_3.iterrows():
-        st.success(f"**{row['Stock Name']}**: +{row['3 Months %']}%")
+    # Two columns on desktop, stacked on mobile
+    col_top, col_bottom = st.columns(2)
     
-    # Bottom performers
-    st.markdown("**🔻 Bottom 3 Performers**")
-    bottom_3 = df.nsmallest(3, '3 Months %')[['Stock Name', '3 Months %']]
-    for idx, row in bottom_3.iterrows():
-        st.error(f"**{row['Stock Name']}**: {row['3 Months %']}%")
+    with col_top:
+        st.markdown("**🔝 Top 3 Performers**")
+        top_3 = df.nlargest(3, '3 Months %')[['Stock Name', '3 Months %']]
+        for idx, row in top_3.iterrows():
+            st.success(f"**{row['Stock Name']}**: +{row['3 Months %']}%")
     
-    # Close container
+    with col_bottom:
+        st.markdown("**🔻 Bottom 3 Performers**")
+        bottom_3 = df.nsmallest(3, '3 Months %')[['Stock Name', '3 Months %']]
+        for idx, row in bottom_3.iterrows():
+            st.error(f"**{row['Stock Name']}**: {row['3 Months %']}%")
+    
+    # Close performers section
     st.markdown("</div>", unsafe_allow_html=True)
 
 
