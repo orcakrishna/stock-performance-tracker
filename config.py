@@ -420,7 +420,7 @@ CUSTOM_CSS = """
             margin-left: 0 !important;
         }
         
-        /* 3-column layout for market indices and sectors on mobile */
+        /* 3-column layout for market indices, sectors, and top/bottom performers on mobile */
         [data-testid="stHorizontalBlock"] {
             display: grid !important;
             grid-template-columns: repeat(3, 1fr) !important;
@@ -430,6 +430,30 @@ CUSTOM_CSS = """
             width: 100% !important;
             flex: none !important;
             min-width: 0 !important;
+        }
+        
+        /* Single line ticker on mobile */
+        .ticker-container {
+            white-space: nowrap !important;
+            overflow-x: auto !important;
+        }
+        .ticker-wrapper {
+            display: inline-flex !important;
+            flex-wrap: nowrap !important;
+        }
+        .ticker-item {
+            flex-shrink: 0 !important;
+        }
+        
+        /* 2-column grid for header commodities on mobile */
+        .header-info {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.25rem !important;
+        }
+        .header-info p {
+            margin: 0.25rem 0 !important;
+            font-size: 10px !important;
         }
     }
     /* Sidebar Info Box */
