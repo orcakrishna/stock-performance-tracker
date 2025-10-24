@@ -217,17 +217,17 @@ def render_gainer_loser_banner():
     with col3:
         st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
         if weekly_gainer:
-            st.markdown(f"**📈 Weekly Sector+:** <span style='color: #00ff00; font-size: 0.85rem; line-height: 1.5;'>{weekly_gainer['name'].replace('Nifty ', '')} ({weekly_gainer['change']:+.2f}%)</span>", unsafe_allow_html=True)
+            st.markdown(f"**📈 Weekly Gainer:** <span style='color: #00ff00; font-size: 0.85rem; line-height: 1.5;'>{weekly_gainer['name'].replace('Nifty ', '')} ({weekly_gainer['change']:+.2f}%)</span>", unsafe_allow_html=True)
         else:
-            st.markdown(f"**📈 Weekly Sector+:** <span style='color: #888; font-size: 0.85rem;'>N/A</span>", unsafe_allow_html=True)
+            st.markdown(f"**📈 Weekly Gainer:** <span style='color: #888; font-size: 0.85rem;'>N/A</span>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col4:
         st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
         if weekly_loser:
-            st.markdown(f"**📉 Weekly Sector-:** <span style='color: #ff4444; font-size: 0.85rem; line-height: 1.5;'>{weekly_loser['name'].replace('Nifty ', '')} ({weekly_loser['change']:+.2f}%)</span>", unsafe_allow_html=True)
+            st.markdown(f"**📉 Weekly Looser:** <span style='color: #ff4444; font-size: 0.85rem; line-height: 1.5;'>{weekly_loser['name'].replace('Nifty ', '')} ({weekly_loser['change']:+.2f}%)</span>", unsafe_allow_html=True)
         else:
-            st.markdown(f"**📉 Weekly Sector-:** <span style='color: #888; font-size: 0.85rem;'>N/A</span>", unsafe_allow_html=True)
+            st.markdown(f"**📉 Weekly Looser:** <span style='color: #888; font-size: 0.85rem;'>N/A</span>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col5:

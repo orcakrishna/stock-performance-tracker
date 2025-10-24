@@ -594,7 +594,7 @@ def get_next_nse_holiday():
     return None
 
 
-@st.cache_data(ttl=300)  # Cache for 5 minutes (try to fetch fresh data more often)
+@st.cache_data(ttl=60)  # Cache for 1 minute to fetch fresh data more often
 def get_fii_dii_data():
     """
     Fetch FII/DII buy/sell data with multiple fallback sources
@@ -603,32 +603,33 @@ def get_fii_dii_data():
     """
     
     # Method 0: Try reading from JSON file first (updated daily by GitHub Actions)
+    # But only use if it's today's data
     try:
         import json
         import os
+        from datetime import datetime
+        
         json_file = os.path.join(os.path.dirname(__file__), 'fii_dii_data.json')
         if os.path.exists(json_file):
             with open(json_file, 'r') as f:
                 data = json.load(f)
+                
+                # Check if data is from today
+                file_date = data.get('date', '')
+                today = datetime.now().strftime('%d-%b-%Y')
+                
                 if data.get('status') == 'success' and (data.get('fii') or data.get('dii')):
-                    print(f"FII/DII: Loaded from JSON file (fetched at {data.get('fetched_at', 'unknown')})")
-                    # Cache to session state
-                    try:
-                        from datetime import datetime
-                        st.session_state['last_fii_dii_data'] = {
+                    # Only use JSON file if it's today's data
+                    if file_date == today:
+                        print(f"FII/DII: Loaded from JSON file (fetched at {data.get('fetched_at', 'unknown')})")
+                        return {
                             'fii': data.get('fii'),
                             'dii': data.get('dii'),
-                            'source': f"{data.get('source', 'JSON')} (File)",
-                            'cached_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                            'status': 'success',
+                            'source': f"{data.get('source', 'JSON')} (File)"
                         }
-                    except:
-                        pass
-                    return {
-                        'fii': data.get('fii'),
-                        'dii': data.get('dii'),
-                        'status': 'success',
-                        'source': f"{data.get('source', 'JSON')} (File)"
-                    }
+                    else:
+                        print(f"FII/DII: JSON file data is old ({file_date}), trying live fetch...")
     except Exception as e:
         print(f"JSON file read failed: {e}")
     
