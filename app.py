@@ -374,13 +374,28 @@ def main():
     # Render live ticker
     stock_count = render_live_ticker()
     
-    # Display ticker caption with FII/DII source at extreme right
-    col_left, col_right = st.columns([5, 1])
-    with col_left:
-        st.caption(f"📊 Live Ticker: {stock_count} stocks • Updates every 60 seconds • Hover to pause")
-    with col_right:
-        if fii_dii_source:
-            st.markdown(f"<p style='text-align: right; font-size: 0.8rem; color: #888;'>📊 FII/DII: {fii_dii_source}</p>", unsafe_allow_html=True)
+    # Display ticker caption with FII/DII source - mobile friendly
+    st.markdown("""
+    <style>
+        .ticker-info {
+            font-size: 0.85rem;
+            color: #888;
+            line-height: 1.5;
+        }
+        @media (max-width: 768px) {
+            .ticker-info {
+                font-size: 0.7rem !important;
+                line-height: 1.6 !important;
+                word-wrap: break-word !important;
+            }
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    ticker_caption = f"📊 Live Ticker: {stock_count} stocks • Updates every 60 seconds • Hover to pause"
+    if fii_dii_source:
+        ticker_caption += f" • FII/DII: {fii_dii_source}"
+    st.markdown(f"<p class='ticker-info'>{ticker_caption}</p>", unsafe_allow_html=True)
     
     # Sidebar: Stock selection
     category = render_stock_selection_sidebar()
@@ -433,6 +448,20 @@ def main():
     cache_stats = get_cache_stats()
     st.sidebar.text(f"Cached Stocks: {cache_stats['valid']}")
     st.sidebar.caption(f"Expired: {cache_stats['expired']} | Total: {cache_stats['total']}")
+    
+    # Stack buttons vertically on mobile
+    st.sidebar.markdown("""
+    <style>
+        @media (max-width: 768px) {
+            [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] {
+                display: block !important;
+            }
+            [data-testid="stSidebar"] [data-testid="column"] {
+                width: 100% !important;
+            }
+        }
+    </style>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.sidebar.columns(2)
     with col1:

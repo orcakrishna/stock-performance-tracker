@@ -24,32 +24,38 @@ def render_header():
             .header-subtitle {
                 font-size: 0.875rem !important;
             }
+            /* Force single column on mobile */
+            div[data-testid="column"] {
+                width: 100% !important;
+                flex: 1 1 100% !important;
+                min-width: 100% !important;
+            }
         }
     </style>
     """, unsafe_allow_html=True)
     
-    col_title, col_time = st.columns([3, 1])
+    # Title section
+    st.markdown('<h1 class="header-title">📊 Indian Stock Performance Tracker</h1>', unsafe_allow_html=True)
+    st.markdown(
+        """<div style='margin-top: -10px;'>
+            <span class='header-subtitle' style='color: #00ff88; font-weight: bold; font-size: 1rem;'>
+                View 1-month, 2-month, and 3-month performance of NSE/BSE stocks.
+            </span>
+        </div>""",
+        unsafe_allow_html=True
+    )
+    
+    # Commodities section - wrapped in left-aligned container
+    ist_time, edt_time = get_current_times()
+    commodities_prices = get_commodities_prices()
+    next_holiday = get_next_nse_holiday()
 
-    with col_title:
-        st.markdown('<h1 class="header-title">📊 Indian Stock Performance Tracker</h1>', unsafe_allow_html=True)
-        st.markdown(
-            """<div style='margin-top: -10px;'>
-                <span class='header-subtitle' style='color: #00ff88; font-weight: bold; font-size: 1rem;'>
-                    View 1-month, 2-month, and 3-month performance of NSE/BSE stocks.
-                </span>
-            </div>""",
-            unsafe_allow_html=True
-        )
-
-    with col_time:
-        ist_time, edt_time = get_current_times()
-        commodities_prices = get_commodities_prices()
-        next_holiday = get_next_nse_holiday()
-
-        st.markdown(
-            format_time_display(ist_time, edt_time, commodities_prices, next_holiday),
-            unsafe_allow_html=True,
-        )
+    st.markdown('<div style="text-align: left !important; width: 100%; margin: 0; padding: 0; display: block !important;">', unsafe_allow_html=True)
+    st.markdown(
+        format_time_display(ist_time, edt_time, commodities_prices, next_holiday),
+        unsafe_allow_html=True,
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def render_holiday_and_pe_info():
@@ -299,19 +305,40 @@ def render_top_bottom_performers(df):
     """Render top and bottom performers section"""
     st.markdown("---")
     st.subheader("🏆 Top & Bottom Performers (3 Months)")
-    col_top, col_bottom = st.columns(2)
     
-    with col_top:
-        st.markdown("**🔝 Top 3 Performers**")
-        top_3 = df.nlargest(3, '3 Months %')[['Stock Name', '3 Months %']]
-        for idx, row in top_3.iterrows():
-            st.success(f"**{row['Stock Name']}**: +{row['3 Months %']}%")
+    # Wrap in a container that overrides grid layout for mobile
+    st.markdown("""
+    <style>
+        .performers-container [data-testid="stHorizontalBlock"] {
+            display: block !important;
+            grid-template-columns: none !important;
+        }
+        @media (max-width: 768px) {
+            .performers-container [data-testid="column"] {
+                width: 100% !important;
+                flex: 1 1 100% !important;
+                min-width: 100% !important;
+                display: block !important;
+            }
+        }
+    </style>
+    <div class="performers-container">
+    """, unsafe_allow_html=True)
     
-    with col_bottom:
-        st.markdown("**🔻 Bottom 3 Performers**")
-        bottom_3 = df.nsmallest(3, '3 Months %')[['Stock Name', '3 Months %']]
-        for idx, row in bottom_3.iterrows():
-            st.error(f"**{row['Stock Name']}**: {row['3 Months %']}%")
+    # Top performers
+    st.markdown("**🔝 Top 3 Performers**")
+    top_3 = df.nlargest(3, '3 Months %')[['Stock Name', '3 Months %']]
+    for idx, row in top_3.iterrows():
+        st.success(f"**{row['Stock Name']}**: +{row['3 Months %']}%")
+    
+    # Bottom performers
+    st.markdown("**🔻 Bottom 3 Performers**")
+    bottom_3 = df.nsmallest(3, '3 Months %')[['Stock Name', '3 Months %']]
+    for idx, row in bottom_3.iterrows():
+        st.error(f"**{row['Stock Name']}**: {row['3 Months %']}%")
+    
+    # Close container
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def render_averages(df):
@@ -372,7 +399,8 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
     # Wrap pagination in a container div for specific styling
     st.markdown('<div class="pagination-container">', unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([0.5, 8, 0.5])
+    # Adjust column widths - give more space for text on mobile
+    col1, col2, col3 = st.columns([1, 10, 1])
     
     with col1:
         st.markdown("""
@@ -394,8 +422,36 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
     end_idx = min(start_idx + items_per_page, total_items)
     
     with col2:
+        st.markdown("""
+            <style>
+                .pagination-text {
+                    text-align: center;
+                    margin: 0 !important;
+                    padding-top: 10px !important;
+                    font-size: 0.9rem;
+                    color: white;
+                    font-weight: bold;
+                    white-space: nowrap;
+                    line-height: 1.2;
+                }
+                @media (max-width: 768px) {
+                    .pagination-text {
+                        font-size: 0.65rem !important;
+                        white-space: nowrap !important;
+                        padding-top: 12px !important;
+                        padding: 0 2px !important;
+                        margin: 0 !important;
+                    }
+                }
+                @media (max-width: 480px) {
+                    .pagination-text {
+                        font-size: 0.6rem !important;
+                    }
+                }
+            </style>
+        """, unsafe_allow_html=True)
         st.markdown(
-            f"<p style='text-align: center; margin-top: 8px; font-size: 0.9rem; color: white; font-weight: bold;'>Page {st.session_state.current_page} of {total_pages} <span style='color: #95e1d3; font-weight: normal;'>(Showing {start_idx + 1}-{end_idx} of {total_items})</span></p>",
+            f"<p class='pagination-text'>Page {st.session_state.current_page} of {total_pages} <span style='color: #95e1d3; font-weight: normal;'>(Showing {start_idx + 1}-{end_idx} of {total_items})</span></p>",
             unsafe_allow_html=True
         )
     

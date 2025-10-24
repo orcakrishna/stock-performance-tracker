@@ -78,52 +78,55 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     return f"""
     <style>
         .header-info {{
-            text-align: right;
-            padding-top: 20px;
+            text-align: left !important;
+            padding: 15px 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            display: block !important;
         }}
         .header-info p {{
-            margin: 0;
+            margin: 5px 0 !important;
+            padding: 0 !important;
             font-size: 13px;
+            display: block !important;
+            width: 100% !important;
+            text-align: left !important;
+            clear: both !important;
+            float: none !important;
         }}
         @media (max-width: 768px) {{
             .header-info {{
-                text-align: left;
-                padding-top: 10px;
+                text-align: left !important;
+                padding: 10px 0 0 0 !important;
+                margin: 0 !important;
+                margin-left: 0 !important;
+                padding-left: 0 !important;
+                display: block !important;
             }}
             .header-info p {{
-                font-size: 11px;
-                line-height: 1.6;
+                font-size: 11px !important;
+                line-height: 1.8 !important;
+                margin: 4px 0 !important;
+                padding: 0 !important;
+                text-align: left !important;
+                display: block !important;
+                width: 100% !important;
+                clear: both !important;
+                float: none !important;
+            }}
+        }}
+        @media (max-width: 480px) {{
+            .header-info p {{
+                font-size: 10px !important;
+                line-height: 1.7 !important;
             }}
         }}
     </style>
     <div class='header-info'>
-    </br>
-        <p>
-            <span style='color: #fff; font-weight: bold;'>🛢️ Oil:</span> 
-            <span style='color: {oil_color}; font-weight: bold;'>{oil_price} {oil_arrow}</span> | 
-            <span style='color: #fff; font-weight: bold;'>₿ BTC:</span> 
-            <span style='color: {btc_color}; font-weight: bold;'>{btc_display}</span> | 
-            <span style='color: #fff; font-weight: bold;'>🕐 IST:</span> 
-            <span style='color: #fff; font-weight: bold;'>{ist_time.strftime('%I:%M %p')}</span>
-        </p>
-        <p>
-            <span style='color: #fff; font-weight: bold;'>🥇 Gold:</span> 
-            <span style='color: {gold_color}; font-weight: bold;'>{gold_price} {gold_arrow}</span>
-            <span style='color: #ffd700; font-weight: normal;'> ({gold_inr})</span> | 
-            <span style='color: #fff; font-weight: bold;'>🕐 EDT:</span> 
-            <span style='color: #fff; font-weight: bold;'>{edt_time.strftime('%I:%M %p')}</span>
-        </p>
-        <p>
-            <span style='color: #fff; font-weight: bold;'>🪙 Silver:</span> 
-            <span style='color: {silver_color}; font-weight: bold;'>{silver_price} {silver_arrow}</span>
-            <span style='color: #c0c0c0; font-weight: normal;'> ({silver_inr})</span> | 
-            <span style='color: #fff; font-weight: bold;'>📅</span> 
-            <span style='color: #fff; font-weight: bold;'>{ist_time.strftime('%d %b %Y')}</span>
-        </p>
-        <p>
-            <span style='color: #fff; font-weight: bold;'>💵 USD/INR:</span> 
-            <span style='color: {usd_inr_color}; font-weight: bold;'>{usd_inr}</span>{holiday_text}
-        </p>
+        <p>🛢️ Oil: <span style='color: {oil_color}; font-weight: bold;'>{oil_price} {oil_arrow}</span> | ₿ BTC: <span style='color: {btc_color}; font-weight: bold;'>{btc_display}</span> | 🕐 IST: {ist_time.strftime('%I:%M %p')}</p>
+        <p>🥇 Gold: <span style='color: {gold_color}; font-weight: bold;'>{gold_price} {gold_arrow}</span> <span style='color: #ffd700;'>({gold_inr})</span> | 🕐 EDT: {edt_time.strftime('%I:%M %p')}</p>
+        <p>🪙 Silver: <span style='color: {silver_color}; font-weight: bold;'>{silver_price} {silver_arrow}</span> <span style='color: #c0c0c0;'>({silver_inr})</span> | 📅 {ist_time.strftime('%d %b %Y')}</p>
+        <p>💵 USD/INR: <span style='color: {usd_inr_color}; font-weight: bold;'>{usd_inr}</span>{holiday_text}</p>
     </div>
     """
 

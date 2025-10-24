@@ -420,10 +420,11 @@ CUSTOM_CSS = """
             margin-left: 0 !important;
         }
         
-        /* 4-column layout for market indices, sectors, and top/bottom performers on mobile */
+        /* 3-column layout for market indices and sectors on mobile */
+        /* Note: Top/Bottom performers override this in their own CSS */
         [data-testid="stHorizontalBlock"] {
             display: grid !important;
-            grid-template-columns: repeat(4, 1fr) !important;
+            grid-template-columns: repeat(3, 1fr) !important;
             gap: 0.25rem !important;
         }
         [data-testid="stHorizontalBlock"] [data-testid="column"] {
