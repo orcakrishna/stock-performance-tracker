@@ -377,25 +377,52 @@ def main():
     # Display ticker caption with FII/DII source - mobile friendly
     st.markdown("""
     <style>
-        .ticker-info {
+        .ticker-info-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 10px;
+        }
+        .ticker-info-left {
             font-size: 0.85rem;
             color: #888;
             line-height: 1.5;
         }
+        .ticker-info-right {
+            font-size: 0.85rem;
+            color: #888;
+            line-height: 1.5;
+            text-align: right;
+            white-space: nowrap;
+        }
         @media (max-width: 768px) {
-            .ticker-info {
+            .ticker-info-container {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            .ticker-info-left {
                 font-size: 0.7rem !important;
                 line-height: 1.6 !important;
-                word-wrap: break-word !important;
+            }
+            .ticker-info-right {
+                font-size: 0.7rem !important;
+                line-height: 1.6 !important;
             }
         }
     </style>
     """, unsafe_allow_html=True)
     
-    ticker_caption = f"📊 Live Ticker: {stock_count} stocks • Updates every 60 seconds • Hover to pause"
-    if fii_dii_source:
-        ticker_caption += f"&nbsp;&nbsp;•&nbsp;&nbsp;&nbsp;&nbsp;FII/DII: {fii_dii_source}"
-    st.markdown(f"<p class='ticker-info'>{ticker_caption}</p>", unsafe_allow_html=True)
+    ticker_left = f"📊 Live Ticker: {stock_count} stocks • Updates every 60 seconds • Hover to pause"
+    ticker_right = f"📊 FII/DII: {fii_dii_source}" if fii_dii_source else ""
+    
+    st.markdown(f"""
+    <div class='ticker-info-container'>
+        <div class='ticker-info-left'>{ticker_left}</div>
+        <div class='ticker-info-right'>{ticker_right}</div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Sidebar: Stock selection
     category = render_stock_selection_sidebar()
