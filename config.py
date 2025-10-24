@@ -421,9 +421,15 @@ CUSTOM_CSS = """
         }
         
         /* 3-column layout for market indices and sectors on mobile */
+        [data-testid="stHorizontalBlock"] {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 0.5rem !important;
+        }
         [data-testid="stHorizontalBlock"] [data-testid="column"] {
-            flex: 0 0 33.333% !important;
-            max-width: 33.333% !important;
+            width: 100% !important;
+            flex: none !important;
+            min-width: 0 !important;
         }
     }
     /* Sidebar Info Box */
