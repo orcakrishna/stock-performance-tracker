@@ -509,15 +509,14 @@ def main():
     # Add rank
     df.insert(0, 'Rank', range(1, len(df) + 1))
     
-    # Pagination
+    # Pagination - get page range
     total_items = len(df)
-    start_idx, end_idx = render_pagination_controls(total_items, ITEMS_PER_PAGE)
+    start_idx, end_idx = render_pagination_controls(total_items, ITEMS_PER_PAGE, position="top")
     df_page = df.iloc[start_idx:end_idx]
     
     # Display table
     html_table = create_html_table(df_page)
     st.markdown(html_table, unsafe_allow_html=True)
-    st.caption(f"Showing {start_idx + 1} to {end_idx} of {total_items} stocks")
     
     # Top/Bottom performers
     render_top_bottom_performers(df)

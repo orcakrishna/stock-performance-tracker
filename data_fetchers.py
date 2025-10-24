@@ -536,6 +536,12 @@ def get_next_nse_holiday():
     """Fetch the next upcoming NSE holiday dynamically from NSE website"""
     from datetime import datetime
     
+    # Fallback: Hardcoded NSE holidays for 2025 (in case API fails in cloud)
+    fallback_holidays = [
+        "05-Nov-2025",  # Prakash Gurpurb Sri Guru Nanak Dev
+        "25-Dec-2025",  # Christmas
+    ]
+    
     try:
         # Fetch from NSE website
         url = "https://www.nseindia.com/api/holiday-master?type=trading"
@@ -574,7 +580,17 @@ def get_next_nse_holiday():
     except Exception as e:
         print(f"Error fetching NSE holidays from API: {e}")
     
-    # Return None if API fails - will display as N/A
+    # Fallback: Use hardcoded holidays if API fails
+    try:
+        today = datetime.now().date()
+        for holiday_str in fallback_holidays:
+            holiday_date = datetime.strptime(holiday_str, "%d-%b-%Y").date()
+            if holiday_date > today:
+                return holiday_str
+    except Exception as e:
+        print(f"Error parsing fallback holidays: {e}")
+    
+    # Return None if everything fails
     return None
 
 

@@ -103,6 +103,27 @@ CUSTOM_CSS = """
     header a[href*="github"] {
         display: none !important;
     }
+    
+    /* Make sidebar toggle button always visible */
+    button[kind="header"] {
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: block !important;
+        background-color: #667eea !important;
+        color: white !important;
+        border: 2px solid #ffffff !important;
+        border-radius: 6px !important;
+        padding: 8px 12px !important;
+        font-size: 1.1rem !important;
+        font-weight: bold !important;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.6) !important;
+    }
+    button[kind="header"]:hover {
+        background-color: #5568d3 !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.8) !important;
+        transform: scale(1.05) !important;
+    }
+    
     .main > div:first-child {
         padding-top: 0 !important;
     }

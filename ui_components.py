@@ -143,7 +143,7 @@ def render_live_ticker(fii_dii_source=None):
 # GAINER/LOSER BANNER
 # =========================
 def render_gainer_loser_banner():
-    """Render top gainer and loser banner from market indices with FII/DII data"""
+    """Render top gainer and loser banner from market indices with FII/DII data and weekly sectoral"""
     indices_data = []
     
     # Combine all indices but exclude VIX and international indices
@@ -166,12 +166,43 @@ def render_gainer_loser_banner():
     top_gainer = max(indices_data, key=lambda x: x['change'])
     top_loser = min(indices_data, key=lambda x: x['change'])
     
+    # Fetch weekly sectoral data
+    import yfinance as yf
+    sectoral_indices = {
+        'Nifty Auto': '^CNXAUTO',
+        'Nifty Energy': '^CNXENERGY',
+        'Nifty FMCG': '^CNXFMCG',
+        'Nifty IT': '^CNXIT',
+        'Nifty Metal': '^CNXMETAL',
+        'Nifty Pharma': '^CNXPHARMA',
+        'Nifty Realty': '^CNXREALTY'
+    }
+    
+    weekly_sectoral_data = []
+    for name, symbol in sectoral_indices.items():
+        try:
+            ticker = yf.Ticker(symbol)
+            hist = ticker.history(period='1wk')
+            if len(hist) >= 2:
+                week_change = ((hist['Close'].iloc[-1] - hist['Close'].iloc[0]) / hist['Close'].iloc[0]) * 100
+                weekly_sectoral_data.append({'name': name, 'change': week_change})
+        except Exception as e:
+            print(f"Error fetching weekly data for {name}: {e}")
+            continue
+    
+    # Find weekly sectoral gainer and loser
+    weekly_gainer = None
+    weekly_loser = None
+    if weekly_sectoral_data:
+        weekly_gainer = max(weekly_sectoral_data, key=lambda x: x['change'])
+        weekly_loser = min(weekly_sectoral_data, key=lambda x: x['change'])
+    
     # Fetch FII/DII data
     fii_dii_data = get_fii_dii_data()
     
-    # Display using compact inline format with FII/DII data
-    # Adjust column widths: move DII left by making col3 smaller and col4 larger
-    col1, col2, col3, col4 = st.columns([1.5, 1.5, 1.3, 1.7])
+    # Display using compact inline format with FII/DII data and weekly sectoral
+    # 6 columns with equal widths
+    col1, col2, col3, col4, col5, col6 = st.columns([1, 1, 1, 1, 1, 1])
     
     with col1:
         st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
@@ -180,10 +211,26 @@ def render_gainer_loser_banner():
     
     with col2:
         st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
-        st.markdown(f"**⚠️ Top Loser:** <span style='color: #ff4444; font-size: 1rem; line-height: 1.5;'>{top_loser['name']} ({top_loser['change']:+.2f}%)</span>", unsafe_allow_html=True)
+        st.markdown(f"**⚠️ Top Loser:** <span style='color: #ff4444; font-size: 0.85rem; line-height: 1.5;'>{top_loser['name']} ({top_loser['change']:+.2f}%)</span>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
     with col3:
+        st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
+        if weekly_gainer:
+            st.markdown(f"**📈 Week Sector+:** <span style='color: #00ff00; font-size: 0.85rem; line-height: 1.5;'>{weekly_gainer['name'].replace('Nifty ', '')} ({weekly_gainer['change']:+.2f}%)</span>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"**📈 Week Sector+:** <span style='color: #888; font-size: 0.85rem;'>N/A</span>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
+        if weekly_loser:
+            st.markdown(f"**📉 Week Sector-:** <span style='color: #ff4444; font-size: 0.85rem; line-height: 1.5;'>{weekly_loser['name'].replace('Nifty ', '')} ({weekly_loser['change']:+.2f}%)</span>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"**📉 Weekly Sector-:** <span style='color: #888; font-size: 0.85rem;'>N/A</span>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col5:
         st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
         if fii_dii_data['status'] in ['success', 'cached', 'placeholder'] and fii_dii_data['fii']:
             fii = fii_dii_data['fii']
@@ -192,14 +239,14 @@ def render_gainer_loser_banner():
             action = 'Buy' if fii['net'] >= 0 else 'Sell'
             # Show N/A for placeholder (0.0 values)
             if fii_dii_data['status'] == 'placeholder':
-                st.markdown(f"**🌍 FII:** <span style='color: #888; font-size: 1rem; line-height: 1.5;'>N/A</span>", unsafe_allow_html=True)
+                st.markdown(f"**🌍 FII:** <span style='color: #888; font-size: 0.85rem; line-height: 1.5;'>N/A</span>", unsafe_allow_html=True)
             else:
-                st.markdown(f"**🌍 FII:** <span style='color: {net_color}; font-size: 1rem; line-height: 1.5;'>₹{net_abs:.0f} Cr ({action})</span>", unsafe_allow_html=True)
+                st.markdown(f"**🌍 FII:** <span style='color: {net_color}; font-size: 0.85rem; line-height: 1.5;'>₹{net_abs:.0f} Cr ({action})</span>", unsafe_allow_html=True)
         else:
-            st.markdown("**🌍 FII:** <span style='color: #888; font-size: 1rem;'>N/A</span>", unsafe_allow_html=True)
+            st.markdown("**🌍 FII:** <span style='color: #888; font-size: 0.85rem;'>N/A</span>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
-    with col4:
+    with col6:
         st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
         if fii_dii_data['status'] in ['success', 'cached', 'placeholder'] and fii_dii_data['dii']:
             dii = fii_dii_data['dii']
@@ -208,11 +255,11 @@ def render_gainer_loser_banner():
             action = 'Buy' if dii['net'] >= 0 else 'Sell'
             # Show N/A for placeholder (0.0 values)
             if fii_dii_data['status'] == 'placeholder':
-                st.markdown(f"**🏦 DII:** <span style='color: #888; font-size: 1rem; line-height: 1.5;'>N/A</span>", unsafe_allow_html=True)
+                st.markdown(f"**🏦 DII:** <span style='color: #888; font-size: 0.85rem; line-height: 1.5;'>N/A</span>", unsafe_allow_html=True)
             else:
-                st.markdown(f"**🏦 DII:** <span style='color: {net_color}; font-size: 1rem; line-height: 1.5;'>₹{net_abs:.0f} Cr ({action})</span>", unsafe_allow_html=True)
+                st.markdown(f"**🏦 DII:** <span style='color: {net_color}; font-size: 0.85rem; line-height: 1.5;'>₹{net_abs:.0f} Cr ({action})</span>", unsafe_allow_html=True)
         else:
-            st.markdown("**🏦 DII:** <span style='color: #888; font-size: 1rem;'>N/A</span>", unsafe_allow_html=True)
+            st.markdown("**🏦 DII:** <span style='color: #888; font-size: 0.85rem;'>N/A</span>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
     
     # Return FII/DII data source for combined caption
@@ -315,7 +362,7 @@ def render_averages(df):
 # =========================
 # PAGINATION
 # =========================
-def render_pagination_controls(total_items, items_per_page):
+def render_pagination_controls(total_items, items_per_page, position="top"):
     """Render pagination controls and return current page data range"""
     total_pages = (total_items + items_per_page - 1) // items_per_page
     
@@ -325,7 +372,7 @@ def render_pagination_controls(total_items, items_per_page):
     # Wrap pagination in a container div for specific styling
     st.markdown('<div class="pagination-container">', unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 6, 1])
+    col1, col2, col3 = st.columns([0.5, 8, 0.5])
     
     with col1:
         st.markdown("""
@@ -339,7 +386,7 @@ def render_pagination_controls(total_items, items_per_page):
             }
             </style>
         """, unsafe_allow_html=True)
-        if st.button("⬅️", disabled=(st.session_state.current_page == 1), key="prev_page"):
+        if st.button("◄◄", disabled=(st.session_state.current_page == 1), key=f"prev_page_{position}"):
             st.session_state.current_page -= 1
             st.rerun()
     
@@ -364,7 +411,7 @@ def render_pagination_controls(total_items, items_per_page):
             }
             </style>
         """, unsafe_allow_html=True)
-        if st.button("➡️", disabled=(st.session_state.current_page == total_pages), key="next_page"):
+        if st.button("►►", disabled=(st.session_state.current_page == total_pages), key=f"next_page_{position}"):
             st.session_state.current_page += 1
             st.rerun()
     
