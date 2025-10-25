@@ -1,16 +1,16 @@
 {
   "fii": {
-    "buy": 20477.78,
-    "sell": 21643.72,
-    "net": -1165.94
+    "buy": 0.0,
+    "sell": 0.0,
+    "net": 0.0
   },
   "dii": {
-    "buy": 19247.94,
-    "sell": 15354.21,
-    "net": 3893.73
+    "buy": 0.0,
+    "sell": 0.0,
+    "net": 0.0
   },
-  "status": "success",
-  "source": "NSE API",
-  "fetched_at": "2025-10-23 13:49:12 UTC",
-  "date": "23-Oct-2025"
+  "status": "error",
+  "source": "None",
+  "fetched_at": "2025-10-25 13:33:22 UTC",
+  "date": "Unknown"
 }
