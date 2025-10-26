@@ -522,15 +522,6 @@ def main():
     # Display Market Indices
     render_market_indices()
     
-    # Display title
-    if category == 'Upload File' and st.session_state.current_list_name:
-        display_title = f"📊 {st.session_state.current_list_name} - Performance Summary ({len(selected_stocks)} Stock(s))"
-    else:
-        display_title = f"📊 {category} - Performance Summary ({len(selected_stocks)} Stock(s))"
-    
-    st.subheader(display_title)
-    st.caption(f"🔽 Sorted by: **{sort_by}** ({sort_order})")
-    
     # Check if we need to fetch data (only if stocks list changed)
     stocks_list_key = ','.join(sorted(selected_stocks))  # Create unique key for current stock list
     
@@ -550,6 +541,24 @@ def main():
     else:
         # Use cached data (no re-fetch needed for sorting)
         stocks_data = st.session_state.cached_stocks_data
+    
+    # Display title with actual fetched count
+    actual_count = len(stocks_data)
+    if category == 'Upload File' and st.session_state.current_list_name:
+        display_title = f"📊 {st.session_state.current_list_name} - Performance Summary ({actual_count} Stock(s))"
+    else:
+        display_title = f"📊 {category} - Performance Summary ({actual_count} Stock(s))"
+    
+    # Log failed stocks (without displaying in title)
+    if actual_count < len(selected_stocks):
+        fetched_symbols = {data['Stock Name'] for data in stocks_data}
+        failed_symbols = [s.replace('.NS', '').replace('.BO', '') for s in selected_stocks 
+                         if s.replace('.NS', '').replace('.BO', '') not in fetched_symbols]
+        if failed_symbols:
+            print(f"⚠️ Failed to fetch data for: {', '.join(failed_symbols)}")
+    
+    st.subheader(display_title)
+    st.caption(f"🔽 Sorted by: **{sort_by}** ({sort_order})")
     
     # Create DataFrame
     df = pd.DataFrame(stocks_data)

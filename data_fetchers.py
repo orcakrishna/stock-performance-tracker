@@ -10,7 +10,7 @@ from io import StringIO
 import time
 import yfinance as yf
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from config import COMMODITIES
+from config import COMMODITIES, FALLBACK_NIFTY_50, FALLBACK_NIFTY_NEXT_50, FALLBACK_BSE_SENSEX
 from cache_manager import load_from_cache, save_to_cache, load_bulk_cache, save_bulk_cache
 
 
@@ -497,7 +497,14 @@ def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True):
 
 
 def get_stock_list(category_name):
-    """Get stock list from Yahoo Finance (100% live data)"""
+    """Get stock list - Always try dynamic fetch first, fallback to hardcoded if fails"""
+    
+    # Fallback mapping
+    fallback_map = {
+        'Nifty 50': FALLBACK_NIFTY_50,
+        'Nifty Next 50': FALLBACK_NIFTY_NEXT_50,
+        'BSE Sensex': FALLBACK_BSE_SENSEX
+    }
     
     # Get available indices
     available_indices = get_available_nse_indices()
@@ -506,13 +513,20 @@ def get_stock_list(category_name):
     if category_name in available_indices:
         api_index_name = available_indices[category_name]
         
-        # Fetch from NSE CSV (auto-updated when composition changes)
+        # Try 1: Fetch dynamically from NSE CSV (preferred method)
         yahoo_stocks = fetch_nse_index_constituents(api_index_name)
         
-        if yahoo_stocks:
-            return yahoo_stocks, f"✅ Fetched {len(yahoo_stocks)} stocks from {category_name} (🔴 NSE Official - Auto-Updated)"
-        else:
-            return [], f"❌ Failed to fetch {category_name}. Please try again."
+        if yahoo_stocks and len(yahoo_stocks) >= 5:
+            return yahoo_stocks, f"✅ Fetched {len(yahoo_stocks)} stocks from {category_name} (🔴 NSE Dynamic)"
+        
+        # Try 2: Fallback to hardcoded list if dynamic fetch failed
+        if category_name in fallback_map:
+            fallback_stocks = fallback_map[category_name]
+            print(f"⚠️ NSE dynamic fetch failed for {category_name}, using fallback list")
+            return fallback_stocks, f"⚠️ Using {len(fallback_stocks)} stocks from {category_name} (📋 Fallback - NSE may be down)"
+        
+        # No fallback available
+        return [], f"❌ Failed to fetch {category_name} and no fallback available"
     
     return [], "❌ No data available"
 
