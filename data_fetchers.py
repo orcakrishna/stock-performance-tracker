@@ -24,6 +24,7 @@ def get_available_nse_indices():
         'Nifty IT': 'NIFTY IT',
         'Nifty Pharma': 'NIFTY PHARMA',
         'Nifty Realty': 'NIFTY REALTY',
+        'Nifty Metal': 'NIFTY METAL',
     }
     return indices
 
@@ -39,6 +40,7 @@ def fetch_nse_index_constituents(index_name):
             'NIFTY IT': 'ind_niftyitlist.csv',
             'NIFTY PHARMA': 'ind_niftypharmalist.csv',
             'NIFTY REALTY': 'ind_niftyrealtylist.csv',
+            'NIFTY METAL': 'ind_niftymetallist.csv',
         }
         
         if index_name not in csv_map:
