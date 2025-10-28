@@ -95,11 +95,27 @@ CUSTOM_CSS = """
         background-color: transparent !important;
     }
     
-    /* Hide GitHub fork button */
+    /* Hide GitHub fork button and all menu items */
     .viewerBadge_container__1QSob,
     .viewerBadge_link__1S137,
     a[href*="github.com"][target="_blank"]:has(svg),
     header a[href*="github"] {
+        display: none !important;
+    }
+    
+    /* Hide Streamlit menu buttons (Share, Fork, Deploy, Settings) */
+    header[data-testid="stHeader"] button[kind="header"]:not([data-testid="collapsedControl"]) {
+        display: none !important;
+    }
+    
+    /* Hide main menu completely */
+    #MainMenu {
+        display: none !important;
+    }
+    
+    /* Hide the three dots menu in header */
+    header button[aria-label*="menu"],
+    header button[aria-label*="Menu"] {
         display: none !important;
     }
     
