@@ -42,7 +42,8 @@ st.set_page_config(
     page_title="NSE Stock Performance",
     page_icon="📈",
     layout="wide",
-    initial_sidebar_state="expanded"  # Expanded on desktop, collapsible on mobile
+    initial_sidebar_state="expanded",  # Expanded on desktop, collapsible on mobile
+    menu_items=None  # Hide Fork/Deploy/Settings menu
 )
 
 
