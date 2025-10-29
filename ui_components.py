@@ -64,9 +64,9 @@ def render_header():
         try:
             from data_fetchers import get_highest_volume_stocks
             
-            # Get stocks from both Nifty 50 and Nifty 500
-            nifty50_stocks = get_stock_list('Nifty 50')
-            nifty500_stocks = get_stock_list('Nifty 500')
+            # Get stocks from both Nifty 50 and Nifty 500 (returns tuple: stocks, message)
+            nifty50_stocks, _ = get_stock_list('Nifty 50')
+            nifty500_stocks, _ = get_stock_list('Nifty 500')
             
             # Combine both lists and remove duplicates
             combined_stocks = []
@@ -97,6 +97,8 @@ def render_header():
                         )
         except Exception as e:
             print(f"Error rendering volume stocks in header: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 def render_holiday_and_pe_info():
