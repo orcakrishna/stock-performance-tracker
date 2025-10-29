@@ -372,10 +372,10 @@ def main():
     # Render gainer/loser banner and get FII/DII source
     fii_dii_source = render_gainer_loser_banner()
     
-    # Render live ticker
-    stock_count = render_live_ticker()
+    # Render live ticker (volume stocks now in header)
+    stock_count, advances, declines = render_live_ticker()
     
-    # Display ticker caption with FII/DII source - mobile friendly
+    # Display ticker caption with FII/DII source and advances/declines - mobile friendly
     st.markdown("""
     <style>
         .ticker-info-container {
@@ -383,12 +383,21 @@ def main():
             justify-content: space-between;
             align-items: center;
             width: 100%;
-            gap: 10px;
+            gap: 15px;
         }
         .ticker-info-left {
             font-size: 0.85rem;
             color: #888;
             line-height: 1.5;
+            flex: 1;
+        }
+        .ticker-info-center {
+            font-size: 0.85rem;
+            color: #888;
+            line-height: 1.5;
+            text-align: center;
+            white-space: nowrap;
+            flex: 0 0 auto;
         }
         .ticker-info-right {
             font-size: 0.85rem;
@@ -396,6 +405,15 @@ def main():
             line-height: 1.5;
             text-align: right;
             white-space: nowrap;
+            flex: 1;
+        }
+        .adv-dec-positive {
+            color: #00ff00;
+            font-weight: bold;
+        }
+        .adv-dec-negative {
+            color: #ff4444;
+            font-weight: bold;
         }
         @media (max-width: 768px) {
             .ticker-info-container {
@@ -407,20 +425,28 @@ def main():
                 font-size: 0.7rem !important;
                 line-height: 1.6 !important;
             }
+            .ticker-info-center {
+                font-size: 0.7rem !important;
+                line-height: 1.6 !important;
+                text-align: left;
+            }
             .ticker-info-right {
                 font-size: 0.7rem !important;
                 line-height: 1.6 !important;
+                text-align: left;
             }
         }
     </style>
     """, unsafe_allow_html=True)
     
-    ticker_left = f"📊 Live Ticker: {stock_count} stocks • Updates every 60 seconds • Hover to pause"
+    ticker_left = f"📊 Live Ticker: {stock_count} stocks • Updates every 60 seconds • Hover to pause" if stock_count else ""
+    ticker_center = f"📈 <span class='adv-dec-positive'>Advances: {advances}</span> • <span class='adv-dec-negative'>Declines: {declines}</span>" if advances is not None and declines is not None else ""
     ticker_right = f"📊 FII/DII: {fii_dii_source}" if fii_dii_source else ""
     
     st.markdown(f"""
     <div class='ticker-info-container'>
         <div class='ticker-info-left'>{ticker_left}</div>
+        <div class='ticker-info-center'>{ticker_center}</div>
         <div class='ticker-info-right'>{ticker_right}</div>
     </div>
     """, unsafe_allow_html=True)

@@ -5,7 +5,7 @@ Streamlit UI rendering functions
 
 import streamlit as st
 from config import INDICES_ROW1, INDICES_ROW2, METRIC_CSS
-from data_fetchers import get_index_performance, get_commodities_prices, get_stock_list, get_next_nse_holiday, get_fii_dii_data
+from data_fetchers import get_index_performance, get_commodities_prices, get_stock_list, get_next_nse_holiday, get_fii_dii_data, get_highest_volume_stocks
 from utils import get_current_times, format_time_display, get_ticker_data
 
 
@@ -50,12 +50,39 @@ def render_header():
     commodities_prices = get_commodities_prices()
     next_holiday = get_next_nse_holiday()
 
-    st.markdown('<div style="text-align: left !important; width: 100%; margin: 0; padding: 0; display: block !important;">', unsafe_allow_html=True)
-    st.markdown(
-        format_time_display(ist_time, edt_time, commodities_prices, next_holiday),
-        unsafe_allow_html=True,
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Create two columns: commodities on left, volume stocks on right
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        st.markdown(
+            format_time_display(ist_time, edt_time, commodities_prices, next_holiday),
+            unsafe_allow_html=True,
+        )
+    
+    with col2:
+        # Render highest volume stocks inline with commodities - simple text only
+        try:
+            from data_fetchers import get_highest_volume_stocks
+            ticker_stocks = get_ticker_data()
+            if ticker_stocks and len(ticker_stocks) >= 5:
+                stock_symbols = [s['symbol'] for s in ticker_stocks]
+                volume_stocks = get_highest_volume_stocks(stock_symbols[:50], top_n=5)
+                
+                if volume_stocks:
+                    st.markdown("**📊 Highest volume stocks ›**")
+                    for stock in volume_stocks:
+                        change_icon = "▲" if stock['change_pct'] >= 0 else "▼"
+                        change_color = "green" if stock['change_pct'] >= 0 else "red"
+                        vol_display = f"{stock['volume']/1_000_000:.1f}M" if stock['volume'] >= 1_000_000 else f"{stock['volume']/1_000:.0f}K"
+                        
+                        st.markdown(
+                            f"**{stock['symbol']}**: ₹{stock['price']:.2f} "
+                            f"<span style='color:{change_color}'>{change_icon} {abs(stock['change_pct']):.2f}%</span> "
+                            f"• Vol: {vol_display}",
+                            unsafe_allow_html=True
+                        )
+        except Exception as e:
+            print(f"Error rendering volume stocks in header: {e}")
 
 
 def render_holiday_and_pe_info():
@@ -125,11 +152,17 @@ def render_live_ticker(fii_dii_source=None):
 
     if not ticker_data:
         st.markdown('<div class="ticker-container"><div style="text-align: center; padding: 10px; color: #888;">📊 Loading live stock data...</div></div>', unsafe_allow_html=True)
-        return
+        return None, None, None
 
     # Sort alphabetically and duplicate for smooth loop
     ticker_data_sorted = sorted(ticker_data, key=lambda x: x["symbol"])
     stock_count = len(ticker_data_sorted)
+    
+    # Calculate advances and declines
+    advances = sum(1 for stock in ticker_data_sorted if stock["change"] > 0)
+    declines = sum(1 for stock in ticker_data_sorted if stock["change"] < 0)
+    unchanged = stock_count - advances - declines
+    
     ticker_items = ""
 
     # Duplicate stocks for seamless infinite scroll
@@ -142,7 +175,10 @@ def render_live_ticker(fii_dii_source=None):
     ticker_html = f'<div class="ticker-container"><div class="ticker-wrapper">{ticker_items}</div></div>'
     
     st.markdown(ticker_html, unsafe_allow_html=True)
-    return stock_count
+    return stock_count, advances, declines
+
+
+# Highest volume stocks rendering is now handled directly in render_header() function above
 
 
 # =========================

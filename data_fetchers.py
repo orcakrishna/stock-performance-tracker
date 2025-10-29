@@ -901,3 +901,54 @@ def get_fii_dii_data():
         'status': 'placeholder',
         'source': 'Unavailable'
     }
+
+
+@st.cache_data(ttl=300)  # Cache for 5 minutes
+def get_highest_volume_stocks(stock_list, top_n=5):
+    """
+    Dynamically fetch highest volume stocks from the given stock list
+    Returns top N stocks sorted by trading volume
+    """
+    volume_data = []
+    
+    try:
+        # Fetch volume data for all stocks in parallel
+        def fetch_stock_volume(symbol):
+            try:
+                ticker = yf.Ticker(f"{symbol}.NS")
+                info = ticker.info
+                hist = ticker.history(period='1d')
+                
+                if len(hist) > 0 and 'Volume' in hist.columns:
+                    volume = hist['Volume'].iloc[-1]
+                    price = hist['Close'].iloc[-1]
+                    prev_close = info.get('previousClose', price)
+                    change_pct = ((price - prev_close) / prev_close) * 100 if prev_close else 0
+                    
+                    return {
+                        'symbol': symbol,
+                        'company': info.get('longName', symbol),
+                        'price': price,
+                        'change_pct': change_pct,
+                        'volume': volume
+                    }
+            except Exception as e:
+                print(f"Error fetching volume for {symbol}: {e}")
+            return None
+        
+        # Use ThreadPoolExecutor for parallel fetching
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = {executor.submit(fetch_stock_volume, symbol): symbol for symbol in stock_list}
+            
+            for future in as_completed(futures):
+                result = future.result()
+                if result and result['volume'] > 0:
+                    volume_data.append(result)
+        
+        # Sort by volume (descending) and return top N
+        volume_data.sort(key=lambda x: x['volume'], reverse=True)
+        return volume_data[:top_n]
+        
+    except Exception as e:
+        print(f"Error fetching highest volume stocks: {e}")
+        return []
