@@ -60,16 +60,30 @@ def render_header():
         )
     
     with col2:
-        # Render highest volume stocks inline with commodities - simple text only
+        # Render highest volume stocks from both Nifty 50 AND Nifty 500
         try:
             from data_fetchers import get_highest_volume_stocks
-            ticker_stocks = get_ticker_data()
-            if ticker_stocks and len(ticker_stocks) >= 5:
-                stock_symbols = [s['symbol'] for s in ticker_stocks]
-                volume_stocks = get_highest_volume_stocks(stock_symbols[:50], top_n=5)
+            
+            # Get stocks from both Nifty 50 and Nifty 500
+            nifty50_stocks = get_stock_list('Nifty 50')
+            nifty500_stocks = get_stock_list('Nifty 500')
+            
+            # Combine both lists and remove duplicates
+            combined_stocks = []
+            if nifty50_stocks:
+                combined_stocks.extend(nifty50_stocks)
+            if nifty500_stocks:
+                combined_stocks.extend(nifty500_stocks)
+            
+            # Remove duplicates while preserving order
+            combined_stocks = list(dict.fromkeys(combined_stocks))
+            
+            if combined_stocks and len(combined_stocks) >= 5:
+                print(f"📊 Fetching volume data from {len(combined_stocks)} stocks (Nifty 50 + Nifty 500)")
+                volume_stocks = get_highest_volume_stocks(combined_stocks, top_n=5)
                 
                 if volume_stocks:
-                    st.markdown("**📊 Highest volume stocks ›**")
+                    st.markdown("**📊 Highest volume stocks › (Nifty 50+500)**")
                     for stock in volume_stocks:
                         change_icon = "▲" if stock['change_pct'] >= 0 else "▼"
                         change_color = "green" if stock['change_pct'] >= 0 else "red"

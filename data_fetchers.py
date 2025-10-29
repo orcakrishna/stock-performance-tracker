@@ -20,6 +20,7 @@ def get_available_nse_indices():
     # Only indices that Yahoo Finance has live data for
     indices = {
         'Nifty 50': 'NIFTY 50',
+        'Nifty 500': 'NIFTY 500',
         'Nifty Bank': 'NIFTY BANK',
         'Nifty IT': 'NIFTY IT',
         'Nifty Pharma': 'NIFTY PHARMA',
@@ -36,6 +37,7 @@ def fetch_nse_index_constituents(index_name):
         # Map to NSE CSV filenames
         csv_map = {
             'NIFTY 50': 'ind_nifty50list.csv',
+            'NIFTY 500': 'ind_nifty500list.csv',
             'NIFTY BANK': 'ind_niftybanklist.csv',
             'NIFTY IT': 'ind_niftyitlist.csv',
             'NIFTY PHARMA': 'ind_niftypharmalist.csv',
