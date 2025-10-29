@@ -60,19 +60,20 @@ def render_header():
         )
     
     with col2:
-        # Render highest volume stocks from Nifty 500 (includes all Nifty 50 stocks)
+        # Render highest volume stocks from ticker (Nifty 50 - already loaded, avoids rate limits)
         try:
             from data_fetchers import get_highest_volume_stocks
             
-            # Get stocks from Nifty 500 only (already includes Nifty 50)
-            nifty500_stocks, _ = get_stock_list('Nifty 500')
+            # Use ticker stocks (already loaded, no extra API calls)
+            ticker_stocks = get_ticker_data()
             
-            if nifty500_stocks and len(nifty500_stocks) >= 5:
-                print(f"📊 Fetching volume data from {len(nifty500_stocks)} stocks (Nifty 500)")
-                volume_stocks = get_highest_volume_stocks(nifty500_stocks, top_n=5)
+            if ticker_stocks and len(ticker_stocks) >= 5:
+                stock_symbols = [s['symbol'] for s in ticker_stocks]
+                print(f"📊 Fetching volume data from {len(stock_symbols)} ticker stocks")
+                volume_stocks = get_highest_volume_stocks(stock_symbols, top_n=5)
                 
                 if volume_stocks:
-                    st.markdown("**📊 Highest volume stocks › (Nifty 500)**")
+                    st.markdown("**📊 Highest volume stocks ›**")
                     for stock in volume_stocks:
                         change_icon = "▲" if stock['change_pct'] >= 0 else "▼"
                         change_color = "green" if stock['change_pct'] >= 0 else "red"
