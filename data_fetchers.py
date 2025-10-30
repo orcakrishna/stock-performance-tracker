@@ -636,19 +636,21 @@ def get_fii_dii_data():
             with open(json_file, 'r') as f:
                 data = json.load(f)
                 
-                # Check if data is from today
+                # Check if data is from today or yesterday (use UTC to match GitHub Actions)
                 file_date = data.get('date', '')
-                today = datetime.now().strftime('%d-%b-%Y')
+                today = datetime.utcnow().strftime('%d-%b-%Y')
+                yesterday = (datetime.utcnow() - pd.Timedelta(days=1)).strftime('%d-%b-%Y')
                 
                 if data.get('status') == 'success' and (data.get('fii') or data.get('dii')):
-                    # Only use JSON file if it's today's data
-                    if file_date == today:
-                        print(f"FII/DII: Loaded from JSON file (fetched at {data.get('fetched_at', 'unknown')})")
+                    # Use JSON file if it's today's or yesterday's data
+                    if file_date == today or file_date == yesterday:
+                        age_label = "Today's" if file_date == today else "Yesterday's"
+                        print(f"FII/DII: Loaded {age_label} data from JSON file (fetched at {data.get('fetched_at', 'unknown')})")
                         return {
                             'fii': data.get('fii'),
                             'dii': data.get('dii'),
                             'status': 'success',
-                            'source': f"{data.get('source', 'JSON')} (File)"
+                            'source': f"{data.get('source', 'JSON')} (File - {age_label})"
                         }
                     else:
                         print(f"FII/DII: JSON file data is old ({file_date}), trying live fetch...")
