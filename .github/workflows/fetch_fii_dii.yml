@@ -29,10 +29,8 @@ jobs:
     - name: Prepare files (keep only last 2 days)
       run: |
         echo "Cleaning up old FII/DII data files..."
-        # Get today's and yesterday's dates
         TODAY=$(date -u +"%Y-%m-%d")
         YESTERDAY=$(date -u -d "yesterday" +"%Y-%m-%d")
-
         # Remove everything except the 2 latest files if they exist
         ls fii_dii_data_*.json 2>/dev/null || true
         for f in fii_dii_data_*.json; do
@@ -48,25 +46,21 @@ jobs:
       run: |
         TODAY=$(date -u +"%Y-%m-%d")
         YESTERDAY=$(date -u -d "yesterday" +"%Y-%m-%d")
-
         # Move today's file to main file
         if [ -f "fii_dii_data_${TODAY}.json" ]; then
           mv -f "fii_dii_data_${TODAY}.json" fii_dii_data.json
         fi
-
         # Copy yesterday’s file (if it exists) to fii_dii_data_prev.json
         if [ -f "fii_dii_data_${YESTERDAY}.json" ]; then
           cp -f "fii_dii_data_${YESTERDAY}.json" fii_dii_data_prev.json
         fi
 
-        - name: Commit and push if changed
+    - name: Commit and push if changed
       run: |
         git config --global user.name 'GitHub Actions Bot'
         git config --global user.email 'actions@github.com'
-
         git fetch origin main
         git rebase origin/main
-
         git add fii_dii_data*.json
         git diff --quiet && git diff --staged --quiet || (
           git commit -m "Update FII/DII data - $(date +'%Y-%m-%d')" &&
