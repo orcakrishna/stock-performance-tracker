@@ -41,3 +41,6 @@ cache/
 
 # Environment variables (contains admin password)
 .env
+
+# Separate astrovidya project (has its own git repo)
+astrovidya/
