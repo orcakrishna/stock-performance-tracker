@@ -55,23 +55,17 @@ jobs:
           cp -f "fii_dii_data_${YESTERDAY}.json" fii_dii_data_prev.json
         fi
 
-       - name: Commit and push if changed
+          - name: Commit and push if changed
       run: |
         git config --global user.name 'GitHub Actions Bot'
         git config --global user.email 'actions@github.com'
-        
-        # Fetch latest branch updates first
+
         git fetch origin main
+        git pull --rebase origin main || true  # pull latest cleanly
 
-        # Stage changes (add new/updated JSON files)
         git add fii_dii_data*.json
-
-        # Commit only if there are changes
-        git diff --quiet && git diff --staged --quiet || git commit -m "Update FII/DII data - $(date +'%Y-%m-%d')"
-
-        # Rebase to ensure we’re up-to-date before push
-        git pull --rebase origin main
-
-        # Push changes
-        git push origin main
+        git diff --quiet && git diff --staged --quiet || (
+          git commit -m "Update FII/DII data - $(date +'%Y-%m-%d')" &&
+          git push origin main
+        )
 
