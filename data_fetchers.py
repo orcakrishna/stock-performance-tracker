@@ -222,6 +222,10 @@ def get_stock_performance(ticker, use_cache=True):
         
         # For longer periods: use date-based lookup with better accuracy
         def get_price_by_days_back(days):
+            """
+            Returns closing price from X calendar days ago.
+            Automatically skips weekends, holidays, and market closures.
+            """
             target_date = current_date - pd.Timedelta(days=days)
             # Filter data before or on target date
             past_data = hist[hist.index <= target_date]
