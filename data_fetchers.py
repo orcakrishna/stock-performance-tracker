@@ -218,7 +218,7 @@ def get_stock_performance(ticker, use_cache=True):
            # price_1w = hist['Close'].iloc[-6]  # 5 trading days ago
        # else:
          #   price_1w = hist['Close'].iloc[0]
-        price_1w = get_price_by_days_back(7)  # 7 calendar days ago
+        #price_1w = get_price_by_days_back(7)  # 7 calendar days ago
         
         # For longer periods: use date-based lookup with better accuracy
         def get_price_by_days_back(days):
