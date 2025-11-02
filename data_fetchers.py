@@ -214,10 +214,11 @@ def get_stock_performance(ticker, use_cache=True):
         
         # Calculate prices for different periods
         # For 1 week: go back 5 trading days (1 week of trading)
-        if len(hist) >= 5:
-            price_1w = hist['Close'].iloc[-6]  # 5 trading days ago
-        else:
-            price_1w = hist['Close'].iloc[0]
+       # if len(hist) >= 5:
+           # price_1w = hist['Close'].iloc[-6]  # 5 trading days ago
+       # else:
+         #   price_1w = hist['Close'].iloc[0]
+        price_1w = get_price_by_days_back(7)  # 7 calendar days ago
         
         # For longer periods: use date-based lookup with better accuracy
         def get_price_by_days_back(days):
@@ -230,7 +231,8 @@ def get_stock_performance(ticker, use_cache=True):
             else:
                 # If no data before target, use earliest available
                 return hist['Close'].iloc[0]
-        
+
+        price_1w = get_price_by_days_back(7)   # <-- Fixed added
         price_1m = get_price_by_days_back(30)
         price_2m = get_price_by_days_back(60)
         price_3m = get_price_by_days_back(90)
