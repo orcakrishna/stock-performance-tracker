@@ -286,16 +286,30 @@ def get_stock_performance(ticker, use_cache=True):
         return None
 
 
-@st.cache_data(ttl=1800)  # Cache for 30 minutes - avoid refresh on dropdown changes
+@st.cache_data(ttl=3600, show_spinner=False)  # Cache for 60 minutes to reduce API calls on cloud
 def get_commodities_prices():
     """Fetch current prices for oil, gold, silver, BTC, and USD/INR with change indicators"""
     prices = {}
     
+    # Helper function to fetch with retry
+    def fetch_with_retry(ticker_symbol, max_retries=2):
+        for attempt in range(max_retries):
+            try:
+                ticker = yf.Ticker(ticker_symbol)
+                hist = ticker.history(period='1mo')
+                if hist is not None and not hist.empty:
+                    return hist
+                time.sleep(0.5)  # Brief pause between retries
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    print(f"Failed to fetch {ticker_symbol} after {max_retries} attempts: {str(e)}")
+                time.sleep(0.5)
+        return None
+    
     # Oil
     try:
-        oil = yf.Ticker(COMMODITIES['oil'])
-        hist = oil.history(period='1mo')  # Get more data for 1-week calculation
-        if len(hist) >= 2:
+        hist = fetch_with_retry(COMMODITIES['oil'])
+        if hist is not None and len(hist) >= 2:
             current = hist['Close'].iloc[-1]
             previous = hist['Close'].iloc[-2]
             change_pct = ((current - previous) / previous) * 100
@@ -313,13 +327,20 @@ def get_commodities_prices():
                 prices['oil_week_change'] = week_change_pct
             else:
                 prices['oil_week_change'] = 0
-        else:
+        elif hist is not None and not hist.empty:
             prices['oil'] = f"${hist['Close'].iloc[-1]:.2f}"
             prices['oil_change'] = 0
             prices['oil_arrow'] = ''
             prices['oil_color'] = '#ffffff'
             prices['oil_week_change'] = 0
-    except:
+        else:
+            prices['oil'] = "--"
+            prices['oil_change'] = 0
+            prices['oil_arrow'] = ''
+            prices['oil_color'] = '#ffffff'
+            prices['oil_week_change'] = 0
+    except Exception as e:
+        print(f"⚠️ Oil fetch error: {str(e)}")
         prices['oil'] = "--"
         prices['oil_change'] = 0
         prices['oil_arrow'] = ''
@@ -328,9 +349,9 @@ def get_commodities_prices():
     
     # Natural Gas
     try:
-        natural_gas = yf.Ticker(COMMODITIES['natural_gas'])
-        hist = natural_gas.history(period='1mo')
-        if len(hist) >= 2:
+        hist = fetch_with_retry(COMMODITIES['natural_gas'])
+        
+        if hist is not None and len(hist) >= 2:
             current = hist['Close'].iloc[-1]
             previous = hist['Close'].iloc[-2]
             change_pct = ((current - previous) / previous) * 100
@@ -348,13 +369,23 @@ def get_commodities_prices():
                 prices['natural_gas_week_change'] = week_change_pct
             else:
                 prices['natural_gas_week_change'] = 0
-        else:
+        elif hist is not None and not hist.empty:
+            # If we have at least 1 data point
             prices['natural_gas'] = f"${hist['Close'].iloc[-1]:.2f}"
             prices['natural_gas_change'] = 0
             prices['natural_gas_arrow'] = ''
             prices['natural_gas_color'] = '#ffffff'
             prices['natural_gas_week_change'] = 0
-    except:
+        else:
+            # No data available
+            print(f"⚠️ Natural Gas: No data returned from yfinance")
+            prices['natural_gas'] = "--"
+            prices['natural_gas_change'] = 0
+            prices['natural_gas_arrow'] = ''
+            prices['natural_gas_color'] = '#ffffff'
+            prices['natural_gas_week_change'] = 0
+    except Exception as e:
+        print(f"⚠️ Natural Gas fetch error: {str(e)}")
         prices['natural_gas'] = "--"
         prices['natural_gas_change'] = 0
         prices['natural_gas_arrow'] = ''
