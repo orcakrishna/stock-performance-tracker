@@ -290,7 +290,12 @@ def get_stock_performance(ticker, use_cache=True):
 def get_commodities_prices():
     """Fetch current prices for oil, gold, silver, BTC, and USD/INR with change indicators"""
     prices = {}
-    
+
+    yahoo_headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+    }
+
     # Helper function to fetch with retry
     def fetch_with_retry(ticker_symbol, max_retries=2):
         for attempt in range(max_retries):
@@ -305,7 +310,42 @@ def get_commodities_prices():
                     print(f"Failed to fetch {ticker_symbol} after {max_retries} attempts: {str(e)}")
                 time.sleep(0.5)
         return None
-    
+
+    def fetch_quote_summary(symbol):
+        """Fallback quote fetch using Yahoo Finance quoteSummary endpoint"""
+        url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}?modules=price"
+        try:
+            response = requests.get(url, headers=yahoo_headers, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            result = data.get('quoteSummary', {}).get('result')
+            if not result:
+                return None, None
+            price_data = result[0].get('price', {})
+            current = price_data.get('regularMarketPrice', {}).get('raw')
+            previous = price_data.get('regularMarketPreviousClose', {}).get('raw')
+            return current, previous
+        except Exception as e:
+            print(f"⚠️ Quote summary fallback failed for {symbol}: {e}")
+            return None, None
+
+    def fetch_chart_series(symbol, range_period="10d", interval="1d"):
+        """Fallback chart fetch to derive recent closing prices"""
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range={range_period}&interval={interval}"
+        try:
+            response = requests.get(url, headers=yahoo_headers, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            result = data.get('chart', {}).get('result')
+            if not result:
+                return None
+            closes = result[0].get('indicators', {}).get('quote', [{}])[0].get('close', [])
+            # Preserve order while removing None entries
+            return [close for close in closes if close is not None]
+        except Exception as e:
+            print(f"⚠️ Chart fallback failed for {symbol}: {e}")
+            return None
+
     # Oil
     try:
         hist = fetch_with_retry(COMMODITIES['oil'])
@@ -350,10 +390,40 @@ def get_commodities_prices():
     # Natural Gas
     try:
         hist = fetch_with_retry(COMMODITIES['natural_gas'])
-        
+        current = previous = None
+        week_change_pct = 0
+
         if hist is not None and len(hist) >= 2:
-            current = hist['Close'].iloc[-1]
-            previous = hist['Close'].iloc[-2]
+            current = float(hist['Close'].iloc[-1])
+            previous = float(hist['Close'].iloc[-2])
+            if len(hist) >= 7:
+                week_baseline = float(hist['Close'].iloc[-6])
+                if week_baseline:
+                    week_change_pct = ((current - week_baseline) / week_baseline) * 100
+        else:
+            # Cloud environments occasionally block NG=F via yfinance; try HTTP fallback
+            chart_series = fetch_chart_series(COMMODITIES['natural_gas'])
+            quote_current, quote_previous = fetch_quote_summary(COMMODITIES['natural_gas'])
+
+            if chart_series:
+                # Use the most recent valid numbers from chart data when available
+                valid_series = [float(value) for value in chart_series if value is not None]
+                if valid_series:
+                    current = valid_series[-1]
+                    if len(valid_series) >= 2:
+                        previous = valid_series[-2]
+                    if len(valid_series) >= 6:
+                        baseline = valid_series[-6]
+                        if baseline:
+                            week_change_pct = ((current - baseline) / baseline) * 100
+
+            # Fill gaps using quote summary values
+            if quote_current is not None:
+                current = float(quote_current)
+            if quote_previous is not None:
+                previous = float(quote_previous)
+
+        if current is not None and previous is not None and previous != 0:
             change_pct = ((current - previous) / previous) * 100
             arrow = '↑' if change_pct >= 0 else '↓'
             color = '#00ff00' if change_pct >= 0 else '#ff4444'
@@ -361,24 +431,15 @@ def get_commodities_prices():
             prices['natural_gas_change'] = change_pct
             prices['natural_gas_arrow'] = arrow
             prices['natural_gas_color'] = color
-            
-            # 1-week change
-            if len(hist) >= 7:
-                week_ago = hist['Close'].iloc[-6]
-                week_change_pct = ((current - week_ago) / week_ago) * 100
-                prices['natural_gas_week_change'] = week_change_pct
-            else:
-                prices['natural_gas_week_change'] = 0
-        elif hist is not None and not hist.empty:
-            # If we have at least 1 data point
-            prices['natural_gas'] = f"${hist['Close'].iloc[-1]:.2f}"
+            prices['natural_gas_week_change'] = week_change_pct
+        elif current is not None:
+            prices['natural_gas'] = f"${current:.2f}"
             prices['natural_gas_change'] = 0
             prices['natural_gas_arrow'] = ''
             prices['natural_gas_color'] = '#ffffff'
-            prices['natural_gas_week_change'] = 0
+            prices['natural_gas_week_change'] = week_change_pct
         else:
-            # No data available
-            print(f"⚠️ Natural Gas: No data returned from yfinance")
+            print(f"⚠️ Natural Gas: No data returned from yfinance or fallback")
             prices['natural_gas'] = "--"
             prices['natural_gas_change'] = 0
             prices['natural_gas_arrow'] = ''
