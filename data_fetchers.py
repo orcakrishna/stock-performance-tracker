@@ -8,8 +8,12 @@ import pandas as pd
 import requests
 from io import StringIO
 import time
+from datetime import datetime, timedelta
+
+import investpy
 import yfinance as yf
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from config import COMMODITIES, FALLBACK_NIFTY_50, FALLBACK_NIFTY_NEXT_50, FALLBACK_BSE_SENSEX
 from cache_manager import load_from_cache, save_to_cache, load_bulk_cache, save_bulk_cache
 
@@ -387,41 +391,64 @@ def get_commodities_prices():
         prices['oil_color'] = '#ffffff'
         prices['oil_week_change'] = 0
     
-    # Natural Gas
+    # Natural Gas - investpy primary, Yahoo fallback
     try:
-        hist = fetch_with_retry(COMMODITIES['natural_gas'])
         current = previous = None
         week_change_pct = 0
+        investpy_success = False
 
-        if hist is not None and len(hist) >= 2:
-            current = float(hist['Close'].iloc[-1])
-            previous = float(hist['Close'].iloc[-2])
-            if len(hist) >= 7:
-                week_baseline = float(hist['Close'].iloc[-6])
-                if week_baseline:
-                    week_change_pct = ((current - week_baseline) / week_baseline) * 100
-        else:
-            # Cloud environments occasionally block NG=F via yfinance; try HTTP fallback
-            chart_series = fetch_chart_series(COMMODITIES['natural_gas'])
-            quote_current, quote_previous = fetch_quote_summary(COMMODITIES['natural_gas'])
+        try:
+            start_date = (datetime.utcnow() - timedelta(days=30)).strftime('%d/%m/%Y')
+            end_date = datetime.utcnow().strftime('%d/%m/%Y')
+            ng_df = investpy.get_commodity_historical_data(
+                commodity='natural gas',
+                from_date=start_date,
+                to_date=end_date
+            )
 
-            if chart_series:
-                # Use the most recent valid numbers from chart data when available
-                valid_series = [float(value) for value in chart_series if value is not None]
-                if valid_series:
-                    current = valid_series[-1]
-                    if len(valid_series) >= 2:
-                        previous = valid_series[-2]
-                    if len(valid_series) >= 6:
-                        baseline = valid_series[-6]
-                        if baseline:
-                            week_change_pct = ((current - baseline) / baseline) * 100
+            if not ng_df.empty and len(ng_df) >= 2:
+                current = float(ng_df['Close'].iloc[-1])
+                previous = float(ng_df['Close'].iloc[-2])
+                if len(ng_df) >= 6:
+                    week_baseline = float(ng_df['Close'].iloc[-6])
+                    if week_baseline:
+                        week_change_pct = ((current - week_baseline) / week_baseline) * 100
+                investpy_success = True
+        except Exception as investpy_err:
+            print(f"⚠️ investpy natural gas fetch error: {investpy_err}")
 
-            # Fill gaps using quote summary values
-            if quote_current is not None:
-                current = float(quote_current)
-            if quote_previous is not None:
-                previous = float(quote_previous)
+        if not investpy_success:
+            hist = fetch_with_retry(COMMODITIES['natural_gas'])
+
+            if hist is not None and len(hist) >= 2:
+                current = float(hist['Close'].iloc[-1])
+                previous = float(hist['Close'].iloc[-2])
+                if len(hist) >= 7:
+                    week_baseline = float(hist['Close'].iloc[-6])
+                    if week_baseline:
+                        week_change_pct = ((current - week_baseline) / week_baseline) * 100
+            else:
+                # Cloud environments occasionally block NG=F via yfinance; try HTTP fallback
+                chart_series = fetch_chart_series(COMMODITIES['natural_gas'])
+                quote_current, quote_previous = fetch_quote_summary(COMMODITIES['natural_gas'])
+
+                if chart_series:
+                    # Use the most recent valid numbers from chart data when available
+                    valid_series = [float(value) for value in chart_series if value is not None]
+                    if valid_series:
+                        current = valid_series[-1]
+                        if len(valid_series) >= 2:
+                            previous = valid_series[-2]
+                        if len(valid_series) >= 6:
+                            baseline = valid_series[-6]
+                            if baseline:
+                                week_change_pct = ((current - baseline) / baseline) * 100
+
+                # Fill gaps using quote summary values
+                if quote_current is not None:
+                    current = float(quote_current)
+                if quote_previous is not None:
+                    previous = float(quote_previous)
 
         if current is not None and previous is not None and previous != 0:
             change_pct = ((current - previous) / previous) * 100
@@ -439,7 +466,7 @@ def get_commodities_prices():
             prices['natural_gas_color'] = '#ffffff'
             prices['natural_gas_week_change'] = week_change_pct
         else:
-            print(f"⚠️ Natural Gas: No data returned from yfinance or fallback")
+            print(f"⚠️ Natural Gas: No data returned from investpy or Yahoo fallbacks")
             prices['natural_gas'] = "--"
             prices['natural_gas_change'] = 0
             prices['natural_gas_arrow'] = ''

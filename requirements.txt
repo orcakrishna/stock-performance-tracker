@@ -7,3 +7,4 @@ lxml
 yfinance
 pytz
 curl-cffi
+investpy
