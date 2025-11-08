@@ -1,24 +1,51 @@
-# Indian Stock Performance Tracker
+# NSE Pulse - Indian Stock Performance Tracker
 
-A comprehensive web application that displays 1-week, 1-month, 2-month, and 3-month performance of NSE/BSE stocks with a modern dark theme interface.
+A comprehensive web application that displays 1-week, 1-month, 2-month, and 3-month performance of NSE/BSE stocks with a modern navy blue theme interface.
+
+## 🌐 Live Demo
+
+**Access the app:** [https://nsepulse.streamlit.app/](https://nsepulse.streamlit.app/)
+
+> Real-time Indian stock market tracking with live market indices, commodities, and high volume stocks.
 
 ## Features
 
-- 📊 View 1-week, 1-month, 2-month, and 3-month performance
-- 🏢 **Multiple Stock Categories:**
+### 📊 Market Overview
+- **Live Market Indices:** Nifty 50, Sensex, Bank Nifty, and sectoral indices
+- **Global Commodities:** Oil, Natural Gas, Gold, Silver, Bitcoin prices with change indicators
+- **Currency:** USD/INR exchange rate with color-coded performance
+- **High Volume Stocks:** Top 7 highest volume stocks with real-time data
+- **Live Ticker:** Scrolling ticker with advances/declines
+- **NSE Holiday Calendar:** Next upcoming NSE holiday
+
+### 📈 Stock Performance Tracking
+- View 1-week, 1-month, 2-month, and 3-month performance
+- **Multiple Stock Categories:**
   - Nifty 50
   - Nifty Next 50
   - BSE Sensex
   - Nifty 500 (Sample)
   - Custom Selection
 - 📤 **Upload Custom Stock Lists** (CSV/TXT files)
-- 🎨 Dark theme interface for better visibility
-- 📈 Table format with sortable columns
-- 🟢 Color-coded returns (Green = Positive, Red = Negative)
+- 📈 Sortable data tables with compact metric boxes
+- 🟢🔴 Color-coded returns with triangles (▲/▼)
 - 🏆 Top & Bottom performers highlight
 - 📉 Average performance statistics
-- 🔄 Auto-updates daily with latest market data
+- 🔄 Smart caching for optimal performance
 - 📱 Mobile-responsive design
+
+### 🎨 Modern UI
+- Deep navy blue gradient theme
+- Compact, professional layout
+- Color-coded percentage changes (Green/Red)
+- Matching table designs for consistency
+- Modern fonts (Inter & JetBrains Mono)
+
+### 🔒 Security
+- Copy protection enabled
+- Right-click disabled
+- Keyboard shortcuts blocked
+- Content theft prevention
 
 ## Prerequisites
 

@@ -85,7 +85,7 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     # Build USD/INR and Holiday line
     holiday_text = ""
     if next_holiday:
-        holiday_text = f" | 🏖️ Holiday: <span style='color: #ff4444; font-weight: bold;'>{next_holiday}</span>"
+        holiday_text = f" | 🏖️ NSE Holiday: <span style='color: #ff4444; font-weight: bold;'>{next_holiday}</span>"
     
     # Return as table format to match high volume stocks section
     return f"""<table style='width: 100%; font-size: 0.875rem; border-collapse: collapse;'>
