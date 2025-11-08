@@ -10,6 +10,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   fetch-data:
@@ -80,3 +81,27 @@ jobs:
 
           git commit -m "Update FII/DII data - $(date +'%Y-%m-%d')"
           git push origin main
+
+      - name: Cleanup old workflow runs
+        run: |
+          echo "Cleaning up old workflow runs (keeping only last 2)..."
+          
+          # Get all workflow runs for this workflow, sorted by creation date (newest first)
+          WORKFLOW_ID=$(gh api repos/${{ github.repository }}/actions/workflows \
+            --jq '.workflows[] | select(.path == ".github/workflows/fetch_fii_dii.yml") | .id')
+          
+          # Get all run IDs, skip the first 2 (most recent)
+          gh api repos/${{ github.repository }}/actions/workflows/${WORKFLOW_ID}/runs \
+            --paginate \
+            --jq '.workflow_runs[].id' | tail -n +3 > old_runs.txt
+          
+          # Delete old runs
+          while read run_id; do
+            echo "Deleting workflow run: $run_id"
+            gh api repos/${{ github.repository }}/actions/runs/${run_id} -X DELETE || true
+          done < old_runs.txt
+          
+          rm -f old_runs.txt
+          echo "Cleanup completed!"
+        env:
+          GH_TOKEN: ${{ github.token }}
