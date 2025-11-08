@@ -614,15 +614,11 @@ def main():
     ist_time, _ = get_current_times()
     last_updated = ist_time.strftime('%d %b %Y, %I:%M %p IST')
     
-    # Display meta information with market status and last updated
+    # Display summary of current view
     st.markdown(f"""
-    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;'>
-        <div style='color: #42a5f5; font-size: 0.875rem;'>
+    <div style='display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;'>
+        <div style='font-size: 0.95rem; color: #95e1d3;'>
             🔽 Sorted by: <strong>{sort_by}</strong> ({sort_order}) | 📅 Range: <strong>1M / 2M / 3M</strong>
-        </div>
-        <div style='display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;'>
-            <span style='color: {status_color}; font-weight: bold; font-size: 0.875rem;'>{market_status}</span>
-            <span style='color: #888; font-size: 0.875rem;'>⏰ Updated: <strong style='color: #42a5f5;'>{last_updated}</strong></span>
         </div>
     </div>
     """, unsafe_allow_html=True)

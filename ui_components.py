@@ -6,7 +6,7 @@ Streamlit UI rendering functions
 import streamlit as st
 from config import INDICES_ROW1, INDICES_ROW2, METRIC_CSS
 from data_fetchers import get_index_performance, get_commodities_prices, get_stock_list, get_next_nse_holiday, get_fii_dii_data, get_highest_volume_stocks
-from utils import get_current_times, format_time_display, get_ticker_data
+from utils import get_current_times, format_time_display, get_ticker_data, get_market_session_status
 
 
 # =========================
@@ -45,7 +45,44 @@ def render_header():
             border-bottom: 1px solid rgba(66, 165, 245, 0.3) !important;
             padding-bottom: 0.5rem !important;
         }
-        
+
+        .market-overview-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .market-overview-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .market-overview-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0.3rem 0.7rem;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        .market-overview-updated {
+            color: #95e1d3;
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+
+        .market-overview-updated span {
+            color: #42a5f5;
+            font-weight: 600;
+        }
+
         @media (max-width: 768px) {
             .header-title {
                 font-size: 1.4rem !important;
@@ -76,6 +113,8 @@ def render_header():
     
     # Commodities section - wrapped in left-aligned container
     ist_time, edt_time = get_current_times()
+    market_status, status_color = get_market_session_status()
+    last_updated = ist_time.strftime('%d %b %Y, %I:%M %p IST')
     commodities_prices = get_commodities_prices()
     next_holiday = get_next_nse_holiday()
 
@@ -86,7 +125,15 @@ def render_header():
         # Build commodities box content
         commodities_html = f"""
         <div class="info-box">
-            <div class="info-box-title">🌍 Market Overview</div>
+            <div class="info-box-title market-overview-title">
+                <span>🌍 Market Overview</span>
+                <div class="market-overview-meta">
+                    <span class="market-overview-status" style="color: {status_color}; border: 1px solid {status_color}33; background: {status_color}12;">
+                        {market_status}
+                    </span>
+                    <span class="market-overview-updated">🕒 Updated: <span>{last_updated}</span></span>
+                </div>
+            </div>
             {format_time_display(ist_time, edt_time, commodities_prices, next_holiday)}
         </div>
         """
