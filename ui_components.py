@@ -62,15 +62,22 @@ def render_header():
         }
 
         .market-overview-status {
+            position: relative;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 0.3rem 0.7rem;
-            border-radius: 999px;
-            font-weight: 600;
+            gap: 8px;
+            padding: 0;
+            font-weight: 700;
             font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
             white-space: nowrap;
+            color: var(--status-color, #42a5f5);
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
         }
+
 
         .market-overview-updated {
             color: #95e1d3;
@@ -128,7 +135,7 @@ def render_header():
             <div class="info-box-title market-overview-title">
                 <span>🌍 Market Overview</span>
                 <div class="market-overview-meta">
-                    <span class="market-overview-status" style="color: {status_color}; border: 1px solid {status_color}33; background: {status_color}12;">
+                    <span class="market-overview-status" style="--status-color: {status_color}; color: {status_color};">
                         {market_status}
                     </span>
                     <span class="market-overview-updated">🕒 Updated: <span>{last_updated}</span></span>

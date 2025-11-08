@@ -83,11 +83,11 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     oil_color = '#00ff00' if oil_change >= 0 else '#ff4444'
     oil_change_display = f"{oil_arrow} {abs(oil_change):.2f}%" if oil_change != 0 else '-'
     
-    natural_gas_price = commodities_prices.get('natural_gas', '--')
-    natural_gas_change = commodities_prices.get('natural_gas_change', 0)
-    natural_gas_arrow = '▲' if natural_gas_change >= 0 else '▼'
-    natural_gas_color = '#00ff00' if natural_gas_change >= 0 else '#ff4444'
-    natural_gas_change_display = f"{natural_gas_arrow} {abs(natural_gas_change):.2f}%" if natural_gas_change != 0 else '-'
+    eth_price = commodities_prices.get('ethereum', '--')
+    eth_change = commodities_prices.get('ethereum_change', 0)
+    eth_arrow = '▲' if eth_change >= 0 else '▼'
+    eth_color = '#00ff00' if eth_change >= 0 else '#ff4444'
+    eth_change_display = f"{eth_arrow} {abs(eth_change):.2f}%" if eth_change != 0 else '-'
     
     btc_price = commodities_prices.get('btc', '--')
     btc_change = commodities_prices.get('btc_change', 0)
@@ -132,7 +132,7 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     
     # Get 1-week changes
     oil_week = commodities_prices.get('oil_week_change', 0)
-    gas_week = commodities_prices.get('natural_gas_week_change', 0)
+    eth_week = commodities_prices.get('ethereum_week_change', 0)
     gold_week = commodities_prices.get('gold_week_change', 0)
     silver_week = commodities_prices.get('silver_week_change', 0)
     btc_week = commodities_prices.get('btc_week_change', 0)
@@ -164,12 +164,6 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'>{week_change_html(oil_week)}</td>
             </tr>
             <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
-                <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>🔥 Gas</td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{natural_gas_price}</td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {natural_gas_color}; font-weight: bold;'>{natural_gas_change_display}</span></td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{week_change_html(gas_week)}</td>
-            </tr>
-            <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
                 <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>🥇 Gold</td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'>{gold_price} <span style='color: #888; font-size: 0.75rem;'>({gold_inr})</span></td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {gold_color}; font-weight: bold;'>{gold_change_display}</span></td>
@@ -180,6 +174,12 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'>{silver_price} <span style='color: #888; font-size: 0.75rem;'>({silver_inr})</span></td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {silver_color}; font-weight: bold;'>{silver_change_display}</span></td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'>{week_change_html(silver_week)}</td>
+            </tr>
+            <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
+                <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>🪙 Ethereum</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{eth_price}</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {eth_color}; font-weight: bold;'>{eth_change_display}</span></td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{week_change_html(eth_week)}</td>
             </tr>
             <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
                 <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>₿ BTC</td>

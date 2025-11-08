@@ -12,7 +12,7 @@ A comprehensive web application that displays 1-week, 1-month, 2-month, and 3-mo
 
 ### 📊 Market Overview
 - **Live Market Indices:** Nifty 50, Sensex, Bank Nifty, and sectoral indices
-- **Global Commodities:** Oil, Natural Gas, Gold, Silver, Bitcoin prices with change indicators
+- **Global Commodities:** Oil, Ethereum, Gold, Silver, Bitcoin prices with change indicators
 - **Currency:** USD/INR exchange rate with color-coded performance
 - **High Volume Stocks:** Top 7 highest volume stocks with real-time data
 - **Live Ticker:** Scrolling ticker with advances/declines

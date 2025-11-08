@@ -68,7 +68,7 @@ COMMODITIES = {
     'oil': 'CL=F',
     'gold': 'GC=F',
     'silver': 'SI=F',
-    'natural_gas': 'NG=F',
+    'ethereum': 'ETH-USD',
     'btc': 'BTC-USD'
 }
 
