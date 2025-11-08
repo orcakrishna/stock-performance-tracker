@@ -1,4 +1,4 @@
-name: Update FII/DII Data
+name: "FII/DII Daily Data Sync"
 
 on:
   schedule:
@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  # Full history for accurate git operations
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -64,92 +64,74 @@ jobs:
         id: fetch
         run: |
           python fetch_fii_dii_daily.py
-          if [ ! -f "fii_dii_data_$(date -u +'%Y-%m-%d').json" ]; then
-            echo "Error: Failed to generate today's data file!"
+          TODAY_FILE="fii_dii_data_$(date -u +'%Y-%m-%d').json"
+          if [ ! -f "$TODAY_FILE" ]; then
+            echo "::error::Failed to generate $TODAY_FILE"
             exit 1
           fi
-          echo "Data fetched successfully."
+          echo "Data fetched: $TODAY_FILE"
 
       - name: Update main and previous files
         run: |
           TODAY=$(date -u +"%Y-%m-%d")
           YESTERDAY=$(date -u -d "yesterday" +"%Y-%m-%d")
 
-          # Update main file
-          if [ -f "fii_dii_data_${TODAY}.json" ]; then
-            cp -f "fii_dii_data_${TODAY}.json" fii_dii_data.json
-            echo "Updated fii_dii_data.json"
-          fi
+          # Update main
+          cp -f "fii_dii_data_${TODAY}.json" fii_dii_data.json
+          echo "Updated fii_dii_data.json"
 
-          # Update previous file
+          # Update previous
           if [ -f "fii_dii_data_${YESTERDAY}.json" ]; then
             cp -f "fii_dii_data_${YESTERDAY}.json" fii_dii_data_prev.json
             echo "Updated fii_dii_data_prev.json"
           else
-            # Fallback: use today's as prev if yesterday missing
-            if [ -f "fii_dii_data.json" ]; then
-              cp -f "fii_dii_data.json" fii_dii_data_prev.json
-              echo "Warning: Yesterday's data missing. Using today's as previous."
-            fi
+            cp -f fii_dii_data.json fii_dii_data_prev.json
+            echo "Warning: Yesterday's data missing. Using today as previous."
           fi
 
       - name: Commit and push changes
         run: |
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "actions@github.com"
+          git config --global user.name "FII/DII Data Bot"
+          git config --global user.email "fii-dii-bot@users.noreply.github.com"
 
-          # Sync with remote to avoid conflicts
           git fetch origin main
           git checkout main
           git reset --hard origin/main
 
-          # Add only JSON data files
           git add fii_dii_data*.json
 
-          # Commit only if changes exist
           if git diff --staged --quiet; then
-            echo "No changes detected. Skipping commit."
+            echo "No changes. Skipping commit."
             exit 0
           fi
 
-          git commit -m "Update FII/DII data - $(date +'%Y-%m-%d')"
+          git commit -m "FII/DII Update – $(date +'%b %d, %Y')"
           git push origin main
-          echo "Changes pushed successfully."
+          echo "Pushed latest FII/DII data"
 
       - name: Cleanup old workflow runs (keep last 2)
-        if: always()  # Run even if previous steps fail
+        if: always()
         run: |
-          echo "Starting cleanup of old workflow runs..."
+          echo "Cleaning old workflow runs..."
 
           WORKFLOW_FILE=".github/workflows/fetch_fii_dii.yml"
           WORKFLOW_ID=$(gh api "repos/${{ github.repository }}/actions/workflows" \
             --jq ".workflows[] | select(.path == \"$WORKFLOW_FILE\") | .id")
 
-          if [ -z "$WORKFLOW_ID" ]; then
-            echo "Warning: Could not find workflow ID for $WORKFLOW_FILE"
-            exit 0
-          fi
+          [ -z "$WORKFLOW_ID" ] && { echo "Workflow not found."; exit 0; }
 
-          echo "Found workflow ID: $WORKFLOW_ID"
-
-          # Get run IDs (sorted newest first), skip first 2
           gh api "repos/${{ github.repository }}/actions/workflows/$WORKFLOW_ID/runs" \
             --paginate \
             --jq '.workflow_runs[].id' | head -n 100 | tail -n +3 > old_runs.txt
 
-          if [ ! -s old_runs.txt ]; then
-            echo "No old runs to delete."
-            rm -f old_runs.txt
-            exit 0
-          fi
+          [ ! -s old_runs.txt ] && { echo "No old runs to delete."; rm -f old_runs.txt; exit 0; }
 
-          echo "Deleting $(wc -l < old_runs.txt) old workflow run(s)..."
-          while IFS= read -r run_id; do
-            echo "Deleting run #$run_id"
-            gh api "repos/${{ github.repository }}/actions/runs/$run_id" -X DELETE || echo "Failed to delete $run_id"
+          echo "Deleting $(wc -l < old_runs.txt) old run(s)..."
+          while read -r run_id; do
+            gh api "repos/${{ github.repository }}/actions/runs/$run_id" -X DELETE || true
           done < old_runs.txt
 
           rm -f old_runs.txt
-          echo "Cleanup completed!"
+          echo "Cleanup complete!"
         env:
           GH_TOKEN: ${{ github.token }}
