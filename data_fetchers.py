@@ -115,7 +115,7 @@ def fetch_nse_csv_list(csv_filename):
 # Removed hardcoded functions - now using dynamic get_stock_list()
 
 
-@st.cache_data(ttl=300)  # Cache for 5 minutes
+@st.cache_data(ttl=1800)  # Cache for 30 minutes - avoid refresh on dropdown changes
 def get_index_performance(index_symbol, index_name=None):
     """Fetch index performance - prioritize info dict to avoid hist bugs"""
     if index_symbol:
@@ -286,6 +286,7 @@ def get_stock_performance(ticker, use_cache=True):
         return None
 
 
+@st.cache_data(ttl=1800)  # Cache for 30 minutes - avoid refresh on dropdown changes
 def get_commodities_prices():
     """Fetch current prices for oil, gold, silver, BTC, and USD/INR with change indicators"""
     prices = {}
@@ -314,6 +315,31 @@ def get_commodities_prices():
         prices['oil_change'] = 0
         prices['oil_arrow'] = ''
         prices['oil_color'] = '#ffffff'
+    
+    # Natural Gas
+    try:
+        natural_gas = yf.Ticker(COMMODITIES['natural_gas'])
+        hist = natural_gas.history(period='2d')
+        if len(hist) >= 2:
+            current = hist['Close'].iloc[-1]
+            previous = hist['Close'].iloc[-2]
+            change_pct = ((current - previous) / previous) * 100
+            arrow = '↑' if change_pct >= 0 else '↓'
+            color = '#00ff00' if change_pct >= 0 else '#ff4444'
+            prices['natural_gas'] = f"${current:.2f}"
+            prices['natural_gas_change'] = change_pct
+            prices['natural_gas_arrow'] = arrow
+            prices['natural_gas_color'] = color
+        else:
+            prices['natural_gas'] = f"${hist['Close'].iloc[-1]:.2f}"
+            prices['natural_gas_change'] = 0
+            prices['natural_gas_arrow'] = ''
+            prices['natural_gas_color'] = '#ffffff'
+    except:
+        prices['natural_gas'] = "--"
+        prices['natural_gas_change'] = 0
+        prices['natural_gas_arrow'] = ''
+        prices['natural_gas_color'] = '#ffffff'
     
     # Gold (USD and INR)
     try:
@@ -913,7 +939,7 @@ def get_fii_dii_data():
     }
 
 
-@st.cache_data(ttl=300)  # Cache for 5 minutes
+@st.cache_data(ttl=86400)  # Cache for 24 hours - volume data refreshes once per day
 def get_highest_volume_stocks(stock_list, top_n=5):
     """
     Dynamically fetch highest volume stocks from the given stock list

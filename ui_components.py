@@ -14,9 +14,38 @@ from utils import get_current_times, format_time_display, get_ticker_data
 # =========================
 def render_header():
     """Render app header with title, time, and commodities"""
-    # Use single column layout on mobile, two columns on desktop
+    # Box styling for header sections
     st.markdown("""
     <style>
+        /* Beautiful box styling for header sections - Navy Blue Theme */
+        .info-box {
+            background: linear-gradient(135deg, rgba(26, 35, 126, 0.3) 0%, rgba(13, 27, 42, 0.5) 100%) !important;
+            border: 1px solid rgba(66, 165, 245, 0.3) !important;
+            border-radius: 12px !important;
+            padding: 1rem !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 20px rgba(66, 165, 245, 0.1) !important;
+            transition: all 0.3s ease !important;
+            margin-bottom: 1rem !important;
+        }
+        
+        .info-box:hover {
+            background: linear-gradient(135deg, rgba(26, 35, 126, 0.5) 0%, rgba(13, 71, 161, 0.3) 100%) !important;
+            border-color: rgba(66, 165, 245, 0.6) !important;
+            transform: translateY(-3px) !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 30px rgba(66, 165, 245, 0.2) !important;
+        }
+        
+        .info-box-title {
+            font-size: 0.875rem !important;
+            font-weight: 600 !important;
+            color: #42a5f5 !important;
+            margin-bottom: 0.75rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            border-bottom: 1px solid rgba(66, 165, 245, 0.3) !important;
+            padding-bottom: 0.5rem !important;
+        }
+        
         @media (max-width: 768px) {
             .header-title {
                 font-size: 1.4rem !important;
@@ -54,41 +83,70 @@ def render_header():
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.markdown(
-            format_time_display(ist_time, edt_time, commodities_prices, next_holiday),
-            unsafe_allow_html=True,
-        )
+        # Build commodities box content
+        commodities_html = f"""
+        <div class="info-box">
+            <div class="info-box-title">🌍 Market Overview</div>
+            {format_time_display(ist_time, edt_time, commodities_prices, next_holiday)}
+        </div>
+        """
+        st.markdown(commodities_html, unsafe_allow_html=True)
     
     with col2:
         # Render highest volume stocks from ticker (Nifty 50 - already loaded, avoids rate limits)
         try:
             from data_fetchers import get_highest_volume_stocks
             
+            # Cached function to fetch high volume stocks once per day
+            @st.cache_data(ttl=86400, show_spinner=False)  # Cache for 24 hours
+            def get_cached_volume_stocks(stock_symbols_tuple):
+                """Fetch high volume stocks with daily caching"""
+                print(f"📊 Fetching volume data from {len(stock_symbols_tuple)} ticker stocks (cached for 24h)")
+                return get_highest_volume_stocks(list(stock_symbols_tuple), top_n=7)
+            
             # Use ticker stocks (already loaded, no extra API calls)
             ticker_stocks = get_ticker_data()
             
-            if ticker_stocks and len(ticker_stocks) >= 5:
-                stock_symbols = [s['symbol'] for s in ticker_stocks]
-                print(f"📊 Fetching volume data from {len(stock_symbols)} ticker stocks")
-                volume_stocks = get_highest_volume_stocks(stock_symbols, top_n=5)
+            volume_stocks_html = '<div class="info-box"><div class="info-box-title">📊 Highest Volume Stocks</div>'
+            
+            if ticker_stocks and len(ticker_stocks) >= 7:
+                stock_symbols = tuple([s['symbol'] for s in ticker_stocks])  # Convert to tuple for caching
+                volume_stocks = get_cached_volume_stocks(stock_symbols)
                 
                 if volume_stocks:
-                    st.markdown("**📊 Highest volume stocks ›**")
+                    # Create table structure
+                    volume_stocks_html += '<table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">'
+                    volume_stocks_html += '<thead><tr style="border-bottom: 1px solid rgba(66, 165, 245, 0.3);"><th style="text-align: left; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;">Symbol</th><th style="text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;">Price</th><th style="text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;">Change</th><th style="text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;">Volume</th></tr></thead>'
+                    volume_stocks_html += '<tbody>'
+                    
                     for stock in volume_stocks:
-                        change_icon = "▲" if stock['change_pct'] >= 0 else "▼"
-                        change_color = "green" if stock['change_pct'] >= 0 else "red"
+                        change_pct = stock.get('change_pct', stock.get('change', 0))
+                        change_icon = "▲" if change_pct >= 0 else "▼"
+                        change_color = "#00ff00" if change_pct >= 0 else "#ff4444"
                         vol_display = f"{stock['volume']/1_000_000:.1f}M" if stock['volume'] >= 1_000_000 else f"{stock['volume']/1_000:.0f}K"
                         
-                        st.markdown(
-                            f"**{stock['symbol']}**: ₹{stock['price']:.2f} "
-                            f"<span style='color:{change_color}'>{change_icon} {abs(stock['change_pct']):.2f}%</span> "
-                            f"• Vol: {vol_display}",
-                            unsafe_allow_html=True
-                        )
+                        volume_stocks_html += f'<tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);"><td style="padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;">{stock["symbol"]}</td><td style="padding: 0.4rem 0.5rem; text-align: right;">₹{stock["price"]:.2f}</td><td style="padding: 0.4rem 0.5rem; text-align: right;"><span style="color: {change_color}; font-weight: bold;">{change_icon} {abs(change_pct):.2f}%</span></td><td style="padding: 0.4rem 0.5rem; text-align: right;">{vol_display}</td></tr>'
+                    
+                    volume_stocks_html += '</tbody></table>'
+                else:
+                    volume_stocks_html += "<span style='color: rgba(255, 255, 255, 0.5);'>Loading...</span>"
+            else:
+                volume_stocks_html += "<span style='color: rgba(255, 255, 255, 0.5);'>Loading...</span>"
+            
+            volume_stocks_html += '</div>'
+            st.markdown(volume_stocks_html, unsafe_allow_html=True)
+            
         except Exception as e:
             print(f"Error rendering volume stocks in header: {e}")
             import traceback
             traceback.print_exc()
+            error_html = """
+            <div class="info-box">
+                <div class="info-box-title">📊 Highest Volume Stocks</div>
+                <span style='color: rgba(255, 255, 255, 0.5);'>Loading...</span>
+            </div>
+            """
+            st.markdown(error_html, unsafe_allow_html=True)
 
 
 def render_holiday_and_pe_info():

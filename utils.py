@@ -37,7 +37,7 @@ def get_current_times():
 
 
 def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=None):
-    """Format time and commodities display for header with arrows and colors"""
+    """Format time and commodities display for header with arrows and colors - no style tags"""
     # Determine USD/INR color based on change
     usd_inr_change = commodities_prices.get('usd_inr_change', 0)
     if usd_inr_change > 0:
@@ -49,86 +49,100 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     
     # Get commodity data with defaults
     oil_price = commodities_prices.get('oil', '--')
-    oil_arrow = commodities_prices.get('oil_arrow', '')
-    oil_color = commodities_prices.get('oil_color', '#ffffff')
+    oil_change = commodities_prices.get('oil_change', 0)
+    oil_arrow = '▲' if oil_change >= 0 else '▼'
+    oil_color = '#00ff00' if oil_change >= 0 else '#ff4444'
+    oil_change_display = f"{oil_arrow} {abs(oil_change):.2f}%" if oil_change != 0 else '-'
+    
+    natural_gas_price = commodities_prices.get('natural_gas', '--')
+    natural_gas_change = commodities_prices.get('natural_gas_change', 0)
+    natural_gas_arrow = '▲' if natural_gas_change >= 0 else '▼'
+    natural_gas_color = '#00ff00' if natural_gas_change >= 0 else '#ff4444'
+    natural_gas_change_display = f"{natural_gas_arrow} {abs(natural_gas_change):.2f}%" if natural_gas_change != 0 else '-'
     
     btc_price = commodities_prices.get('btc', '--')
-    btc_arrow = commodities_prices.get('btc_arrow', '')
-    btc_color = commodities_prices.get('btc_color', '#ffffff')
-    # Add space before arrow if it exists
-    btc_display = f"{btc_price} {btc_arrow}" if btc_arrow else btc_price
+    btc_change = commodities_prices.get('btc_change', 0)
+    btc_arrow = '▲' if btc_change >= 0 else '▼'
+    btc_color = '#00ff00' if btc_change >= 0 else '#ff4444'
+    btc_change_display = f"{btc_arrow} {abs(btc_change):.2f}%" if btc_change != 0 else '-'
     
     gold_price = commodities_prices.get('gold', '--')
     gold_inr = commodities_prices.get('gold_inr', '--')
-    gold_arrow = commodities_prices.get('gold_arrow', '')
-    gold_color = commodities_prices.get('gold_color', '#ffffff')
+    gold_change = commodities_prices.get('gold_change', 0)
+    gold_arrow = '▲' if gold_change >= 0 else '▼'
+    gold_color = '#00ff00' if gold_change >= 0 else '#ff4444'
+    gold_change_display = f"{gold_arrow} {abs(gold_change):.2f}%" if gold_change != 0 else '-'
     
     silver_price = commodities_prices.get('silver', '--')
     silver_inr = commodities_prices.get('silver_inr', '--')
-    silver_arrow = commodities_prices.get('silver_arrow', '')
-    silver_color = commodities_prices.get('silver_color', '#ffffff')
+    silver_change = commodities_prices.get('silver_change', 0)
+    silver_arrow = '▲' if silver_change >= 0 else '▼'
+    silver_color = '#00ff00' if silver_change >= 0 else '#ff4444'
+    silver_change_display = f"{silver_arrow} {abs(silver_change):.2f}%" if silver_change != 0 else '-'
     
     usd_inr = commodities_prices.get('usd_inr', '--')
     
     # Build USD/INR and Holiday line
     holiday_text = ""
     if next_holiday:
-        holiday_text = f" | <span style='color: #fff; font-weight: bold;'>🏖️ Holiday:</span> <span style='color: #ff4444; font-weight: bold;'>{next_holiday}</span>"
+        holiday_text = f" | 🏖️ Holiday: <span style='color: #ff4444; font-weight: bold;'>{next_holiday}</span>"
     
-    return f"""
-    <style>
-        .header-info {{
-            text-align: left !important;
-            padding: 15px 0 !important;
-            width: 100% !important;
-            margin: 0 !important;
-            display: block !important;
-        }}
-        .header-info p {{
-            margin: 5px 0 !important;
-            padding: 0 !important;
-            font-size: 13px;
-            display: block !important;
-            width: 100% !important;
-            text-align: left !important;
-            clear: both !important;
-            float: none !important;
-        }}
-        @media (max-width: 768px) {{
-            .header-info {{
-                text-align: left !important;
-                padding: 10px 0 0 0 !important;
-                margin: 0 !important;
-                margin-left: 0 !important;
-                padding-left: 0 !important;
-                display: block !important;
-            }}
-            .header-info p {{
-                font-size: 11px !important;
-                line-height: 1.8 !important;
-                margin: 4px 0 !important;
-                padding: 0 !important;
-                text-align: left !important;
-                display: block !important;
-                width: 100% !important;
-                clear: both !important;
-                float: none !important;
-            }}
-        }}
-        @media (max-width: 480px) {{
-            .header-info p {{
-                font-size: 10px !important;
-                line-height: 1.7 !important;
-            }}
-        }}
-    </style>
-    <div class='header-info'>
-        <p>🛢️ Oil: <span style='color: {oil_color}; font-weight: bold;'>{oil_price} {oil_arrow}</span> | ₿ BTC: <span style='color: {btc_color}; font-weight: bold;'>{btc_display}</span> | 🕐 IST: {ist_time.strftime('%I:%M %p')}</p>
-        <p>🥇 Gold: <span style='color: {gold_color}; font-weight: bold;'>{gold_price} {gold_arrow}</span> <span style='color: #ffd700;'>({gold_inr})</span> | 🕐 EDT: {edt_time.strftime('%I:%M %p')}</p>
-        <p>🪙 Silver: <span style='color: {silver_color}; font-weight: bold;'>{silver_price} {silver_arrow}</span> <span style='color: #c0c0c0;'>({silver_inr})</span> | 📅 {ist_time.strftime('%d %b %Y')}</p>
-        <p>💵 USD/INR: <span style='color: {usd_inr_color}; font-weight: bold;'>{usd_inr}</span>{holiday_text}</p>
-    </div>
-    """
+    # Return as table format to match high volume stocks section
+    return f"""<table style='width: 100%; font-size: 0.875rem; border-collapse: collapse;'>
+        <thead>
+            <tr style='border-bottom: 1px solid rgba(66, 165, 245, 0.3);'>
+                <th style='text-align: left; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>Commodity</th>
+                <th style='text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>Price</th>
+                <th style='text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>Change</th>
+                <th style='text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>INR</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
+                <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>🛢️ Oil</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{oil_price}</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {oil_color}; font-weight: bold;'>{oil_change_display}</span></td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>-</td>
+            </tr>
+            <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
+                <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>🔥 Gas</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{natural_gas_price}</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {natural_gas_color}; font-weight: bold;'>{natural_gas_change_display}</span></td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>-</td>
+            </tr>
+            <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
+                <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>🥇 Gold</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{gold_price}</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {gold_color}; font-weight: bold;'>{gold_change_display}</span></td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: #ffd700;'>{gold_inr}</span></td>
+            </tr>
+            <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
+                <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>🪙 Silver</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{silver_price}</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {silver_color}; font-weight: bold;'>{silver_change_display}</span></td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: #c0c0c0;'>{silver_inr}</span></td>
+            </tr>
+            <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
+                <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>₿ BTC</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{btc_price}</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {btc_color}; font-weight: bold;'>{btc_change_display}</span></td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>-</td>
+            </tr>
+            <tr>
+                <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>💵 USD/INR</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {usd_inr_color}; font-weight: bold;'>{usd_inr}</span></td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>-</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>-</td>
+            </tr>
+        </tbody>
+        <tfoot>
+            <tr style='border-top: 1px solid rgba(66, 165, 245, 0.3);'>
+                <td colspan='4' style='padding: 0.5rem; text-align: center; color: #ffffff; font-size: 0.875rem; font-weight: 500;'>
+                    🕐 IST: <span style='color: #42a5f5; font-weight: 600;'>{ist_time.strftime('%I:%M %p')}</span> | EDT: <span style='color: #42a5f5; font-weight: 600;'>{edt_time.strftime('%I:%M %p')}</span> | 📅 <span style='color: #42a5f5; font-weight: 600;'>{ist_time.strftime('%d %b %Y')}</span>{holiday_text}
+                </td>
+            </tr>
+        </tfoot>
+    </table>"""
 
 
 def create_sparkline_svg(sparkline_data, today_change, stock_symbol, width=80, height=30):
