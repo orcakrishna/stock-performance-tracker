@@ -171,21 +171,70 @@ def render_holiday_and_pe_info():
 # =========================
 # MARKET INDICES
 # =========================
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_index_sparkline(symbol):
+    """Get sparkline data for index (7 days)"""
+    import yfinance as yf
+    try:
+        ticker = yf.Ticker(symbol)
+        hist = ticker.history(period='7d')
+        if not hist.empty and len(hist) >= 2:
+            prices = hist['Close'].tolist()
+            # Normalize to 0-100 range
+            min_price = min(prices)
+            max_price = max(prices)
+            if max_price > min_price:
+                normalized = [(p - min_price) / (max_price - min_price) * 100 for p in prices]
+                return normalized
+    except:
+        pass
+    return None
+
+
+def create_index_sparkline_svg(sparkline_data, change_pct, width=40, height=20):
+    """Create a mini SVG sparkline for indices"""
+    if not sparkline_data or len(sparkline_data) < 2:
+        return ""
+    
+    points = []
+    step = width / (len(sparkline_data) - 1)
+    
+    for i, value in enumerate(sparkline_data):
+        x = i * step
+        y = height - (value / 100 * height)
+        points.append(f"{x:.1f},{y:.1f}")
+    
+    path_data = "M " + " L ".join(points)
+    color = "#00ff00" if change_pct >= 0 else "#ff4444"
+    
+    return f'''<svg width="{width}" height="{height}" style="display: inline-block; vertical-align: middle; margin-left: 5px;">
+        <path d="{path_data}" fill="none" stroke="{color}" stroke-width="1.5" />
+    </svg>'''
+
+
 def render_market_indices():
-    """Render market indices performance section"""
+    """Render market indices performance section with mini charts"""
     st.markdown("### 📈 Market Indices - Today's Performance")
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(METRIC_CSS, unsafe_allow_html=True)
 
-    # Row 1: Major Indices - Full width on desktop
+    # Row 1: Major Indices - Wrapped for mobile targeting
+    st.markdown('<div class="metric-row">', unsafe_allow_html=True)
     cols1 = st.columns(len(INDICES_ROW1))
     for idx, (name, symbol) in enumerate(INDICES_ROW1.items()):
         with cols1[idx]:
             price, change = get_index_performance(symbol)
+            sparkline_data = get_index_sparkline(symbol)
+            
             if price is not None and change is not None:
-                st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f}%")
+                # Create chart SVG
+                chart_svg = create_index_sparkline_svg(sparkline_data, change) if sparkline_data else ""
+                # Display with chart
+                st.markdown(f"**{name}** {chart_svg}", unsafe_allow_html=True)
+                st.metric(label="", value=f"{price:,.2f}", delta=f"{change:+.2f}%")
             else:
                 st.metric(label=name, value="--", delta="--")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # Row 2: Sectoral Indices
     st.markdown("<br>", unsafe_allow_html=True)
@@ -195,14 +244,22 @@ def render_market_indices():
     )
     st.markdown("<br>", unsafe_allow_html=True)
 
+    st.markdown('<div class="metric-row">', unsafe_allow_html=True)
     cols2 = st.columns(len(INDICES_ROW2))
     for idx, (name, symbol) in enumerate(INDICES_ROW2.items()):
         with cols2[idx]:
             price, change = get_index_performance(symbol)
+            sparkline_data = get_index_sparkline(symbol)
+            
             if price is not None and change is not None:
-                st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f}%")
+                # Create chart SVG
+                chart_svg = create_index_sparkline_svg(sparkline_data, change) if sparkline_data else ""
+                # Display with chart
+                st.markdown(f"**{name}** {chart_svg}", unsafe_allow_html=True)
+                st.metric(label="", value=f"{price:,.2f}", delta=f"{change:+.2f}%")
             else:
                 st.metric(label=name, value="--", delta="--")
+    st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown("---")
 
@@ -683,7 +740,6 @@ def render_sectoral_yearly_performance():
     if not st.session_state.show_sectoral:
         if st.button("📊 Load Sectoral Performance Data"):
             st.session_state.show_sectoral = True
-            st.rerun()
         return
     
     # Fetch data with caching

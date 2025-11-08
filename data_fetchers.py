@@ -294,7 +294,7 @@ def get_commodities_prices():
     # Oil
     try:
         oil = yf.Ticker(COMMODITIES['oil'])
-        hist = oil.history(period='2d')
+        hist = oil.history(period='1mo')  # Get more data for 1-week calculation
         if len(hist) >= 2:
             current = hist['Close'].iloc[-1]
             previous = hist['Close'].iloc[-2]
@@ -305,21 +305,31 @@ def get_commodities_prices():
             prices['oil_change'] = change_pct
             prices['oil_arrow'] = arrow
             prices['oil_color'] = color
+            
+            # 1-week change
+            if len(hist) >= 7:
+                week_ago = hist['Close'].iloc[-6]
+                week_change_pct = ((current - week_ago) / week_ago) * 100
+                prices['oil_week_change'] = week_change_pct
+            else:
+                prices['oil_week_change'] = 0
         else:
             prices['oil'] = f"${hist['Close'].iloc[-1]:.2f}"
             prices['oil_change'] = 0
             prices['oil_arrow'] = ''
             prices['oil_color'] = '#ffffff'
+            prices['oil_week_change'] = 0
     except:
         prices['oil'] = "--"
         prices['oil_change'] = 0
         prices['oil_arrow'] = ''
         prices['oil_color'] = '#ffffff'
+        prices['oil_week_change'] = 0
     
     # Natural Gas
     try:
         natural_gas = yf.Ticker(COMMODITIES['natural_gas'])
-        hist = natural_gas.history(period='2d')
+        hist = natural_gas.history(period='1mo')
         if len(hist) >= 2:
             current = hist['Close'].iloc[-1]
             previous = hist['Close'].iloc[-2]
@@ -330,21 +340,31 @@ def get_commodities_prices():
             prices['natural_gas_change'] = change_pct
             prices['natural_gas_arrow'] = arrow
             prices['natural_gas_color'] = color
+            
+            # 1-week change
+            if len(hist) >= 7:
+                week_ago = hist['Close'].iloc[-6]
+                week_change_pct = ((current - week_ago) / week_ago) * 100
+                prices['natural_gas_week_change'] = week_change_pct
+            else:
+                prices['natural_gas_week_change'] = 0
         else:
             prices['natural_gas'] = f"${hist['Close'].iloc[-1]:.2f}"
             prices['natural_gas_change'] = 0
             prices['natural_gas_arrow'] = ''
             prices['natural_gas_color'] = '#ffffff'
+            prices['natural_gas_week_change'] = 0
     except:
         prices['natural_gas'] = "--"
         prices['natural_gas_change'] = 0
         prices['natural_gas_arrow'] = ''
         prices['natural_gas_color'] = '#ffffff'
+        prices['natural_gas_week_change'] = 0
     
     # Gold (USD and INR)
     try:
         gold = yf.Ticker(COMMODITIES['gold'])
-        hist = gold.history(period='2d')
+        hist = gold.history(period='1mo')
         usd_inr_rate = 83.5  # Approximate rate, will be updated below
         
         # Try to get actual USD/INR rate
@@ -373,6 +393,14 @@ def get_commodities_prices():
             prices['gold_change'] = change_pct
             prices['gold_arrow'] = arrow
             prices['gold_color'] = color
+            
+            # 1-week change
+            if len(hist) >= 7:
+                week_ago = hist['Close'].iloc[-6]
+                week_change_pct = ((current - week_ago) / week_ago) * 100
+                prices['gold_week_change'] = week_change_pct
+            else:
+                prices['gold_week_change'] = 0
         else:
             current = hist['Close'].iloc[-1]
             gold_per_gram_usd = current / 31.1035
@@ -383,17 +411,19 @@ def get_commodities_prices():
             prices['gold_change'] = 0
             prices['gold_arrow'] = ''
             prices['gold_color'] = '#ffffff'
+            prices['gold_week_change'] = 0
     except:
         prices['gold'] = "--"
         prices['gold_inr'] = "--"
         prices['gold_change'] = 0
         prices['gold_arrow'] = ''
         prices['gold_color'] = '#ffffff'
+        prices['gold_week_change'] = 0
     
     # Silver (USD and INR)
     try:
         silver = yf.Ticker(COMMODITIES['silver'])
-        hist = silver.history(period='2d')
+        hist = silver.history(period='1mo')
         usd_inr_rate = 83.5  # Will use the rate from gold calculation
         
         # Try to get actual USD/INR rate
@@ -422,6 +452,14 @@ def get_commodities_prices():
             prices['silver_change'] = change_pct
             prices['silver_arrow'] = arrow
             prices['silver_color'] = color
+            
+            # 1-week change
+            if len(hist) >= 7:
+                week_ago = hist['Close'].iloc[-6]
+                week_change_pct = ((current - week_ago) / week_ago) * 100
+                prices['silver_week_change'] = week_change_pct
+            else:
+                prices['silver_week_change'] = 0
         else:
             current = hist['Close'].iloc[-1]
             silver_per_gram_usd = current / 31.1035
@@ -432,17 +470,19 @@ def get_commodities_prices():
             prices['silver_change'] = 0
             prices['silver_arrow'] = ''
             prices['silver_color'] = '#ffffff'
+            prices['silver_week_change'] = 0
     except:
         prices['silver'] = "--"
         prices['silver_inr'] = "--"
         prices['silver_change'] = 0
         prices['silver_arrow'] = ''
         prices['silver_color'] = '#ffffff'
+        prices['silver_week_change'] = 0
     
     # Bitcoin
     try:
         btc = yf.Ticker(COMMODITIES['btc'])
-        hist = btc.history(period='2d')
+        hist = btc.history(period='1mo')
         if len(hist) >= 2:
             current = hist['Close'].iloc[-1]
             previous = hist['Close'].iloc[-2]
@@ -453,21 +493,31 @@ def get_commodities_prices():
             prices['btc_change'] = change_pct
             prices['btc_arrow'] = arrow
             prices['btc_color'] = color
+            
+            # 1-week change
+            if len(hist) >= 7:
+                week_ago = hist['Close'].iloc[-6]
+                week_change_pct = ((current - week_ago) / week_ago) * 100
+                prices['btc_week_change'] = week_change_pct
+            else:
+                prices['btc_week_change'] = 0
         else:
             prices['btc'] = f"${hist['Close'].iloc[-1]:,.0f}"
             prices['btc_change'] = 0
             prices['btc_arrow'] = ''
             prices['btc_color'] = '#ffffff'
+            prices['btc_week_change'] = 0
     except:
         prices['btc'] = "--"
         prices['btc_change'] = 0
         prices['btc_arrow'] = ''
         prices['btc_color'] = '#ffffff'
+        prices['btc_week_change'] = 0
     
     # USD/INR
     try:
         usd_inr = yf.Ticker('INR=X')
-        hist = usd_inr.history(period='2d')
+        hist = usd_inr.history(period='1mo')
         
         if len(hist) >= 2:
             current_rate = hist['Close'].iloc[-1]
@@ -476,12 +526,22 @@ def get_commodities_prices():
             
             prices['usd_inr'] = f"₹{current_rate:.2f}"
             prices['usd_inr_change'] = change  # Positive = INR weakened, Negative = INR strengthened
+            
+            # 1-week change
+            if len(hist) >= 7:
+                week_ago = hist['Close'].iloc[-6]
+                week_change_pct = ((current_rate - week_ago) / week_ago) * 100
+                prices['usd_inr_week_change'] = week_change_pct
+            else:
+                prices['usd_inr_week_change'] = 0
         else:
             prices['usd_inr'] = f"₹{hist['Close'].iloc[-1]:.2f}"
             prices['usd_inr_change'] = 0
+            prices['usd_inr_week_change'] = 0
     except:
         prices['usd_inr'] = "--"
         prices['usd_inr_change'] = 0
+        prices['usd_inr_week_change'] = 0
     
     return prices
 
@@ -536,15 +596,9 @@ def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True):
     return cached_data
 
 
+@st.cache_data(ttl=3600)  # Cache for 1 hour
 def get_stock_list(category_name):
-    """Get stock list - Always try dynamic fetch first, fallback to hardcoded if fails"""
-    
-    # Fallback mapping
-    fallback_map = {
-        'Nifty 50': FALLBACK_NIFTY_50,
-        'Nifty Next 50': FALLBACK_NIFTY_NEXT_50,
-        'BSE Sensex': FALLBACK_BSE_SENSEX
-    }
+    """Get stock list - Try dynamic fetch first, fallback to hardcoded if fails"""
     
     # Get available indices
     available_indices = get_available_nse_indices()
@@ -554,21 +608,44 @@ def get_stock_list(category_name):
         api_index_name = available_indices[category_name]
         
         # Try 1: Fetch dynamically from NSE CSV (preferred method)
-        yahoo_stocks = fetch_nse_index_constituents(api_index_name)
-        
-        if yahoo_stocks and len(yahoo_stocks) >= 5:
-            return yahoo_stocks, f"✅ Fetched {len(yahoo_stocks)} stocks from {category_name} (🔴 NSE Dynamic)"
+        try:
+            yahoo_stocks = fetch_nse_index_constituents(api_index_name)
+            if yahoo_stocks and len(yahoo_stocks) >= 5:
+                return yahoo_stocks, f"✅ Fetched {len(yahoo_stocks)} stocks from {category_name}"
+        except Exception as e:
+            print(f"Error fetching {category_name} dynamically: {str(e)}")
         
         # Try 2: Fallback to hardcoded list if dynamic fetch failed
+        fallback_map = {
+            'Nifty 50': FALLBACK_NIFTY_50,
+            'Nifty Next 50': FALLBACK_NIFTY_NEXT_50,
+            'BSE Sensex': FALLBACK_BSE_SENSEX,
+            'Nifty IT': [
+                'TCS.NS', 'INFY.NS', 'WIPRO.NS', 'HCLTECH.NS', 'TECHM.NS',
+                'LTIM.NS', 'MPHASIS.NS', 'PERSISTENT.NS', 'COFORGE.NS', 'LTI.NS'
+            ],
+            'Nifty Pharma': [
+                'SUNPHARMA.NS', 'DRREDDY.NS', 'CIPLA.NS', 'DIVISLAB.NS', 'TORNTPHARMA.NS',
+                'LUPIN.NS', 'AUROPHARMA.NS', 'ALKEM.NS', 'GLAND.NS', 'BIOCON.NS'
+            ],
+            'Nifty Metal': [
+                'TATASTEEL.NS', 'JSWSTEEL.NS', 'HINDALCO.NS', 'VEDL.NS', 'JINDALSTEL.NS',
+                'NMDC.NS', 'HINDZINC.NS', 'COALINDIA.NS', 'NATCOPHARM.NS', 'RATNAMANI.NS'
+            ],
+            'Nifty Realty': [
+                'DLF.NS', 'PRESTIGE.NS', 'SOBHA.NS', 'GODREJPROP.NS', 'OBEROIRLTY.NS',
+                'BRIGADE.NS', 'MAHLIFE.NS', 'PHOENIXLTD.NS', 'SUNTECK.NS', 'MAHINDALIFE.NS'
+            ]
+        }
+        
         if category_name in fallback_map:
             fallback_stocks = fallback_map[category_name]
-            print(f"⚠️ NSE dynamic fetch failed for {category_name}, using fallback list")
-            return fallback_stocks, f"⚠️ Using {len(fallback_stocks)} stocks from {category_name} (📋 Fallback - NSE may be down)"
+            print(f"⚠️ Using fallback data for {category_name}")
+            return fallback_stocks, f"⚠️ Using fallback data for {category_name} (NSE may be down)"
         
-        # No fallback available
-        return [], f"❌ Failed to fetch {category_name} and no fallback available"
+        return [], f"❌ No data available for {category_name}"
     
-    return [], "❌ No data available"
+    return [], "❌ Invalid category"
 
 
 def validate_stock_symbol(symbol):

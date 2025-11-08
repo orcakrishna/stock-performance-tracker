@@ -20,7 +20,8 @@ from ui_components import (
     render_top_bottom_performers, render_averages, render_pagination_controls,
     render_live_ticker, render_gainer_loser_banner, render_sectoral_yearly_performance
 )
-from utils import create_html_table
+from utils import create_html_table, get_market_session_status, get_current_times
+from screenshot_protection import apply_screenshot_protection
 
 warnings.filterwarnings('ignore')
 
@@ -51,15 +52,35 @@ def render_stock_selection_sidebar():
     """Render sidebar for stock selection and options"""
     st.sidebar.markdown("**📋 Stock Selection**")
     
+    # Initialize session state for category if not exists
+    if 'selected_category' not in st.session_state:
+        st.session_state.selected_category = 'Nifty 50'  # Default value
+    
     # Get dynamic list of available indices
     available_indices = get_available_nse_indices()
     index_options = list(available_indices.keys()) + ['Upload File']
     
-    # Category selection
+    # Get the current index to maintain selection
+    current_index = index_options.index(st.session_state.selected_category) if st.session_state.selected_category in index_options else 0
+    
+    # Category selection with on_change handler
+    def on_category_change():
+        # Only clear cache if category actually changed
+        if st.session_state.selected_category != st.session_state.category_select:
+            st.session_state.selected_category = st.session_state.category_select
+            # Clear stock data cache when category changes
+            if 'cached_stocks_data' in st.session_state:
+                del st.session_state.cached_stocks_data
+            if 'cached_stocks_list' in st.session_state:
+                del st.session_state.cached_stocks_list
+    
+    # Create the selectbox with the current value from session state
     category = st.sidebar.selectbox(
         "Select Category",
         options=index_options,
-        index=0
+        index=current_index,
+        key='category_select',
+        on_change=on_category_change
     )
     
     return category
@@ -348,6 +369,9 @@ def main():
     # Apply custom CSS first
     st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
     
+    # Apply screenshot protection (cloud only)
+    environment = apply_screenshot_protection()
+    
     # Initialize session state
     if 'saved_lists' not in st.session_state:
         st.session_state.saved_lists = {}  # Session-only lists
@@ -454,10 +478,9 @@ def main():
     # Sidebar: Stock selection
     category = render_stock_selection_sidebar()
     
-    # Clear cache if category changed
+    # Clear cache if category changed (but don't force a rerun - let Streamlit handle it naturally)
     if st.session_state.last_category != category:
         st.session_state.cached_stocks_data = None
-        st.session_state.cached_stocks_list = None
         st.session_state.last_category = category
     
     # Determine stock list based on category
@@ -585,7 +608,24 @@ def main():
             print(f"⚠️ Failed to fetch data for: {', '.join(failed_symbols)}")
     
     st.subheader(display_title)
-    st.caption(f"🔽 Sorted by: **{sort_by}** ({sort_order})")
+    
+    # Get market session status and current time
+    market_status, status_color = get_market_session_status()
+    ist_time, _ = get_current_times()
+    last_updated = ist_time.strftime('%d %b %Y, %I:%M %p IST')
+    
+    # Display meta information with market status and last updated
+    st.markdown(f"""
+    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;'>
+        <div style='color: #42a5f5; font-size: 0.875rem;'>
+            🔽 Sorted by: <strong>{sort_by}</strong> ({sort_order}) | 📅 Range: <strong>1M / 2M / 3M</strong>
+        </div>
+        <div style='display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;'>
+            <span style='color: {status_color}; font-weight: bold; font-size: 0.875rem;'>{market_status}</span>
+            <span style='color: #888; font-size: 0.875rem;'>⏰ Updated: <strong style='color: #42a5f5;'>{last_updated}</strong></span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Create DataFrame
     df = pd.DataFrame(stocks_data)

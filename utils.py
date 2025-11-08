@@ -36,6 +36,35 @@ def get_current_times():
     return ist_time, edt_time
 
 
+def get_market_session_status():
+    """Determine NSE market session status based on IST time"""
+    ist = pytz.timezone('Asia/Kolkata')
+    current_time = datetime.now(pytz.utc).astimezone(ist)
+    
+    # Check if weekend
+    weekday = current_time.weekday()  # 0 = Monday, 6 = Sunday
+    if weekday >= 5:  # Saturday or Sunday
+        return "🔴 Market Closed (Weekend)", "#ff4444"
+    
+    current_hour = current_time.hour
+    current_minute = current_time.minute
+    current_time_mins = current_hour * 60 + current_minute
+    
+    # Market timings (IST)
+    pre_open_start = 9 * 60 + 0  # 9:00 AM
+    market_open = 9 * 60 + 15    # 9:15 AM
+    market_close = 15 * 60 + 30  # 3:30 PM
+    
+    if current_time_mins < pre_open_start:
+        return "🔴 Market Closed", "#ff4444"
+    elif pre_open_start <= current_time_mins < market_open:
+        return "🟡 Pre-Open Session", "#ffa500"
+    elif market_open <= current_time_mins < market_close:
+        return "🟢 Market Open (Live)", "#00ff00"
+    else:
+        return "🔴 Market Closed", "#ff4444"
+
+
 def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=None):
     """Format time and commodities display for header with arrows and colors - no style tags"""
     # Determine USD/INR color based on change
@@ -87,14 +116,30 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     if next_holiday:
         holiday_text = f" | 🏖️ NSE Holiday: <span style='color: #ff4444; font-weight: bold;'>{next_holiday}</span>"
     
-    # Return as table format to match high volume stocks section
+    # Get 1-week changes
+    oil_week = commodities_prices.get('oil_week_change', 0)
+    gas_week = commodities_prices.get('natural_gas_week_change', 0)
+    gold_week = commodities_prices.get('gold_week_change', 0)
+    silver_week = commodities_prices.get('silver_week_change', 0)
+    btc_week = commodities_prices.get('btc_week_change', 0)
+    usd_inr_week = commodities_prices.get('usd_inr_week_change', 0)
+    
+    # Helper function to create triangle with percentage (matching Today column style)
+    def week_change_html(week_change):
+        if week_change == 0:
+            return '-'
+        color = '#00ff00' if week_change >= 0 else '#ff4444'
+        triangle = '▲' if week_change >= 0 else '▼'
+        return f"<span style='color: {color}; font-weight: bold;'>{triangle} {abs(week_change):.2f}%</span>"
+    
+    # Return as table format with INR in brackets and 1W change column
     return f"""<table style='width: 100%; font-size: 0.875rem; border-collapse: collapse;'>
         <thead>
             <tr style='border-bottom: 1px solid rgba(66, 165, 245, 0.3);'>
                 <th style='text-align: left; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>Commodity</th>
                 <th style='text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>Price</th>
-                <th style='text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>Change</th>
-                <th style='text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>INR</th>
+                <th style='text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>Today</th>
+                <th style='text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>1W</th>
             </tr>
         </thead>
         <tbody>
@@ -102,37 +147,37 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
                 <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>🛢️ Oil</td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'>{oil_price}</td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {oil_color}; font-weight: bold;'>{oil_change_display}</span></td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'>-</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{week_change_html(oil_week)}</td>
             </tr>
             <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
                 <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>🔥 Gas</td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'>{natural_gas_price}</td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {natural_gas_color}; font-weight: bold;'>{natural_gas_change_display}</span></td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'>-</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{week_change_html(gas_week)}</td>
             </tr>
             <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
                 <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>🥇 Gold</td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{gold_price}</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{gold_price} <span style='color: #888; font-size: 0.75rem;'>({gold_inr})</span></td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {gold_color}; font-weight: bold;'>{gold_change_display}</span></td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: #ffd700;'>{gold_inr}</span></td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{week_change_html(gold_week)}</td>
             </tr>
             <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
                 <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>🪙 Silver</td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{silver_price}</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{silver_price} <span style='color: #888; font-size: 0.75rem;'>({silver_inr})</span></td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {silver_color}; font-weight: bold;'>{silver_change_display}</span></td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: #c0c0c0;'>{silver_inr}</span></td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{week_change_html(silver_week)}</td>
             </tr>
             <tr style='border-bottom: 1px solid rgba(255, 255, 255, 0.1);'>
                 <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>₿ BTC</td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'>{btc_price}</td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {btc_color}; font-weight: bold;'>{btc_change_display}</span></td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'>-</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{week_change_html(btc_week)}</td>
             </tr>
             <tr>
                 <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>💵 USD/INR</td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {usd_inr_color}; font-weight: bold;'>{usd_inr}</span></td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'>-</td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'>-</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{week_change_html(usd_inr_week)}</td>
             </tr>
         </tbody>
         <tfoot>
