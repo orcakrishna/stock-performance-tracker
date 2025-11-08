@@ -191,8 +191,8 @@ def get_index_sparkline(symbol):
     return None
 
 
-def create_index_sparkline_svg(sparkline_data, change_pct, width=40, height=20):
-    """Create a mini SVG sparkline for indices"""
+def create_index_sparkline_svg(sparkline_data, change_pct, symbol, width=50, height=25):
+    """Create a clickable mini SVG sparkline for indices"""
     if not sparkline_data or len(sparkline_data) < 2:
         return ""
     
@@ -207,9 +207,29 @@ def create_index_sparkline_svg(sparkline_data, change_pct, width=40, height=20):
     path_data = "M " + " L ".join(points)
     color = "#00ff00" if change_pct >= 0 else "#ff4444"
     
-    return f'''<svg width="{width}" height="{height}" style="display: inline-block; vertical-align: middle; margin-left: 5px;">
-        <path d="{path_data}" fill="none" stroke="{color}" stroke-width="1.5" />
-    </svg>'''
+    # Map NSE symbols to TradingView symbols
+    tv_symbol_map = {
+        '^NSEI': 'NSE:NIFTY',
+        '^NSEBANK': 'NSE:BANKNIFTY',
+        '^BSESN': 'BSE:SENSEX',
+        '^CNXIT': 'NSE:CNXIT',
+        '^CNXPHARMA': 'NSE:CNXPHARMA',
+        '^CNXREALTY': 'NSE:CNXREALTY',
+        '^CNXMETAL': 'NSE:CNXMETAL',
+        '^CNXENERGY': 'NSE:CNXENERGY',
+        '^CNXFMCG': 'NSE:CNXFMCG',
+        '^CNXAUTO': 'NSE:CNXAUTO'
+    }
+    
+    tv_symbol = tv_symbol_map.get(symbol, 'NSE:NIFTY')
+    tradingview_url = f"https://www.tradingview.com/chart/?symbol={tv_symbol}"
+    
+    return f'''<a href="{tradingview_url}" target="_blank" style="text-decoration: none; cursor: pointer;" title="View on TradingView">
+        <svg width="{width}" height="{height}" style="display: inline-block; vertical-align: middle; opacity: 0.8; transition: opacity 0.2s;" 
+             onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
+            <path d="{path_data}" fill="none" stroke="{color}" stroke-width="2" />
+        </svg>
+    </a>'''
 
 
 def render_market_indices():
@@ -217,6 +237,21 @@ def render_market_indices():
     st.markdown("### 📈 Market Indices - Today's Performance")
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(METRIC_CSS, unsafe_allow_html=True)
+    
+    # Add CSS to position chart inside metric box
+    st.markdown("""
+    <style>
+        div[data-testid="stMetric"] {
+            position: relative;
+        }
+        .chart-inside {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
     # Row 1: Major Indices - Wrapped for mobile targeting
     st.markdown('<div class="metric-row">', unsafe_allow_html=True)
@@ -227,11 +262,13 @@ def render_market_indices():
             sparkline_data = get_index_sparkline(symbol)
             
             if price is not None and change is not None:
-                # Create chart SVG
-                chart_svg = create_index_sparkline_svg(sparkline_data, change) if sparkline_data else ""
-                # Display with chart
-                st.markdown(f"**{name}** {chart_svg}", unsafe_allow_html=True)
-                st.metric(label="", value=f"{price:,.2f}", delta=f"{change:+.2f}%")
+                # Show chart for indices that have data, skip for "Nifty Total Market"
+                if sparkline_data and name != "Nifty Total Market":
+                    chart_html = create_index_sparkline_svg(sparkline_data, change, symbol)
+                    # Add chart with absolute positioning class
+                    st.markdown(f'<div class="chart-inside">{chart_html}</div>', unsafe_allow_html=True)
+                
+                st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f}%")
             else:
                 st.metric(label=name, value="--", delta="--")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -252,11 +289,13 @@ def render_market_indices():
             sparkline_data = get_index_sparkline(symbol)
             
             if price is not None and change is not None:
-                # Create chart SVG
-                chart_svg = create_index_sparkline_svg(sparkline_data, change) if sparkline_data else ""
-                # Display with chart
-                st.markdown(f"**{name}** {chart_svg}", unsafe_allow_html=True)
-                st.metric(label="", value=f"{price:,.2f}", delta=f"{change:+.2f}%")
+                # Show chart for all sectoral indices that have data
+                if sparkline_data:
+                    chart_html = create_index_sparkline_svg(sparkline_data, change, symbol)
+                    # Add chart with absolute positioning class
+                    st.markdown(f'<div class="chart-inside">{chart_html}</div>', unsafe_allow_html=True)
+                
+                st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f}%")
             else:
                 st.metric(label=name, value="--", delta="--")
     st.markdown('</div>', unsafe_allow_html=True)

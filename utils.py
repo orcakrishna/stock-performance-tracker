@@ -110,6 +110,20 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     silver_change_display = f"{silver_arrow} {abs(silver_change):.2f}%" if silver_change != 0 else '-'
     
     usd_inr = commodities_prices.get('usd_inr', '--')
+    usd_inr_change_raw = commodities_prices.get('usd_inr_change', 0)
+    
+    # Calculate USD/INR today's percentage change
+    if usd_inr_change_raw != 0 and usd_inr != '--':
+        try:
+            current_value = float(usd_inr.replace('₹', ''))
+            usd_inr_change_pct = (usd_inr_change_raw / (current_value - usd_inr_change_raw)) * 100
+            usd_inr_arrow = '▲' if usd_inr_change_pct >= 0 else '▼'
+            usd_inr_today_color = '#ff4444' if usd_inr_change_pct >= 0 else '#00ff00'  # Red=INR weakened, Green=INR strengthened
+            usd_inr_today_display = f"<span style='color: {usd_inr_today_color}; font-weight: bold;'>{usd_inr_arrow} {abs(usd_inr_change_pct):.2f}%</span>"
+        except:
+            usd_inr_today_display = '-'
+    else:
+        usd_inr_today_display = '-'
     
     # Build USD/INR and Holiday line
     holiday_text = ""
@@ -175,8 +189,8 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
             </tr>
             <tr>
                 <td style='padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;'>💵 USD/INR</td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'><span style='color: {usd_inr_color}; font-weight: bold;'>{usd_inr}</span></td>
-                <td style='padding: 0.4rem 0.5rem; text-align: right;'>-</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{usd_inr}</td>
+                <td style='padding: 0.4rem 0.5rem; text-align: right;'>{usd_inr_today_display}</td>
                 <td style='padding: 0.4rem 0.5rem; text-align: right;'>{week_change_html(usd_inr_week)}</td>
             </tr>
         </tbody>
