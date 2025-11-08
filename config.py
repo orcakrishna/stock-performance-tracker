@@ -209,13 +209,104 @@ CUSTOM_CSS = """
             max-width: 100% !important;
         }
         
-        /* Make metrics wrap to 2 columns on mobile */
+        /* Make info boxes stack vertically on mobile */
         [data-testid="stHorizontalBlock"] {
             display: flex !important;
-            flex-wrap: wrap !important;
+            flex-direction: column !important;
+            gap: 0.5rem !important;
         }
         
         [data-testid="stHorizontalBlock"] > div {
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+            max-width: 100% !important;
+        }
+        
+        /* Info boxes - Full width and scrollable tables */
+        .info-box {
+            width: 100% !important;
+            overflow-x: auto !important;
+            margin-bottom: 0.5rem !important;
+            max-width: 100vw !important;
+        }
+        
+        .info-box table {
+            min-width: 500px !important;
+            width: 100% !important;
+            font-size: 0.75rem !important;
+        }
+        
+        .info-box td, .info-box th {
+            padding: 0.4rem 0.5rem !important;
+            font-size: 0.75rem !important;
+            white-space: nowrap !important;
+            min-width: 80px !important;
+        }
+        
+        .info-box td:first-child, .info-box th:first-child {
+            min-width: 120px !important;
+        }
+        
+        .info-box-title {
+            font-size: 0.85rem !important;
+            padding: 0.4rem !important;
+        }
+        
+        /* Scroll indicator for mobile */
+        .info-box:after {
+            content: '← Swipe to see more →';
+            display: block;
+            text-align: center;
+            color: rgba(66, 165, 245, 0.6);
+            font-size: 0.7rem;
+            padding: 0.2rem;
+            font-style: italic;
+        }
+        
+        /* Main data tables - Scrollable on mobile */
+        .dataframe, 
+        .stDataFrame,
+        [data-testid="stDataFrame"] {
+            overflow-x: auto !important;
+            display: block !important;
+            max-width: 100vw !important;
+        }
+        
+        .dataframe table,
+        [data-testid="stDataFrame"] table {
+            font-size: 0.7rem !important;
+            min-width: 600px !important;
+        }
+        
+        .dataframe th,
+        .dataframe td,
+        [data-testid="stDataFrame"] th,
+        [data-testid="stDataFrame"] td {
+            padding: 0.3rem 0.25rem !important;
+            font-size: 0.7rem !important;
+        }
+        
+        /* Metrics - Smaller on mobile */
+        [data-testid="stMetric"] {
+            padding: 0.3rem !important;
+        }
+        
+        [data-testid="stMetricLabel"] {
+            font-size: 0.7rem !important;
+        }
+        
+        [data-testid="stMetricValue"] {
+            font-size: 1rem !important;
+        }
+        
+        /* Make metrics wrap to 2 columns only for market indices */
+        .metric-row [data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            flex-direction: row !important;
+        }
+        
+        .metric-row [data-testid="stHorizontalBlock"] > div {
             flex: 0 0 48% !important;
             min-width: 48% !important;
             max-width: 48% !important;
