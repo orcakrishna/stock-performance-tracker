@@ -75,6 +75,33 @@ COMMODITIES = {
 # Custom CSS for dark theme
 CUSTOM_CSS = """
 <style>
+    /* ========== COPY PROTECTION ========== */
+    /* Disable text selection */
+    * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+    }
+    
+    /* Prevent drag and drop of images */
+    img {
+        pointer-events: none !important;
+        -webkit-user-drag: none !important;
+        -khtml-user-drag: none !important;
+        -moz-user-drag: none !important;
+        -o-user-drag: none !important;
+        user-drag: none !important;
+    }
+    
+    /* Disable copy/paste context menu */
+    body {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        user-select: none !important;
+    }
+    
     /* Mobile viewport optimization */
     @viewport {
         width: device-width;
@@ -826,4 +853,87 @@ METRIC_CSS = """
         fill: #ff4444 !important; 
     }
 </style>
+
+<script>
+    // ========== COPY PROTECTION JAVASCRIPT ==========
+    
+    // Disable right-click context menu
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
+    }, false);
+    
+    // Disable keyboard shortcuts for copy/paste/view source
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+C, Ctrl+X, Ctrl+V (Copy, Cut, Paste)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'x' || e.key === 'v')) {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+U (View Source)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+S (Save Page)
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            return false;
+        }
+        // F12 (Developer Tools)
+        if (e.key === 'F12') {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+Shift+I (Inspect Element)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+Shift+C (Inspect Element)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+Shift+J (Console)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'J') {
+            e.preventDefault();
+            return false;
+        }
+    }, false);
+    
+    // Disable text selection on copy attempt
+    document.addEventListener('copy', function(e) {
+        e.preventDefault();
+        return false;
+    }, false);
+    
+    // Disable cut
+    document.addEventListener('cut', function(e) {
+        e.preventDefault();
+        return false;
+    }, false);
+    
+    // Disable paste
+    document.addEventListener('paste', function(e) {
+        e.preventDefault();
+        return false;
+    }, false);
+    
+    // Disable drag events
+    document.addEventListener('dragstart', function(e) {
+        e.preventDefault();
+        return false;
+    }, false);
+    
+    // Disable select all
+    document.addEventListener('selectstart', function(e) {
+        e.preventDefault();
+        return false;
+    }, false);
+    
+    // Console warning message
+    console.log('%c⚠️ WARNING: Content Protection Enabled', 'color: red; font-size: 20px; font-weight: bold;');
+    console.log('%cThis website is protected. Unauthorized copying is prohibited.', 'color: orange; font-size: 14px;');
+</script>
 """
