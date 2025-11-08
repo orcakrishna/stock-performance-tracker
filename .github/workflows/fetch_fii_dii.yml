@@ -1,82 +1,155 @@
+name: Update FII/DII Data
+
 on:
   schedule:
-    - cron: '0 13 * * *'
+    - cron: '0 13 * * *'  # Daily at 13:00 UTC (~6:30 PM IST)
   workflow_dispatch:
 
-# Prevent multiple runs from conflicting
+# Prevent concurrent runs
 concurrency:
   group: update-fii-dii-data
   cancel-in-progress: true
 
 permissions:
   contents: write
+  actions: write  # Required to delete old workflow runs
 
 jobs:
-  fetch-data:
+  fetch-and-update:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Full history for accurate git operations
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install requests beautifulsoup4
 
-      - name: Prepare files (keep only last 2 days)
+      - name: Clean old data files (keep today & yesterday)
         run: |
-          echo "Cleaning up old FII/DII data files (keep today and yesterday)..."
+          echo "Cleaning old FII/DII JSON files..."
           TODAY=$(date -u +"%Y-%m-%d")
           YESTERDAY=$(date -u -d "yesterday" +"%Y-%m-%d")
+          KEEP_PATTERN="fii_dii_data_(${TODAY}|${YESTERDAY}).json"
 
           shopt -s nullglob
-          for f in fii_dii_data_*.json; do
-            if [[ "$f" == "fii_dii_data_${TODAY}.json" || "$f" == "fii_dii_data_${YESTERDAY}.json" ]]; then
-              echo "Keeping: $f"
+          for file in fii_dii_data_*.json; do
+            if [[ "$file" =~ $KEEP_PATTERN ]]; then
+              echo "Keeping: $file"
             else
-              echo "Deleting old file: $f"
-              rm -f "$f"
+              echo "Removing old: $file"
+              rm -f "$file"
             fi
           done
           shopt -u nullglob
 
-      - name: Fetch FII/DII data
+      - name: Fetch latest FII/DII data
+        id: fetch
         run: |
           python fetch_fii_dii_daily.py
+          if [ ! -f "fii_dii_data_$(date -u +'%Y-%m-%d').json" ]; then
+            echo "Error: Failed to generate today's data file!"
+            exit 1
+          fi
+          echo "Data fetched successfully."
 
       - name: Update main and previous files
         run: |
           TODAY=$(date -u +"%Y-%m-%d")
           YESTERDAY=$(date -u -d "yesterday" +"%Y-%m-%d")
+
+          # Update main file
           if [ -f "fii_dii_data_${TODAY}.json" ]; then
-            mv -f "fii_dii_data_${TODAY}.json" fii_dii_data.json
+            cp -f "fii_dii_data_${TODAY}.json" fii_dii_data.json
+            echo "Updated fii_dii_data.json"
           fi
+
+          # Update previous file
           if [ -f "fii_dii_data_${YESTERDAY}.json" ]; then
             cp -f "fii_dii_data_${YESTERDAY}.json" fii_dii_data_prev.json
+            echo "Updated fii_dii_data_prev.json"
+          else
+            # Fallback: use today's as prev if yesterday missing
+            if [ -f "fii_dii_data.json" ]; then
+              cp -f "fii_dii_data.json" fii_dii_data_prev.json
+              echo "Warning: Yesterday's data missing. Using today's as previous."
+            fi
           fi
 
-      - name: Commit and push if changed
+      - name: Commit and push changes
         run: |
-          git config --global user.name 'GitHub Actions Bot'
-          git config --global user.email 'actions@github.com'
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
 
-          # Sync with remote main (avoid conflicts)
+          # Sync with remote to avoid conflicts
           git fetch origin main
           git checkout main
           git reset --hard origin/main
 
-          # Stage updated files
+          # Add only JSON data files
           git add fii_dii_data*.json
 
-          # Only commit if there are changes
+          # Commit only if changes exist
           if git diff --staged --quiet; then
-            echo "No changes to commit."
+            echo "No changes detected. Skipping commit."
             exit 0
           fi
 
           git commit -m "Update FII/DII data - $(date +'%Y-%m-%d')"
           git push origin main
+          echo "Changes pushed successfully."
+
+      - name: Cleanup old workflow runs (keep last 2)
+        if: always()  # Run even if previous steps fail
+        run: |
+          echo "Starting cleanup of old workflow runs..."
+
+          WORKFLOW_FILE=".github/workflows/fetch_fii_dii.yml"
+          WORKFLOW_ID=$(gh api "repos/${{ github.repository }}/actions/workflows" \
+            --jq ".workflows[] | select(.path == \"$WORKFLOW_FILE\") | .id")
+
+          if [ -z "$WORKFLOW_ID" ]; then
+            echo "Warning: Could not find workflow ID for $WORKFLOW_FILE"
+            exit 0
+          fi
+
+          echo "Found workflow ID: $WORKFLOW_ID"
+
+          # Get run IDs (sorted newest first), skip first 2
+          gh api "repos/${{ github.repository }}/actions/workflows/$WORKFLOW_ID/runs" \
+            --paginate \
+            --jq '.workflow_runs[].id' | head -n 100 | tail -n +3 > old_runs.txt
+
+          if [ ! -s old_runs.txt ]; then
+            echo "No old runs to delete."
+            rm -f old_runs.txt
+            exit 0
+          fi
+
+          echo "Deleting $(wc -l < old_runs.txt) old workflow run(s)..."
+          while IFS= read -r run_id; do
+            echo "Deleting run #$run_id"
+            gh api "repos/${{ github.repository }}/actions/runs/$run_id" -X DELETE || echo "Failed to delete $run_id"
+          done < old_runs.txt
+
+          rm -f old_runs.txt
+          echo "Cleanup completed!"
+        env:
+          GH_TOKEN: ${{ github.token }}
