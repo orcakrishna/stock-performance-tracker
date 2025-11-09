@@ -292,17 +292,25 @@ def render_market_indices():
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(METRIC_CSS, unsafe_allow_html=True)
     
-    # Add CSS to position chart inside metric box
+    # Add CSS to position chart next to percentage delta inside metric box
     st.markdown("""
     <style>
+        /* Make metric box relative for absolute positioning of chart */
         div[data-testid="stMetric"] {
-            position: relative;
+            position: relative !important;
         }
-        .chart-inside {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 1;
+        
+        /* Position chart absolutely inside metric, next to delta */
+        .mini-chart-inline {
+            position: absolute !important;
+            bottom: 10px !important;
+            right: 10px !important;
+            z-index: 10 !important;
+        }
+        
+        /* Add right padding to metric delta to make space for chart when chart exists */
+        .has-chart [data-testid="stMetricDelta"] {
+            margin-right: 60px !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -316,13 +324,18 @@ def render_market_indices():
             sparkline_data = get_index_sparkline(symbol)
             
             if price is not None and change is not None:
-                # Show chart for indices that have data, skip for "Nifty Total Market"
-                if sparkline_data and name != "Nifty Total Market":
-                    chart_html = create_index_sparkline_svg(sparkline_data, change, symbol)
-                    # Add chart with absolute positioning class
-                    st.markdown(f'<div class="chart-inside">{chart_html}</div>', unsafe_allow_html=True)
+                # Only exclude Nifty Total Market from charts
+                has_chart = sparkline_data and name != "Nifty Total Market"
+                
+                if has_chart:
+                    st.markdown('<div class="has-chart">', unsafe_allow_html=True)
                 
                 st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f}%")
+                
+                if has_chart:
+                    chart_html = create_index_sparkline_svg(sparkline_data, change, symbol, width=50, height=25)
+                    st.markdown(f'<div class="mini-chart-inline">{chart_html}</div>', unsafe_allow_html=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
             else:
                 st.metric(label=name, value="--", delta="--")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -343,13 +356,17 @@ def render_market_indices():
             sparkline_data = get_index_sparkline(symbol)
             
             if price is not None and change is not None:
-                # Show chart for all sectoral indices that have data
-                if sparkline_data:
-                    chart_html = create_index_sparkline_svg(sparkline_data, change, symbol)
-                    # Add chart with absolute positioning class
-                    st.markdown(f'<div class="chart-inside">{chart_html}</div>', unsafe_allow_html=True)
+                has_chart = sparkline_data
+                
+                if has_chart:
+                    st.markdown('<div class="has-chart">', unsafe_allow_html=True)
                 
                 st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f}%")
+                
+                if has_chart:
+                    chart_html = create_index_sparkline_svg(sparkline_data, change, symbol, width=50, height=25)
+                    st.markdown(f'<div class="mini-chart-inline">{chart_html}</div>', unsafe_allow_html=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
             else:
                 st.metric(label=name, value="--", delta="--")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -536,10 +553,12 @@ def render_sidebar_info():
         "- 🚀 Bulk Mode: Auto-enabled for 100+ stocks (20 workers)\n"
         "- ⚡ Parallel: 10x faster (10 workers, 50-100 stocks)\n"
         "- 🐢 Sequential: Small datasets (<50 stocks)\n\n"
-        "**Optimization:**\n"
-        "- 💾 6-hour persistent cache (instant load)\n"
-        "- 🔄 Smart refresh (only fetch missing/expired)\n"
-        "- ⚡ 20 parallel workers for 1000+ stocks\n\n"
+        "**Smart Caching:**\n"
+        "- 📈 Market Open: 5-min cache (fresh data)\n"
+        "- 🌙 After Hours: 1-hour cache\n"
+        "- 📅 Weekend: 24-hour cache (no market)\n"
+        "- 🏖️ Holiday: 24-hour cache (no market)\n"
+        "- 🔄 Auto-refresh based on market status\n\n"
         "**Features:**\n"
         "- Nifty Total Market (~750 stocks)\n"
         "- Upload custom stock lists\n"
@@ -612,17 +631,19 @@ def render_averages(df):
     st.markdown("---")
     st.subheader("📊 Key Index Performance (1 Year)")
     
-    # Define main indices only (not sectoral) - alphabetically ordered
+    # Define main indices and commodities - indices first, then commodities
     # Note: Smallcap indices not available in Yahoo Finance with reliable data
     indices = {
-        'Bank Nifty': '^NSEBANK',
         'Nifty 50': '^NSEI',
+        'Sensex': '^BSESN',
+        'Bank Nifty': '^NSEBANK',
         'Nifty Midcap 50': '^NSEMDCP50',
-        'Sensex': '^BSESN'
+        'Gold': 'GC=F',
+        'Silver': 'SI=F'
     }
     
-    # Create 4 columns for 4 indices
-    cols = st.columns(4)
+    # Create 6 columns for 4 indices + 2 commodities
+    cols = st.columns(6)
     
     for idx, (name, symbol) in enumerate(indices.items()):
         with cols[idx]:
@@ -638,11 +659,86 @@ def render_averages(df):
                     end_price = hist['Close'].iloc[-1]
                     year_change = ((end_price - start_price) / start_price) * 100
                     
-                    st.metric(
-                        label=name,
-                        value=f"{end_price:,.2f}",
-                        delta=f"{year_change:+.2f}%"
-                    )
+                    # Calculate 52-week high and low
+                    week_52_high = hist['High'].max()
+                    week_52_low = hist['Low'].min()
+                    
+                    # Determine delta styling
+                    arrow = "▲" if year_change >= 0 else "▼"
+                    delta_class = "positive" if year_change >= 0 else "negative"
+                    
+                    # Create single unified box with all data
+                    st.markdown(f"""
+                        <div class="yearly-metric-box">
+                            <div class="yearly-metric-label">{name}</div>
+                            <div class="yearly-metric-value">{end_price:,.2f}</div>
+                            <div class="yearly-metric-delta {delta_class}">{arrow} {abs(year_change):.2f}%</div>
+                            <div class="yearly-52w-data">
+                                <div>52W High: <span style='color: #00ff00; font-weight: 600;'>{week_52_high:,.2f}</span></div>
+                                <div>52W Low: <span style='color: #ff4444; font-weight: 600;'>{week_52_low:,.2f}</span></div>
+                            </div>
+                        </div>
+                        <style>
+                            .yearly-metric-box {{
+                                background: linear-gradient(135deg, rgba(26, 35, 126, 0.3) 0%, rgba(13, 27, 42, 0.5) 100%);
+                                border: 1px solid rgba(66, 165, 245, 0.3);
+                                border-radius: 8px;
+                                padding: 0.5rem 0.75rem;
+                                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 15px rgba(66, 165, 245, 0.08);
+                                transition: all 0.3s ease;
+                            }}
+                            .yearly-metric-box:hover {{
+                                background: linear-gradient(135deg, rgba(26, 35, 126, 0.5) 0%, rgba(13, 71, 161, 0.3) 100%);
+                                border-color: rgba(66, 165, 245, 0.6);
+                                transform: translateY(-2px);
+                                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 20px rgba(66, 165, 245, 0.15);
+                            }}
+                            .yearly-metric-label {{
+                                font-size: 0.7rem;
+                                line-height: 1.3;
+                                color: rgba(255, 255, 255, 0.7);
+                                font-weight: 500;
+                                margin-bottom: 0.25rem;
+                            }}
+                            .yearly-metric-value {{
+                                font-size: 1rem;
+                                font-weight: 600;
+                                color: #ffffff;
+                                line-height: 1.2;
+                                margin-bottom: 0.2rem;
+                                font-family: 'JetBrains Mono', monospace;
+                            }}
+                            .yearly-metric-delta {{
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 4px;
+                                font-size: 0.7rem;
+                                font-weight: 600;
+                                line-height: 1.2;
+                                padding: 2px 5px;
+                                border-radius: 3px;
+                                white-space: nowrap;
+                                margin-bottom: 0.5rem;
+                            }}
+                            .yearly-metric-delta.positive {{
+                                color: #00ff00;
+                                background-color: rgba(0, 255, 0, 0.15);
+                                border: 1px solid rgba(0, 255, 0, 0.3);
+                            }}
+                            .yearly-metric-delta.negative {{
+                                color: #ff4444;
+                                background-color: rgba(255, 68, 68, 0.15);
+                                border: 1px solid rgba(255, 68, 68, 0.3);
+                            }}
+                            .yearly-52w-data {{
+                                font-size: 0.7rem;
+                                color: rgba(255, 255, 255, 0.6);
+                                line-height: 1.5;
+                                padding-top: 0.5rem;
+                                border-top: 1px solid rgba(66, 165, 245, 0.2);
+                            }}
+                        </style>
+                    """, unsafe_allow_html=True)
                 else:
                     st.metric(label=name, value="--", delta="--")
             except Exception as e:
@@ -680,9 +776,22 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
                 padding: 5px 10px !important;
                 margin-left: 0 !important;
             }
+            /* Mobile pagination - keep horizontal and stick to left */
+            @media (max-width: 768px) {
+                .pagination-container [data-testid="column"]:nth-of-type(1) {
+                    flex: 0 0 auto !important;
+                    min-width: 40px !important;
+                    max-width: 60px !important;
+                }
+                .pagination-container [data-testid="column"]:nth-of-type(1) button {
+                    font-size: 1rem !important;
+                    padding: 4px 8px !important;
+                    width: 100% !important;
+                }
+            }
             </style>
         """, unsafe_allow_html=True)
-        if st.button("◄◄", disabled=(st.session_state.current_page == 1), key=f"prev_page_{position}"):
+        if st.button("◄", disabled=(st.session_state.current_page == 1), key=f"prev_page_{position}"):
             st.session_state.current_page -= 1
             st.rerun()
     
@@ -741,9 +850,22 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
                 padding: 5px 10px !important;
                 margin-right: 0 !important;
             }
+            /* Mobile pagination - keep horizontal and stick to right */
+            @media (max-width: 768px) {
+                .pagination-container [data-testid="column"]:nth-of-type(3) {
+                    flex: 0 0 auto !important;
+                    min-width: 40px !important;
+                    max-width: 60px !important;
+                }
+                .pagination-container [data-testid="column"]:nth-of-type(3) button {
+                    font-size: 1rem !important;
+                    padding: 4px 8px !important;
+                    width: 100% !important;
+                }
+            }
             </style>
         """, unsafe_allow_html=True)
-        if st.button("►►", disabled=(st.session_state.current_page == total_pages), key=f"next_page_{position}"):
+        if st.button("►", disabled=(st.session_state.current_page == total_pages), key=f"next_page_{position}"):
             st.session_state.current_page += 1
             st.rerun()
     
@@ -791,11 +913,17 @@ def fetch_sectoral_yearly_data():
                     end_price = hist['Close'].iloc[-1]
                     year_change = ((end_price - start_price) / start_price) * 100
                     
+                    # Calculate 52-week high and low
+                    week_52_high = hist['High'].max()
+                    week_52_low = hist['Low'].min()
+                    
                     sectoral_data.append({
                         'Sector': name,
-                        'Current Price': f"{end_price:,.2f}",
+                        'Current Price': end_price,
                         '1 Year Change %': round(year_change, 2),
-                        'Start Price': f"{start_price:,.2f}"
+                        'Start Price': start_price,
+                        '52W High': week_52_high,
+                        '52W Low': week_52_low
                     })
                     break  # Success, exit retry loop
                 
@@ -808,9 +936,11 @@ def fetch_sectoral_yearly_data():
                     # Add placeholder data so section still shows
                     sectoral_data.append({
                         'Sector': name,
-                        'Current Price': '--',
+                        'Current Price': None,
                         '1 Year Change %': 0,
-                        'Start Price': '--'
+                        'Start Price': None,
+                        '52W High': None,
+                        '52W Low': None
                     })
         
         # Longer delay between indices to avoid rate limiting
@@ -826,16 +956,7 @@ def render_sectoral_yearly_performance():
     st.subheader("📊 Sectoral Indices - 1 Year Performance")
     st.caption("Annual performance comparison across all major sectors")
     
-    # Add button to load on demand
-    if 'show_sectoral' not in st.session_state:
-        st.session_state.show_sectoral = False
-    
-    if not st.session_state.show_sectoral:
-        if st.button("📊 Load Sectoral Performance Data"):
-            st.session_state.show_sectoral = True
-        return
-    
-    # Fetch data with caching
+    # Fetch data with caching (no button required - loads automatically)
     with st.spinner("Loading sectoral performance data..."):
         sectoral_data = fetch_sectoral_yearly_data()
     
@@ -849,17 +970,35 @@ def render_sectoral_yearly_performance():
             with cols[idx]:
                 change_pct = data['1 Year Change %']
                 # Handle placeholder data
-                if data['Current Price'] == '--':
+                if data['Current Price'] is None:
                     st.metric(
                         label=data['Sector'],
                         value="--",
                         delta="--"
                     )
                 else:
-                    st.metric(
-                        label=data['Sector'],
-                        value=data['Current Price'],
-                        delta=f"{change_pct:+.2f}%"
-                    )
+                    # Use same custom HTML box as key indices
+                    name = data['Sector']
+                    end_price = data['Current Price']
+                    year_change = change_pct
+                    week_52_high = data['52W High']
+                    week_52_low = data['52W Low']
+                    
+                    # Determine delta styling
+                    arrow = "▲" if year_change >= 0 else "▼"
+                    delta_class = "positive" if year_change >= 0 else "negative"
+                    
+                    # Create single unified box with all data
+                    st.markdown(f"""
+                        <div class="yearly-metric-box">
+                            <div class="yearly-metric-label">{name}</div>
+                            <div class="yearly-metric-value">{end_price:,.2f}</div>
+                            <div class="yearly-metric-delta {delta_class}">{arrow} {abs(year_change):.2f}%</div>
+                            <div class="yearly-52w-data">
+                                <div>52W High: <span style='color: #00ff00; font-weight: 600;'>{week_52_high:,.2f}</span></div>
+                                <div>52W Low: <span style='color: #ff4444; font-weight: 600;'>{week_52_low:,.2f}</span></div>
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
     else:
         st.warning("⚠️ Unable to fetch sectoral performance data. Yahoo Finance may be rate limiting. Please wait a few minutes and refresh.")

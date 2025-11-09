@@ -316,9 +316,13 @@ def fetch_stocks_data(selected_stocks, use_parallel, use_cache=True):
     """Fetch stock data using parallel or sequential method with caching"""
     num_stocks = len(selected_stocks)
     
+    # Show cache status message
+    from smart_cache_utils import get_cache_info_message
+    cache_msg = get_cache_info_message()
+    
     # For large datasets (>100 stocks), always use bulk fetch with caching
     if num_stocks > 100:
-        st.info(f"🚀 Optimized mode: Fetching {num_stocks} stocks with caching (3 parallel workers)")
+        st.info(f"🚀 Optimized mode: Fetching {num_stocks} stocks with caching (3 parallel workers)\n\n{cache_msg}")
         return fetch_stocks_bulk(selected_stocks, max_workers=3, use_cache=use_cache)
     
     # For medium datasets (50-100), use parallel with caching
@@ -596,11 +600,11 @@ def main():
                 </div>
                 <style>
                     .spinner {
-                        border: 4px solid rgba(255, 255, 255, 0.1);
+                        border: 3px solid rgba(255, 255, 255, 0.1);
                         border-left-color: #00d4ff;
                         border-radius: 50%;
-                        width: 40px;
-                        height: 40px;
+                        width: 24px;
+                        height: 24px;
                         animation: spin 1s linear infinite;
                         margin: 0 auto;
                     }

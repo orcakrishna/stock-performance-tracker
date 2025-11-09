@@ -6,12 +6,13 @@ Single-file cache for optimal performance with large datasets (25x faster than J
 
 import os
 import pickle
+import pytz
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional
+from smart_cache_utils import should_refresh_cache, get_smart_cache_ttl
 
 CACHE_DIR = "cache"
 CACHE_FILE = os.path.join(CACHE_DIR, "stocks_cache.pkl")
-CACHE_EXPIRY_HOURS = 6  # Cache expires after 6 hours
 
 
 def ensure_cache_dir() -> None:
@@ -47,8 +48,8 @@ def save_to_cache(ticker: str, data: dict) -> bool:
 
 def load_from_cache(ticker: str) -> Optional[dict]:
     """
-    Load single stock data from cache if valid.
-    Returns None if not found or expired.
+    Load single stock data from cache if valid using smart TTL.
+    Returns None if not found or expired based on market status.
     """
     try:
         all_cache = _load_cache_file()
@@ -58,8 +59,13 @@ def load_from_cache(ticker: str) -> Optional[dict]:
         
         stock_cache = all_cache['stocks'][ticker]
         
-        # Check if expired
-        if _is_expired(stock_cache['timestamp']):
+        # Add timezone info to cached timestamp if not present
+        timestamp = stock_cache['timestamp']
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=pytz.utc)
+        
+        # Check if expired using smart cache logic
+        if should_refresh_cache(timestamp):
             return None
         
         return stock_cache['data']
@@ -105,7 +111,7 @@ def save_bulk_cache(stocks_data: List[dict]) -> bool:
 
 def load_bulk_cache(tickers: List[str]) -> Tuple[List[dict], List[str]]:
     """
-    Load multiple stocks from cache.
+    Load multiple stocks from cache using smart TTL.
     Returns (cached_data, missing_tickers).
     """
     cached_data = []
@@ -118,8 +124,13 @@ def load_bulk_cache(tickers: List[str]) -> Tuple[List[dict], List[str]]:
             if ticker in all_cache['stocks']:
                 stock_cache = all_cache['stocks'][ticker]
                 
-                # Check if expired
-                if not _is_expired(stock_cache['timestamp']):
+                # Add timezone info to cached timestamp if not present
+                timestamp = stock_cache['timestamp']
+                if timestamp.tzinfo is None:
+                    timestamp = timestamp.replace(tzinfo=pytz.utc)
+                
+                # Check if expired using smart cache logic
+                if not should_refresh_cache(timestamp):
                     cached_data.append(stock_cache['data'])
                 else:
                     missing_tickers.append(ticker)
@@ -145,7 +156,7 @@ def clear_cache() -> bool:
 
 def get_cache_stats() -> Dict[str, int]:
     """
-    Get cache statistics.
+    Get cache statistics using smart TTL.
     Returns dict with total, valid, and expired counts.
     """
     try:
@@ -156,7 +167,11 @@ def get_cache_stats() -> Dict[str, int]:
         expired = 0
         
         for ticker, stock_cache in all_cache['stocks'].items():
-            if _is_expired(stock_cache['timestamp']):
+            timestamp = stock_cache['timestamp']
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=pytz.utc)
+            
+            if should_refresh_cache(timestamp):
                 expired += 1
             else:
                 valid += 1
@@ -195,6 +210,8 @@ def _save_cache_file(cache_data: dict) -> None:
 
 
 def _is_expired(timestamp: datetime) -> bool:
-    """Check if a timestamp is expired based on CACHE_EXPIRY_HOURS."""
-    expiry_time = datetime.now() - timedelta(hours=CACHE_EXPIRY_HOURS)
-    return timestamp < expiry_time
+    """Check if a timestamp is expired using smart cache TTL (DEPRECATED - use should_refresh_cache)."""
+    # Keep for backward compatibility but use smart cache logic
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=pytz.utc)
+    return should_refresh_cache(timestamp)
