@@ -756,7 +756,7 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
 # =========================
 # SECTORAL YEARLY PERFORMANCE
 # =========================
-@st.cache_data(ttl=3600)  # Cache for 1 hour
+@st.cache_data(ttl=3600, show_spinner=False)  # Cache for 1 hour, hide spinner
 def fetch_sectoral_yearly_data():
     """Fetch 1-year data for sectoral indices only (not main indices)"""
     import yfinance as yf

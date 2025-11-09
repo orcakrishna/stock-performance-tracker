@@ -569,20 +569,54 @@ def main():
             st.warning(f"⚠️ No stocks found in {category}. Please try another category.")
         return
     
-    # Display Market Indices
-    render_market_indices()
+    # Create placeholder containers to maintain layout during loading
+    market_indices_placeholder = st.empty()
+    title_placeholder = st.empty()
+    summary_placeholder = st.empty()
+    table_placeholder = st.empty()
+    performers_placeholder = st.empty()
+    averages_placeholder = st.empty()
+    sectoral_placeholder = st.empty()
+    
+    # Display Market Indices (always show first)
+    with market_indices_placeholder.container():
+        render_market_indices()
     
     # Check if we need to fetch data (only if stocks list changed)
     stocks_list_key = ','.join(sorted(selected_stocks))  # Create unique key for current stock list
     
     if (st.session_state.cached_stocks_data is None or 
         st.session_state.cached_stocks_list != stocks_list_key):
+        # Show clean loading spinner
+        with title_placeholder.container():
+            st.markdown("""
+                <div style='text-align: center; padding: 40px 0;'>
+                    <div class='spinner'></div>
+                    <p style='color: #95e1d3; margin-top: 20px; font-size: 1.1rem;'>Loading...</p>
+                </div>
+                <style>
+                    .spinner {
+                        border: 4px solid rgba(255, 255, 255, 0.1);
+                        border-left-color: #00d4ff;
+                        border-radius: 50%;
+                        width: 40px;
+                        height: 40px;
+                        animation: spin 1s linear infinite;
+                        margin: 0 auto;
+                    }
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            """, unsafe_allow_html=True)
+        
         # Fetch stock data only when needed
-        with st.spinner("🔄 Fetching stock data..."):
-            stocks_data = fetch_stocks_data(selected_stocks, use_parallel, use_cache)
+        stocks_data = fetch_stocks_data(selected_stocks, use_parallel, use_cache)
         
         if not stocks_data:
-            st.error("❌ Failed to fetch data for the selected stocks. Please try again later.")
+            with title_placeholder.container():
+                st.error("❌ Failed to fetch data for the selected stocks. Please try again later.")
             return
         
         # Cache the fetched data
@@ -607,7 +641,8 @@ def main():
         if failed_symbols:
             print(f"⚠️ Failed to fetch data for: {', '.join(failed_symbols)}")
     
-    st.subheader(display_title)
+    with title_placeholder.container():
+        st.subheader(display_title)
     
     # Get market session status and current time
     market_status, status_color = get_market_session_status()
@@ -615,13 +650,14 @@ def main():
     last_updated = ist_time.strftime('%d %b %Y, %I:%M %p IST')
     
     # Display summary of current view
-    st.markdown(f"""
-    <div style='display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;'>
-        <div style='font-size: 0.95rem; color: #95e1d3;'>
-            🔽 Sorted by: <strong>{sort_by}</strong> ({sort_order}) | 📅 Range: <strong>1M / 2M / 3M</strong>
+    with summary_placeholder.container():
+        st.markdown(f"""
+        <div style='display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;'>
+            <div style='font-size: 0.95rem; color: #95e1d3;'>
+                🔽 Sorted by: <strong>{sort_by}</strong> ({sort_order}) | 📅 Range: <strong>1M / 2M / 3M</strong>
+            </div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     # Create DataFrame
     df = pd.DataFrame(stocks_data)
@@ -637,23 +673,28 @@ def main():
     # Add rank
     df.insert(0, 'Rank', range(1, len(df) + 1))
     
-    # Pagination - get page range
-    total_items = len(df)
-    start_idx, end_idx = render_pagination_controls(total_items, ITEMS_PER_PAGE, position="top")
-    df_page = df.iloc[start_idx:end_idx]
+    # Display table and pagination in placeholder
+    with table_placeholder.container():
+        # Pagination - get page range
+        total_items = len(df)
+        start_idx, end_idx = render_pagination_controls(total_items, ITEMS_PER_PAGE, position="top")
+        df_page = df.iloc[start_idx:end_idx]
+        
+        # Display table
+        html_table = create_html_table(df_page)
+        st.markdown(html_table, unsafe_allow_html=True)
     
-    # Display table
-    html_table = create_html_table(df_page)
-    st.markdown(html_table, unsafe_allow_html=True)
+    # Top/Bottom performers in placeholder
+    with performers_placeholder.container():
+        render_top_bottom_performers(df)
     
-    # Top/Bottom performers
-    render_top_bottom_performers(df)
+    # Averages in placeholder
+    with averages_placeholder.container():
+        render_averages(df)
     
-    # Averages
-    render_averages(df)
-    
-    # Sectoral yearly performance
-    render_sectoral_yearly_performance()
+    # Sectoral yearly performance in placeholder
+    with sectoral_placeholder.container():
+        render_sectoral_yearly_performance()
 
 
 if __name__ == "__main__":

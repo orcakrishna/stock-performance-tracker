@@ -117,7 +117,7 @@ def fetch_nse_csv_list(csv_filename):
 # Removed hardcoded functions - now using dynamic get_stock_list()
 
 
-@st.cache_data(ttl=1800)  # Cache for 30 minutes - avoid refresh on dropdown changes
+@st.cache_data(ttl=1800, show_spinner=False)  # Cache for 30 minutes, hide spinner
 def get_index_performance(index_symbol, index_name=None):
     """Fetch index performance - prioritize info dict to avoid hist bugs"""
     if index_symbol:
@@ -668,7 +668,7 @@ def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True):
     return cached_data
 
 
-@st.cache_data(ttl=3600)  # Cache for 1 hour
+@st.cache_data(ttl=3600, show_spinner=False)  # Cache for 1 hour, hide spinner
 def get_stock_list(category_name):
     """Get stock list - Try dynamic fetch first, fallback to hardcoded if fails"""
     
@@ -734,7 +734,7 @@ def validate_stock_symbol(symbol):
         return False
 
 
-@st.cache_data(ttl=86400)  # Cache for 24 hours
+@st.cache_data(ttl=86400, show_spinner=False)  # Cache for 24 hours, hide spinner
 def get_next_nse_holiday():
     """Fetch the next upcoming NSE holiday dynamically from NSE website"""
     from datetime import datetime
@@ -797,7 +797,7 @@ def get_next_nse_holiday():
     return None
 
 
-@st.cache_data(ttl=60)  # Cache for 1 minute to fetch fresh data more often
+@st.cache_data(ttl=60, show_spinner=False)  # Cache for 1 minute, hide spinner
 def get_fii_dii_data():
     """
     Fetch FII/DII buy/sell data with multiple fallback sources
@@ -1088,7 +1088,7 @@ def get_fii_dii_data():
     }
 
 
-@st.cache_data(ttl=86400)  # Cache for 24 hours - volume data refreshes once per day
+@st.cache_data(ttl=86400, show_spinner=False)  # Cache for 24 hours, hide spinner
 def get_highest_volume_stocks(stock_list, top_n=5):
     """
     Dynamically fetch highest volume stocks from the given stock list

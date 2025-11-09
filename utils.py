@@ -291,9 +291,41 @@ def create_html_table(df_page):
     return html_table
 
 
-@st.cache_data(ttl=60)  # Cache for 60 seconds
-def get_ticker_data():
-    """Fetch live data for ticker stocks"""
+def _is_market_open():
+    """Check if market is currently open (weekday + trading hours)"""
+    ist = pytz.timezone('Asia/Kolkata')
+    current_time = datetime.now(pytz.utc).astimezone(ist)
+    
+    # Check if weekend
+    weekday = current_time.weekday()
+    if weekday >= 5:  # Saturday or Sunday
+        return False
+    
+    current_hour = current_time.hour
+    current_minute = current_time.minute
+    current_time_mins = current_hour * 60 + current_minute
+    
+    # Market timings (IST): 9:15 AM to 3:30 PM
+    market_open = 9 * 60 + 15
+    market_close = 15 * 60 + 30
+    
+    return market_open <= current_time_mins < market_close
+
+
+@st.cache_data(ttl=3600, show_spinner=False)  # Default 1-hour cache for closed market
+def _get_ticker_data_closed():
+    """Fetch ticker data when market is closed (cached for 1 hour)"""
+    return _fetch_ticker_data_internal()
+
+
+@st.cache_data(ttl=60, show_spinner=False)  # 60-second cache for open market
+def _get_ticker_data_open():
+    """Fetch ticker data when market is open (cached for 60 seconds)"""
+    return _fetch_ticker_data_internal()
+
+
+def _fetch_ticker_data_internal():
+    """Internal function to fetch ticker data"""
     ticker_data = []
     
     # Get Nifty 50 stocks dynamically
@@ -337,5 +369,16 @@ def get_ticker_data():
             # Skip stocks that fail
             continue
     
-    print(f"📊 Ticker: Fetched {len(ticker_data)}/{len(stocks_to_fetch)} stocks")
+    market_status = "open" if _is_market_open() else "closed"
+    print(f"📊 Ticker: Fetched {len(ticker_data)}/{len(stocks_to_fetch)} stocks (market: {market_status})")
     return ticker_data
+
+
+def get_ticker_data():
+    """Fetch live data for ticker stocks with dynamic caching based on market status"""
+    if _is_market_open():
+        # Market is open: use 60-second cache for live updates
+        return _get_ticker_data_open()
+    else:
+        # Market is closed (weekend/holiday/after-hours): use 1-hour cache
+        return _get_ticker_data_closed()
