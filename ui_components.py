@@ -761,8 +761,9 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
     # Wrap pagination in a container div for specific styling
     st.markdown('<div class="pagination-container">', unsafe_allow_html=True)
     
-    # Adjust column widths - push arrows to absolute extreme edges
-    col1, col2, col3 = st.columns([0.5, 11, 0.4])
+    # Use 3 columns: left arrow, centered text, right arrow
+    # Increase middle width to push right button further right
+    col1, col2, col3 = st.columns([0.4, 11.2, 0.4])
     
     with col1:
         st.markdown("""
@@ -783,13 +784,8 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
             @media (max-width: 768px) {
                 .pagination-container [data-testid="column"]:nth-of-type(1) {
                     flex: 0 0 auto !important;
+                    width: auto !important;
                     min-width: 40px !important;
-                    max-width: 60px !important;
-                }
-                .pagination-container [data-testid="column"]:nth-of-type(1) button {
-                    font-size: 1rem !important;
-                    padding: 4px 8px !important;
-                    width: 100% !important;
                 }
             }
             </style>
@@ -818,7 +814,7 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
                 @media (max-width: 768px) {
                     .pagination-text {
                         font-size: 0.65rem !important;
-                        white-space: nowrap !important;
+                        white-space: normal !important;
                         padding: 8px 2px 3px 2px !important;
                         margin: 0 0 -10px 0 !important;
                         line-height: 1.2 !important;

@@ -646,7 +646,12 @@ def main():
             print(f"⚠️ Failed to fetch data for: {', '.join(failed_symbols)}")
     
     with title_placeholder.container():
-        st.subheader(display_title)
+        st.markdown(f"""
+        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;'>
+            <h3 style='margin: 0; color: white;'>{display_title}</h3>
+            <span style='color: #ffc107; font-size: 0.75rem; white-space: nowrap;'>ⓘ Weekly/Monthly % may vary ±2%</span>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Get market session status and current time
     market_status, status_color = get_market_session_status()
@@ -682,6 +687,7 @@ def main():
         # Pagination - get page range
         total_items = len(df)
         start_idx, end_idx = render_pagination_controls(total_items, ITEMS_PER_PAGE, position="top")
+        
         df_page = df.iloc[start_idx:end_idx]
         
         # Display table
