@@ -667,15 +667,18 @@ def render_averages(df):
                     arrow = "▲" if year_change >= 0 else "▼"
                     delta_class = "positive" if year_change >= 0 else "negative"
                     
+                    # Add $ only for Gold and Silver (USD commodities)
+                    currency_symbol = "$" if name in ["Gold", "Silver"] else ""
+                    
                     # Create single unified box with all data
                     st.markdown(f"""
                         <div class="yearly-metric-box">
                             <div class="yearly-metric-label">{name}</div>
-                            <div class="yearly-metric-value">{end_price:,.2f}</div>
+                            <div class="yearly-metric-value">{currency_symbol}{end_price:,.2f}</div>
                             <div class="yearly-metric-delta {delta_class}">{arrow} {abs(year_change):.2f}%</div>
                             <div class="yearly-52w-data">
-                                <div>52W High: <span style='color: #00ff00; font-weight: 600;'>{week_52_high:,.2f}</span></div>
-                                <div>52W Low: <span style='color: #ff4444; font-weight: 600;'>{week_52_low:,.2f}</span></div>
+                                <div>52W High: <span style='color: #00ff00; font-weight: 600;'>{currency_symbol}{week_52_high:,.2f}</span></div>
+                                <div>52W Low: <span style='color: #ff4444; font-weight: 600;'>{currency_symbol}{week_52_low:,.2f}</span></div>
                             </div>
                         </div>
                         <style>
