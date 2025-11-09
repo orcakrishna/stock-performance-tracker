@@ -73,6 +73,8 @@ def render_stock_selection_sidebar():
                 del st.session_state.cached_stocks_data
             if 'cached_stocks_list' in st.session_state:
                 del st.session_state.cached_stocks_list
+            # Reset pagination to first page when switching lists
+            st.session_state.current_page = 1
     
     # Create the selectbox with the current value from session state
     category = st.sidebar.selectbox(
