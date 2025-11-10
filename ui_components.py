@@ -161,35 +161,37 @@ def render_header():
             # Use ticker stocks (already loaded, no extra API calls)
             ticker_stocks = get_ticker_data()
             
-            volume_stocks_html = '<div class="info-box"><div class="info-box-title">📊 Highest Volume Stocks</div>'
-            
+            base_box_html = '<div class="info-box"><div class="info-box-title">📊 Highest Volume Stocks</div>'
+            loading_html = base_box_html + "<span style='color: rgba(255, 255, 255, 0.5);'>Loading...</span></div>"
+            volume_placeholder = st.empty()
+            volume_placeholder.markdown(loading_html, unsafe_allow_html=True)
+
             if ticker_stocks and len(ticker_stocks) >= 7:
                 stock_symbols = tuple([s['symbol'] for s in ticker_stocks])  # Convert to tuple for caching
                 with st.spinner("Fetching highest volume stocks…"):
                     volume_stocks = get_cached_volume_stocks(stock_symbols)
-                
+
                 if volume_stocks:
-                    # Create table structure
+                    volume_stocks_html = base_box_html
                     volume_stocks_html += '<table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">'
                     volume_stocks_html += '<thead><tr style="border-bottom: 1px solid rgba(66, 165, 245, 0.3);"><th style="text-align: left; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;">Symbol</th><th style="text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;">Price</th><th style="text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;">Change</th><th style="text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;">Volume</th></tr></thead>'
                     volume_stocks_html += '<tbody>'
-                    
+
                     for stock in volume_stocks:
                         change_pct = stock.get('change_pct', stock.get('change', 0))
                         change_icon = "▲" if change_pct >= 0 else "▼"
                         change_color = "#00ff00" if change_pct >= 0 else "#ff4444"
                         vol_display = f"{stock['volume']/1_000_000:.1f}M" if stock['volume'] >= 1_000_000 else f"{stock['volume']/1_000:.0f}K"
-                        
+
                         volume_stocks_html += f'<tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);"><td style="padding: 0.4rem 0.5rem; color: #ffffff; font-weight: 600;">{stock["symbol"]}</td><td style="padding: 0.4rem 0.5rem; text-align: right;">₹{stock["price"]:.2f}</td><td style="padding: 0.4rem 0.5rem; text-align: right;"><span style="color: {change_color}; font-weight: bold;">{change_icon} {abs(change_pct):.2f}%</span></td><td style="padding: 0.4rem 0.5rem; text-align: right;">{vol_display}</td></tr>'
-                    
+
                     volume_stocks_html += '</tbody></table>'
+                    volume_stocks_html += '</div>'
+                    volume_placeholder.markdown(volume_stocks_html, unsafe_allow_html=True)
                 else:
-                    volume_stocks_html += "<span style='color: rgba(255, 255, 255, 0.5);'>Loading...</span>"
+                    volume_placeholder.markdown(base_box_html + "<span style='color: rgba(255, 255, 255, 0.5);'>No volume data available.</span></div>", unsafe_allow_html=True)
             else:
-                volume_stocks_html += "<span style='color: rgba(255, 255, 255, 0.5);'>Loading...</span>"
-            
-            volume_stocks_html += '</div>'
-            st.markdown(volume_stocks_html, unsafe_allow_html=True)
+                volume_placeholder.markdown(base_box_html + "<span style='color: rgba(255, 255, 255, 0.5);'>Ticker data unavailable.</span></div>", unsafe_allow_html=True)
             
         except Exception as e:
             print(f"Error rendering volume stocks in header: {e}")
