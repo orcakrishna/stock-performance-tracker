@@ -165,7 +165,8 @@ def render_header():
             
             if ticker_stocks and len(ticker_stocks) >= 7:
                 stock_symbols = tuple([s['symbol'] for s in ticker_stocks])  # Convert to tuple for caching
-                volume_stocks = get_cached_volume_stocks(stock_symbols)
+                with st.spinner("Fetching highest volume stocks…"):
+                    volume_stocks = get_cached_volume_stocks(stock_symbols)
                 
                 if volume_stocks:
                     # Create table structure
