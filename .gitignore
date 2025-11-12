@@ -45,3 +45,6 @@ cache/
 
 # Separate astrovidya project (has its own git repo)
 astrovidya/
+
+# Spring Boot version (has its own git repo at Stock-Tracker-Spring)
+nsepulse-spring/
