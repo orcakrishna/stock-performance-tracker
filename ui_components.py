@@ -151,6 +151,23 @@ def render_header():
         try:
             from data_fetchers import get_highest_volume_stocks
             
+            # Show loading indicator IMMEDIATELY
+            base_box_html = '<div class="info-box"><div class="info-box-title">📊 Highest Volume Stocks</div>'
+            loading_html = base_box_html + """
+                <div style='text-align: center; padding: 20px 0;'>
+                    <div class='spinner' style='border: 3px solid rgba(255, 255, 255, 0.1); border-left-color: #42a5f5; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; margin: 0 auto;'></div>
+                    <p style='color: rgba(255, 255, 255, 0.5); margin-top: 10px; font-size: 0.875rem;'>Fetching volume data...</p>
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            </div>"""
+            volume_placeholder = st.empty()
+            volume_placeholder.markdown(loading_html, unsafe_allow_html=True)
+            
             # Cached function to fetch high volume stocks once per day
             @st.cache_data(ttl=86400, show_spinner=False)  # Cache for 24 hours
             def get_cached_volume_stocks(stock_symbols_tuple):
@@ -160,16 +177,10 @@ def render_header():
             
             # Use ticker stocks (already loaded, no extra API calls)
             ticker_stocks = get_ticker_data()
-            
-            base_box_html = '<div class="info-box"><div class="info-box-title">📊 Highest Volume Stocks</div>'
-            loading_html = base_box_html + "<span style='color: rgba(255, 255, 255, 0.5);'>Loading...</span></div>"
-            volume_placeholder = st.empty()
-            volume_placeholder.markdown(loading_html, unsafe_allow_html=True)
 
             if ticker_stocks and len(ticker_stocks) >= 7:
                 stock_symbols = tuple([s['symbol'] for s in ticker_stocks])  # Convert to tuple for caching
-                with st.spinner("Fetching highest volume stocks…"):
-                    volume_stocks = get_cached_volume_stocks(stock_symbols)
+                volume_stocks = get_cached_volume_stocks(stock_symbols)
 
                 if volume_stocks:
                     volume_stocks_html = base_box_html
