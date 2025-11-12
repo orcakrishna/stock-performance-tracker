@@ -618,7 +618,7 @@ def get_commodities_prices():
     return prices
 
 
-def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True):
+def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True, status_placeholder=None):
     """
     Fetch multiple stocks in parallel with aggressive caching
     Optimized for large datasets (1000+ stocks)
@@ -627,8 +627,8 @@ def fetch_stocks_bulk(tickers, max_workers=3, use_cache=True):
     # First, try to load from cache
     if use_cache:
         cached_data, missing_tickers = load_bulk_cache(tickers)
-        if cached_data:
-            st.info(f"📦 Loaded {len(cached_data)} stocks from cache, fetching {len(missing_tickers)} fresh...")
+        if cached_data and status_placeholder:
+            status_placeholder.info(f"📦 Loaded {len(cached_data)} stocks from cache, fetching {len(missing_tickers)} fresh...")
     else:
         cached_data = []
         missing_tickers = tickers

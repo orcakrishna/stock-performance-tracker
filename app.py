@@ -314,7 +314,7 @@ def handle_file_upload():
     return [], []
 
 
-def fetch_stocks_data(selected_stocks, use_parallel, use_cache=True):
+def fetch_stocks_data(selected_stocks, use_parallel, use_cache=True, status_placeholder=None):
     """Fetch stock data using parallel or sequential method with caching"""
     num_stocks = len(selected_stocks)
     
@@ -324,8 +324,9 @@ def fetch_stocks_data(selected_stocks, use_parallel, use_cache=True):
     
     # For large datasets (>100 stocks), always use bulk fetch with caching
     if num_stocks > 100:
-        st.info(f"🚀 Optimized mode: Fetching {num_stocks} stocks with caching (3 parallel workers)\n\n{cache_msg}")
-        return fetch_stocks_bulk(selected_stocks, max_workers=3, use_cache=use_cache)
+        if status_placeholder:
+            status_placeholder.info(f"🚀 Optimized mode: Fetching {num_stocks} stocks with caching (3 parallel workers)\n\n{cache_msg}")
+        return fetch_stocks_bulk(selected_stocks, max_workers=3, use_cache=use_cache, status_placeholder=status_placeholder)
     
     # For medium datasets (50-100), use parallel with caching
     elif use_parallel or num_stocks > 50:
@@ -593,6 +594,9 @@ def main():
     
     if (st.session_state.cached_stocks_data is None or 
         st.session_state.cached_stocks_list != stocks_list_key):
+        # Create a status placeholder for temporary messages
+        status_placeholder_top = st.empty()
+        
         # Show clean loading spinner
         with title_placeholder.container():
             st.markdown("""
@@ -618,9 +622,10 @@ def main():
             """, unsafe_allow_html=True)
         
         # Fetch stock data only when needed
-        stocks_data = fetch_stocks_data(selected_stocks, use_parallel, use_cache)
+        stocks_data = fetch_stocks_data(selected_stocks, use_parallel, use_cache, status_placeholder=status_placeholder_top)
         
         if not stocks_data:
+            status_placeholder_top.empty()  # Clear status messages
             with title_placeholder.container():
                 st.error("❌ Failed to fetch data for the selected stocks. Please try again later.")
             return
@@ -628,6 +633,9 @@ def main():
         # Cache the fetched data
         st.session_state.cached_stocks_data = stocks_data
         st.session_state.cached_stocks_list = stocks_list_key
+        
+        # Clear status messages after successful load
+        status_placeholder_top.empty()
     else:
         # Use cached data (no re-fetch needed for sorting)
         stocks_data = st.session_state.cached_stocks_data
