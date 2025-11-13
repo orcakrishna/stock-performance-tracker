@@ -398,6 +398,8 @@ def main():
         st.session_state.last_category = None
     if 'search_clear_requested' not in st.session_state:
         st.session_state.search_clear_requested = False
+    if 'last_search_query' not in st.session_state:
+        st.session_state.last_search_query = ""
     
     # Render header
     render_header()
@@ -710,6 +712,9 @@ def main():
                 placeholder="Type stock name or symbol (e.g., 'inf' for Infosys",
                 help="Search filters by Stock Name. Type at least 3 characters to search."
             )
+            if search_query != st.session_state.last_search_query:
+                st.session_state.last_search_query = search_query
+                st.session_state.current_page = 1
         with search_col2:
             # Add custom CSS for the clear button - navy blue, smaller size
             st.markdown("""
@@ -781,13 +786,15 @@ def main():
     # Add rank after filtering
     df = df.reset_index(drop=True)
     df.insert(0, 'Rank', range(1, len(df) + 1))
-    
+
     # Display table and pagination in placeholder
     with table_placeholder.container():
         # Pagination - get page range
         total_items = len(df)
+        if search_query != st.session_state.last_search_query:
+            st.session_state.current_page = 1
         start_idx, end_idx = render_pagination_controls(total_items, ITEMS_PER_PAGE, position="top")
-        
+
         df_page = df.iloc[start_idx:end_idx]
         
         # Display table

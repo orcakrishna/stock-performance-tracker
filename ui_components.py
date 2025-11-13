@@ -768,8 +768,12 @@ def render_averages(df):
 def render_pagination_controls(total_items, items_per_page, position="top"):
     """Render pagination controls and return current page data range"""
     total_pages = (total_items + items_per_page - 1) // items_per_page
-    
+
     if 'current_page' not in st.session_state:
+        st.session_state.current_page = 1
+    elif total_pages > 0:
+        st.session_state.current_page = max(1, min(st.session_state.current_page, total_pages))
+    else:
         st.session_state.current_page = 1
     
     # Wrap pagination in a container div for specific styling
