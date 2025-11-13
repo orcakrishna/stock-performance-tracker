@@ -337,37 +337,40 @@ def _fetch_ticker_data_internal():
     
     stocks_to_fetch = nifty_50_stocks
     
-    # Fetch data for each stock
-    for symbol in stocks_to_fetch:
+    def fetch_symbol_data(symbol):
         try:
             ticker = yf.Ticker(symbol)
-            # Use 2-day history (most reliable method)
             hist = ticker.history(period='2d')
-            
+
             if len(hist) >= 2:
                 current_price = hist['Close'].iloc[-1]
                 prev_close = hist['Close'].iloc[-2]
                 change_pct = ((current_price - prev_close) / prev_close) * 100
-                
-                ticker_data.append({
-                    'symbol': symbol.replace('.NS', '').replace('.BO', ''),
-                    'price': float(current_price),
-                    'change': float(change_pct)
-                })
             elif len(hist) == 1:
-                # If only 1 day, use open vs close
                 current_price = hist['Close'].iloc[-1]
                 open_price = hist['Open'].iloc[-1]
-                if open_price > 0:
-                    change_pct = ((current_price - open_price) / open_price) * 100
-                    ticker_data.append({
-                        'symbol': symbol.replace('.NS', '').replace('.BO', ''),
-                        'price': float(current_price),
-                        'change': float(change_pct)
-                    })
-        except Exception as e:
-            # Skip stocks that fail
-            continue
+                if open_price <= 0:
+                    return None
+                change_pct = ((current_price - open_price) / open_price) * 100
+            else:
+                return None
+
+            return {
+                'symbol': symbol.replace('.NS', '').replace('.BO', ''),
+                'price': float(current_price),
+                'change': float(change_pct)
+            }
+        except Exception:
+            return None
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    max_workers = 6 if len(stocks_to_fetch) > 6 else len(stocks_to_fetch)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(fetch_symbol_data, symbol): symbol for symbol in stocks_to_fetch}
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                ticker_data.append(result)
     
     market_status = "open" if _is_market_open() else "closed"
     print(f"📊 Ticker: Fetched {len(ticker_data)}/{len(stocks_to_fetch)} stocks (market: {market_status})")

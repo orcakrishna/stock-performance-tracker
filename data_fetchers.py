@@ -267,6 +267,7 @@ def get_stock_performance(ticker, use_cache=True):
                 sparkline_data = [50] * len(sparkline_prices)  # Flat line if no change
         
         result = {
+            'Ticker': ticker,
             'Stock Name': symbol,
             'Current Price': f"₹{current_price:.2f}",
             'Today %': round(change_today, 2),
@@ -285,6 +286,42 @@ def get_stock_performance(ticker, use_cache=True):
         
     except Exception as e:
         st.warning(f"⚠️ Error fetching {symbol}: {str(e)}")  # Show error to user
+        return None
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_stock_52_week_range(ticker):
+    """Return current price and 52-week high/low details for a ticker"""
+    try:
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period='1y')
+
+        if hist is None or hist.empty:
+            return None
+
+        hist.index = hist.index.tz_localize(None)
+
+        current_price = hist['Close'].iloc[-1]
+        week_52_high = hist['High'].max()
+        week_52_low = hist['Low'].min()
+
+        high_date = hist['High'].idxmax()
+        low_date = hist['Low'].idxmin()
+
+        def _format_date(date_value):
+            if isinstance(date_value, pd.Timestamp):
+                return date_value.strftime('%d %b %Y')
+            return None
+
+        return {
+            'current_price': float(current_price),
+            'high': float(week_52_high),
+            'low': float(week_52_low),
+            'high_date': _format_date(high_date),
+            'low_date': _format_date(low_date),
+        }
+    except Exception as e:
+        print(f"52-week data fetch failed for {ticker}: {e}")
         return None
 
 

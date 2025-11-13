@@ -12,7 +12,14 @@ from pathlib import Path
 
 # Import custom modules
 from config import CUSTOM_CSS, ITEMS_PER_PAGE
-from data_fetchers import get_stock_list, get_stock_performance, fetch_stocks_bulk, validate_stock_symbol, get_available_nse_indices
+from data_fetchers import (
+    get_stock_list,
+    get_stock_performance,
+    fetch_stocks_bulk,
+    validate_stock_symbol,
+    get_available_nse_indices,
+    get_stock_52_week_range,
+)
 from file_manager import load_all_saved_lists, save_list_to_csv, delete_list_csv
 from cache_manager import get_cache_stats, clear_cache
 from ui_components import (
@@ -744,7 +751,8 @@ def main():
     # Apply search filter if query length >= 3
     original_count = len(df)
     search_active = search_query and len(search_query) >= 3
-    
+    search_results_52w = []
+
     if search_active:
         # Case-insensitive search in Stock Name column (handles partial matches)
         # regex=False ensures literal string matching (not regex patterns)
@@ -782,7 +790,26 @@ def main():
                 </div>
             </div>
             """, unsafe_allow_html=True)
-    
+
+        # Gather 52-week stats for top matches (limit to 5 for performance)
+        max_cards = min(filtered_count, 5)
+        subset = df.iloc[:max_cards]
+        for _, row in subset.iterrows():
+            ticker = row.get('Ticker')
+            if not ticker:
+                continue
+            details = get_stock_52_week_range(ticker)
+            if details:
+                search_results_52w.append({
+                    'stock': row['Stock Name'],
+                    'ticker': ticker,
+                    'current_price': details['current_price'],
+                    'high': details['high'],
+                    'low': details['low'],
+                    'high_date': details['high_date'],
+                    'low_date': details['low_date'],
+                })
+
     # Add rank after filtering
     df = df.reset_index(drop=True)
     df.insert(0, 'Rank', range(1, len(df) + 1))
@@ -796,16 +823,38 @@ def main():
         start_idx, end_idx = render_pagination_controls(total_items, ITEMS_PER_PAGE, position="top")
 
         df_page = df.iloc[start_idx:end_idx]
+        df_page_display = df_page.drop(columns=['Ticker']) if 'Ticker' in df_page.columns else df_page
         
         # Display table
-        html_table = create_html_table(df_page)
+        html_table = create_html_table(df_page_display)
         st.markdown(html_table, unsafe_allow_html=True)
-    
+
     # Top/Bottom performers in placeholder
     if not search_active:
         with performers_placeholder.container():
             render_top_bottom_performers(df)
-    
+    else:
+        with performers_placeholder.container():
+            if search_results_52w:
+                st.markdown("---")
+                st.subheader("📈 52-Week Snapshot")
+
+                cols = st.columns(len(search_results_52w))
+                for idx, info in enumerate(search_results_52w):
+                    with cols[idx]:
+                        st.markdown(f"""
+                            <div style='background: linear-gradient(135deg, rgba(30, 64, 175, 0.45) 0%, rgba(17, 24, 39, 0.6) 100%); border: 1px solid rgba(96, 165, 250, 0.35); border-radius: 10px; padding: 0.75rem; color: #e5edff; font-size: 0.82rem;'>
+                                <div style='font-weight: 600; font-size: 0.9rem; margin-bottom: 0.35rem;'>{info['stock']} <span style='opacity: 0.7;'>({info['ticker']})</span></div>
+                                <div style='margin-bottom: 0.25rem;'>Current: <span style='font-weight: 600;'>₹{info['current_price']:,.2f}</span></div>
+                                <div style='margin-bottom: 0.2rem;'>52W High: <span style='color: #22c55e; font-weight: 600;'>₹{info['high']:,.2f}</span></div>
+                                <div style='font-size: 0.7rem; opacity: 0.8; margin-bottom: 0.4rem;'>on {info['high_date'] or '—'}</div>
+                                <div style='margin-bottom: 0.2rem;'>52W Low: <span style='color: #f97316; font-weight: 600;'>₹{info['low']:,.2f}</span></div>
+                                <div style='font-size: 0.7rem; opacity: 0.8;'>on {info['low_date'] or '—'}</div>
+                            </div>
+                        """, unsafe_allow_html=True)
+            else:
+                st.info("No 52-week statistics available for the filtered stocks.")
+
     # Averages in placeholder
     with averages_placeholder.container():
         render_averages(df)
