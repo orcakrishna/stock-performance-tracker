@@ -795,8 +795,9 @@ def main():
         st.markdown(html_table, unsafe_allow_html=True)
     
     # Top/Bottom performers in placeholder
-    with performers_placeholder.container():
-        render_top_bottom_performers(df)
+    if not search_active:
+        with performers_placeholder.container():
+            render_top_bottom_performers(df)
     
     # Averages in placeholder
     with averages_placeholder.container():
