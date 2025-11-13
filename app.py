@@ -396,6 +396,8 @@ def main():
         st.session_state.cached_stocks_list = None
     if 'last_category' not in st.session_state:
         st.session_state.last_category = None
+    if 'search_clear_requested' not in st.session_state:
+        st.session_state.search_clear_requested = False
     
     # Render header
     render_header()
@@ -580,6 +582,7 @@ def main():
     market_indices_placeholder = st.empty()
     title_placeholder = st.empty()
     summary_placeholder = st.empty()
+    search_placeholder = st.empty()
     table_placeholder = st.empty()
     performers_placeholder = st.empty()
     averages_placeholder = st.empty()
@@ -668,12 +671,14 @@ def main():
     ist_time, _ = get_current_times()
     last_updated = ist_time.strftime('%d %b %Y, %I:%M %p IST')
     
-    # Display summary of current view
+    # Display summary of current view (will be updated after search if needed)
+    summary_text = f"🔽 Sorted by: <strong>{sort_by}</strong> ({sort_order}) | 📅 Range: <strong>1M / 2M / 3M</strong>"
+    
     with summary_placeholder.container():
         st.markdown(f"""
         <div style='display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;'>
             <div style='font-size: 0.95rem; color: #95e1d3;'>
-                🔽 Sorted by: <strong>{sort_by}</strong> ({sort_order}) | 📅 Range: <strong>1M / 2M / 3M</strong>
+                {summary_text}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -689,7 +694,92 @@ def main():
     else:
         df = df.sort_values(by=sort_by, ascending=ascending)
     
-    # Add rank
+    # Handle search clear request before rendering the search input
+    if st.session_state.search_clear_requested:
+        st.session_state.stock_search = ""
+        clear_cache()  # Clear the cache as per user request
+        st.session_state.search_clear_requested = False
+    
+    # Search functionality - Add search box above table
+    with search_placeholder.container():
+        search_col1, search_col2 = st.columns([3, 1])
+        with search_col1:
+            search_query = st.text_input(
+                "🔍 Search stocks (type 3+ letters)",
+                key="stock_search",
+                placeholder="Type stock name or symbol (e.g., 'inf' for Infosys",
+                help="Search filters by Stock Name. Type at least 3 characters to search."
+            )
+        with search_col2:
+            # Add custom CSS for the clear button - navy blue, smaller size
+            st.markdown("""
+                <style>
+                div[data-testid="column"]:nth-child(2) div[data-testid="stButton"] > button {
+                    padding: 0.3rem 0.3rem !important;
+                    font-size: 0.75rem !important;
+                    background-color: #1e3a8a !important;
+                    color: white !important;
+                    border: 1px solid #2563eb !important;
+                    border-radius: 4px !important;
+                    margin-top: 1.85rem !important;
+                    height: 2.2rem !important;
+                }
+                div[data-testid="column"]:nth-child(2) div[data-testid="stButton"] > button:hover {
+                    background-color: #2563eb !important;
+                    color: white !important;
+                    border-color: #3b82f6 !important;
+                }
+                </style>
+            """, unsafe_allow_html=True)
+            if search_query:
+                if st.button("✖ Clear", key="clear_search"):
+                    st.session_state.search_clear_requested = True
+                    st.rerun()
+    
+    # Apply search filter if query length >= 3
+    original_count = len(df)
+    search_active = search_query and len(search_query) >= 3
+    
+    if search_active:
+        # Case-insensitive search in Stock Name column (handles partial matches)
+        # regex=False ensures literal string matching (not regex patterns)
+        df_filtered = df[df['Stock Name'].str.lower().str.contains(search_query.lower(), case=False, na=False, regex=False)]
+        
+        if len(df_filtered) == 0:
+            # Show warning but don't exit - display the message in table area
+            with table_placeholder.container():
+                st.warning(f"⚠️ No stocks found matching '{search_query}'. Try a different search term or click 'Clear' to see all stocks.")
+            # Display performers and averages with original data
+            with performers_placeholder.container():
+                df_temp = df.copy()
+                df_temp = df_temp.reset_index(drop=True)
+                df_temp.insert(0, 'Rank', range(1, len(df_temp) + 1))
+                render_top_bottom_performers(df_temp)
+            with averages_placeholder.container():
+                df_temp = df.copy()
+                df_temp = df_temp.reset_index(drop=True)
+                df_temp.insert(0, 'Rank', range(1, len(df_temp) + 1))
+                render_averages(df_temp)
+            with sectoral_placeholder.container():
+                render_sectoral_yearly_performance()
+            return
+        
+        df = df_filtered
+        
+        # Update summary to show search results
+        filtered_count = len(df)
+        summary_text = f"🔍 <strong>{filtered_count} of {original_count}</strong> stocks match '<strong>{search_query}</strong>' | 🔽 Sorted by: <strong>{sort_by}</strong> ({sort_order})"
+        with summary_placeholder.container():
+            st.markdown(f"""
+            <div style='display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;'>
+                <div style='font-size: 0.95rem; color: #ffc107;'>
+                    {summary_text}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Add rank after filtering
+    df = df.reset_index(drop=True)
     df.insert(0, 'Rank', range(1, len(df) + 1))
     
     # Display table and pagination in placeholder
