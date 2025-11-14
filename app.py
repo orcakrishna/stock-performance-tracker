@@ -45,7 +45,7 @@ def load_admin_password():
             for line in f:
                 if line.startswith('ADMIN_PASSWORD='):
                     return line.split('=', 1)[1].strip()
-    return "Admin@123"  # Default fallback
+    return "Admin@123"
 
 
 ADMIN_PASSWORD = load_admin_password()
@@ -103,7 +103,6 @@ def handle_file_upload():
         st.session_state.admin_mode = False
 
     if not st.session_state.admin_authenticated:
- adverse:
         with st.sidebar.expander("Admin Login"):
             pwd = st.text_input("Password", type="password", key="admin_pass")
             if st.button("Login"):
@@ -264,7 +263,7 @@ def main():
     apply_screenshot_protection()
 
     # Session State
-    for key, val in {
+    defaults = {
         'saved_lists': {},
         'disk_lists': load_all_saved_lists(),
         'admin_authenticated': False,
@@ -274,10 +273,12 @@ def main():
         'cached_stocks_list': None,
         'last_category': None,
         'search_clear_requested': False,
-        'last_search_query': ""
-    }.items():
-        if key not in st.session_state:
-            st.session_state[key] = val
+        'last_search_query': "",
+        'current_page': 1
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
     render_header()
     fii_dii_source = render_gainer_loser_banner()
