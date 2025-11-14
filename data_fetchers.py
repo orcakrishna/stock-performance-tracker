@@ -190,99 +190,114 @@ def get_stock_performance(ticker, use_cache=True):
                 # Don't show warning for common errors
                 return None
     
-    try:
-        # Remove timezone
-        hist.index = hist.index.tz_localize(None)
-        
-        # Get semi-live current price via info
-        try:
-            info = stock.info
-            current_price = info.get('currentPrice') or info.get('regularMarketPrice') or hist['Close'].iloc[-1]
-        except:
-            current_price = hist['Close'].iloc[-1]
-        current_date = hist.index[-1]
-        
-        # Get previous close for today's change
-        if len(hist) >= 2:
-            previous_close = hist['Close'].iloc[-2]
-            change_today = ((current_price - previous_close) / previous_close) * 100
-        else:
-            # If only 1 day of data, use open price
-            open_price = hist['Open'].iloc[-1]
-            if open_price > 0:
-                change_today = ((current_price - open_price) / open_price) * 100
-            else:
-                change_today = 0.0
-        
-        # Calculate prices for different periods
-        # For 1 week: go back 5 trading days (1 week of trading)
-       # if len(hist) >= 5:
-           # price_1w = hist['Close'].iloc[-6]  # 5 trading days ago
-       # else:
-         #   price_1w = hist['Close'].iloc[0]
-        #price_1w = get_price_by_days_back(7)  # 7 calendar days ago
-        
-        # For longer periods: use date-based lookup with better accuracy
-        def get_price_by_days_back(days):
-            """
-            Returns closing price from X calendar days ago.
-            Automatically skips weekends, holidays, and market closures.
-            """
-            target_date = current_date - pd.Timedelta(days=days)
-            # Filter data before or on target date
-            past_data = hist[hist.index <= target_date]
-            if len(past_data) > 0:
-                # Get the closest date that's on or before target
-                return past_data['Close'].iloc[-1]
-            else:
-                # If no data before target, use earliest available
-                return hist['Close'].iloc[0]
+    # ------------------------------------------------------------------
+# 1. Remove timezone (yfinance returns tz-aware index)
+# ------------------------------------------------------------------
+hist.index = hist.index.tz_localize(None)
 
-        price_1w = get_price_by_days_back(7)   # <-- Fixed added
-        price_1m = get_price_by_days_back(30)
-        price_2m = get_price_by_days_back(60)
-        price_3m = get_price_by_days_back(90)
-        
-        # Changes
-        change_1w = ((current_price - price_1w) / price_1w) * 100
-        change_1m = ((current_price - price_1m) / price_1m) * 100
-        change_2m = ((current_price - price_2m) / price_2m) * 100
-        change_3m = ((current_price - price_3m) / price_3m) * 100
-        
-        # Get sparkline data (last 30 trading days for mini chart)
-        sparkline_data = []
-        if len(hist) >= 30:
-            sparkline_prices = hist['Close'].iloc[-30:].tolist()
-        else:
-            sparkline_prices = hist['Close'].tolist()
-        
-        # Normalize sparkline data to 0-100 range for consistent display
-        if sparkline_prices:
-            min_price = min(sparkline_prices)
-            max_price = max(sparkline_prices)
-            price_range = max_price - min_price
-            if price_range > 0:
-                sparkline_data = [((p - min_price) / price_range) * 100 for p in sparkline_prices]
-            else:
-                sparkline_data = [50] * len(sparkline_prices)  # Flat line if no change
-        
-        result = {
-            'Ticker': ticker,
-            'Stock Name': symbol,
-            'Current Price': f"₹{current_price:.2f}",
-            'Today %': round(change_today, 2),
-            '1 Week %': round(change_1w, 2),
-            '1 Month %': round(change_1m, 2),
-            '2 Months %': round(change_2m, 2),
-            '3 Months %': round(change_3m, 2),
-            'sparkline_data': sparkline_data  # Add sparkline data
-        }
-        
-        # Save to cache
-        if use_cache:
-            save_to_cache(ticker, result)
-        
-        return result
+# ------------------------------------------------------------------
+# 2. Semi-live current price (info → fallback to last close)
+# ------------------------------------------------------------------
+try:
+    info = stock.info
+    current_price = (
+        info.get('currentPrice')
+        or info.get('regularMarketPrice')
+        or hist['Close'].iloc[-1]
+    )
+except Exception:
+    current_price = hist['Close'].iloc[-1]
+
+current_date = hist.index[-1]
+
+# ------------------------------------------------------------------
+# 3. Today’s % change
+# ------------------------------------------------------------------
+if len(hist) >= 2:
+    previous_close = hist['Close'].iloc[-2]
+    change_today = ((current_price - previous_close) / previous_close) * 100
+else:
+    open_price = hist['Open'].iloc[-1]
+    change_today = (
+        ((current_price - open_price) / open_price) * 100
+        if open_price > 0
+        else 0.0
+    )
+
+# ------------------------------------------------------------------
+# 4. Helper – price X **calendar** days ago (skips weekends/holidays)
+# ------------------------------------------------------------------
+def get_price_by_days_back(days: int) -> float:
+    """
+    Returns the closing price from X calendar days ago.
+    Automatically skips non-trading days.
+    """
+    target_date = current_date - pd.Timedelta(days=days)
+    past_data = hist[hist.index <= target_date]          # <-- fixed syntax
+    if len(past_data) > 0:
+        return float(past_data['Close'].iloc[-1])
+    # No data before target → use earliest available
+    return float(hist['Close'].iloc[0])
+
+# ------------------------------------------------------------------
+# 5. Prices for 1w / 1m / 2m / 3m
+# ------------------------------------------------------------------
+price_1w = get_price_by_days_back(7)
+price_1m = get_price_by_days_back(30)
+price_2m = get_price_by_days_back(60)
+price_3m = get_price_by_days_back(90)
+
+# ------------------------------------------------------------------
+# 6. % changes (guard against division-by-zero)
+# ------------------------------------------------------------------
+def pct_change(now: float, then: float) -> float:
+    return round(((now - then) / then) * 100, 2) if then > 0 else 0.0
+
+change_1w = pct_change(current_price, price_1w)
+change_1m = pct_change(current_price, price_1m)
+change_2m = pct_change(current_price, price_2m)
+change_3m = pct_change(current_price, price_3m)
+
+# ------------------------------------------------------------------
+# 7. Sparkline (last 30 trading days, normalised 0-100)
+# ------------------------------------------------------------------
+if len(hist) >= 30:
+    sparkline_prices = hist['Close'].iloc[-30:].tolist()
+else:
+    sparkline_prices = hist['Close'].tolist()
+
+if sparkline_prices:
+    mn, mx = min(sparkline_prices), max(sparkline_prices)
+    rng = mx - mn
+    if rng > 0:
+        sparkline_data = [((p - mn) / rng) * 100 for p in sparkline_prices]
+    else:
+        sparkline_data = [50] * len(sparkline_prices)   # flat line
+else:
+    sparkline_data = []
+
+# ------------------------------------------------------------------
+# 8. Build result dictionary
+# ------------------------------------------------------------------
+result = {
+    'Ticker': ticker,
+    'Stock Name': symbol,
+    'Current Price': f"₹{current_price:.2f}",
+    'Today %': round(change_today, 2),
+    '1 Week %': change_1w,
+    '1 Month %': change_1m,
+    '2 Months %': change_2m,
+    '3 Months %': change_3m,
+    'sparkline_data': sparkline_data,
+}
+
+# ------------------------------------------------------------------
+# 9. Cache & return
+# ------------------------------------------------------------------
+if use_cache:
+    save_to_cache(ticker, result)
+
+return result
         
     except Exception as e:
         st.warning(f"⚠️ Error fetching {symbol}: {str(e)}")  # Show error to user
