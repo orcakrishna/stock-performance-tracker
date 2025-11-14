@@ -182,36 +182,35 @@ def get_stock_performance(ticker, use_cache=True):
         except:
             current_price = hist['Close'].iloc[-1]
         current_date = hist.index[-1]
-       
+
         if len(hist) >= 2:
             previous_close = hist['Close'].iloc[-2]
-            change_today = ((current_price - previous_close) / previous_close) * 100
+            change_today = ((current_price - previous_close) / previous_close) * 100 if previous_close else 0.0
         else:
             open_price = hist['Open'].iloc[-1]
-            change_today = ((current_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
-       
-        # === 1 WEEK LOGIC FIXED: 5 TRADING DAYS AGO ===
-        if len(hist) >= 6:
-            price_1w = hist['Close'].iloc[-6]  # 5 trading days ago
-        else:
-            price_1w = hist['Close'].iloc[0]
+            change_today = ((current_price - open_price) / open_price) * 100 if open_price else 0.0
 
-        # For longer periods: use calendar days (skips weekends/holidays)
-        def get_price_by_days_back(days):
-            target_date = current_date - pd.Timedelta(days=days)
-            past_data = hist[hist.index <= target_date]
-            if len(past_data) > 0:
-                return past_data['Close'].iloc[-1]
-            else:
-                return hist['Close'].iloc[0]
-        price_1m = get_price_by_days_back(30)
-        price_2m = get_price_by_days_back(60)
-        price_3m = get_price_by_days_back(90)
-       
-        change_1w = ((current_price - price_1w) / price_1w) * 100
-        change_1m = ((current_price - price_1m) / price_1m) * 100
-        change_2m = ((current_price - price_2m) / price_2m) * 100
-        change_3m = ((current_price - price_3m) / price_3m) * 100
+        def get_price_by_date(target_date):
+            valid_hist = hist.loc[hist.index <= target_date]
+            if not valid_hist.empty:
+                return valid_hist['Close'].iloc[-1]
+            return hist['Close'].iloc[0]
+
+        target_1w = current_date - pd.Timedelta(days=7)
+        price_1w = get_price_by_date(target_1w)
+        change_1w = ((current_price - price_1w) / price_1w) * 100 if price_1w else 0.0
+
+        target_1m = current_date - pd.DateOffset(months=1)
+        price_1m = get_price_by_date(target_1m)
+        change_1m = ((current_price - price_1m) / price_1m) * 100 if price_1m else 0.0
+
+        target_2m = current_date - pd.DateOffset(months=2)
+        price_2m = get_price_by_date(target_2m)
+        change_2m = ((current_price - price_2m) / price_2m) * 100 if price_2m else 0.0
+
+        target_3m = current_date - pd.DateOffset(months=3)
+        price_3m = get_price_by_date(target_3m)
+        change_3m = ((current_price - price_3m) / price_3m) * 100 if price_3m else 0.0
        
         sparkline_data = []
         if len(hist) >= 30:
