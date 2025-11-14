@@ -6,6 +6,7 @@ Helper functions for formatting, coloring, and data processing
 from datetime import datetime
 import pytz
 import streamlit as st
+import pandas as pd
 import yfinance as yf
 from data_fetchers import get_stock_list
 

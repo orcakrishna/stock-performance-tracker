@@ -5,6 +5,8 @@ Handles all API calls to NSE, Yahoo Finance, and other data sources
 import streamlit as st
 import pandas as pd
 import requests
+import json
+import os
 from io import StringIO
 import time
 from datetime import datetime, timedelta
@@ -762,51 +764,138 @@ def get_next_nse_holiday():
     except Exception as e:
         print(f"Error parsing fallback holidays: {e}")
    
-    return None
-
-
 @st.cache_data(ttl=60, show_spinner=False)
 def get_fii_dii_data():
+    json_file = os.path.join(os.path.dirname(__file__), "fii_dii_data.json")
+
+    # 1. Try cached JSON (valid for today/yesterday and has real data)
     try:
-        import json
-        import os
-        from datetime import datetime
-       
-        json_file = os.path.join(os.path.dirname(__file__), 'fii_dii_data.json')
         if os.path.exists(json_file):
-            with open(json_file, 'r') as f:
+            with open(json_file, "r") as f:
                 data = json.load(f)
-               
-                file_date = data.get('date', '')
-                today = datetime.utcnow().strftime('%d-%b-%Y')
-                yesterday = (datetime.utcnow() - pd.Timedelta(days=1)).strftime('%d-%b-%Y')
-               
-                if data.get('status') == 'success' and (data.get('fii') or data.get('dii')):
-                    if file_date == today or file_date == yesterday:
-                        age_label = "Today's" if file_date == today else "Yesterday's"
-                        print(f"FII/DII: Loaded {age_label} data from JSON file (fetched at {data.get('fetched_at', 'unknown')})")
-                        return {
-                            'fii': data.get('fii'),
-                            'dii': data.get('dii'),
-                            'status': 'success',
-                            'source': f"{data.get('source', 'JSON')} (File - {age_label})"
-                        }
-                    else:
-                        print(f"FII/DII: JSON file data is old ({file_date}), trying live fetch...")
+
+            file_date = data.get("date", "")
+            today = datetime.utcnow().strftime("%d-%b-%Y")
+            yesterday = (datetime.utcnow() - timedelta(days=1)).strftime("%d-%b-%Y")
+
+            # Check if cache has meaningful data (not all zeros)
+            fii_net = data.get("fii", {}).get("net", 0)
+            dii_net = data.get("dii", {}).get("net", 0)
+            has_real_data = (fii_net != 0 or dii_net != 0)
+
+            if (
+                data.get("status") == "success"
+                and (data.get("fii") or data.get("dii"))
+                and file_date in [today, yesterday]
+                and has_real_data
+            ):
+                data.setdefault("source", "JSON Cache")
+                print(f"FII/DII: Using cached data from {file_date}")
+                return data
+            elif not has_real_data:
+                print(f"FII/DII: Cached data has all zeros, fetching fresh data...")
     except Exception as e:
-        print(f"JSON file read failed: {e}")
+        print(f"FII/DII JSON read error: {e}")
 
-    # [Rest of get_fii_dii_data() unchanged — omitted for brevity]
-    # ... (all the NSE API, MoneyControl, caching logic remains 100% the same)
+    # 2. Live NSE API fetch
+    try:
+        url = "https://www.nseindia.com/api/fiidiiTradeReact"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Referer": "https://www.nseindia.com",
+        }
 
-    # Last resort
-    print("FII/DII: No cached data available, using placeholder")
+        with requests.Session() as session:
+            session.headers.update(headers)
+            # First request to set cookies
+            session.get("https://www.nseindia.com", timeout=10)
+            time.sleep(2)
+
+            response = session.get(url, timeout=10)
+            response.raise_for_status()
+            live_data = response.json()
+
+        # fiidiiTradeReact returns array of objects with category, buyValue, sellValue, netValue
+        print(f"FII/DII API Response type: {type(live_data)}")
+        
+        data_array = live_data if isinstance(live_data, list) else []
+        if not data_array:
+            print(f"FII/DII: Empty or invalid API response")
+            raise ValueError("Empty API response")
+            
+        print(f"FII/DII: Found {len(data_array)} records")
+
+        def _clean_value(val):
+            try:
+                return float(str(val).replace(",", ""))
+            except:
+                return 0.0
+
+        fii_data = None
+        dii_data = None
+        report_date = None
+        
+        for item in data_array:
+            if not isinstance(item, dict):
+                continue
+                
+            category = str(item.get("category", "")).upper()
+            if item.get("date"):
+                report_date = item["date"]
+            
+            if "FII" in category or "FPI" in category:
+                fii_data = {
+                    "buy": _clean_value(item.get("buyValue", 0)),
+                    "sell": _clean_value(item.get("sellValue", 0)),
+                    "net": _clean_value(item.get("netValue", 0)),
+                }
+            elif "DII" in category:
+                dii_data = {
+                    "buy": _clean_value(item.get("buyValue", 0)),
+                    "sell": _clean_value(item.get("sellValue", 0)),
+                    "net": _clean_value(item.get("netValue", 0)),
+                }
+        
+        if not fii_data and not dii_data:
+            print(f"FII/DII: No FII or DII data found in response")
+            raise ValueError("No FII/DII data in response")
+
+        print(f"FII/DII parsed: FII net={fii_data['net'] if fii_data else 0}, DII net={dii_data['net'] if dii_data else 0}")
+
+        final_output = {
+            "status": "success",
+            "date": report_date or datetime.utcnow().strftime("%d-%b-%Y"),
+            "fii": fii_data or {"buy": 0, "sell": 0, "net": 0},
+            "dii": dii_data or {"buy": 0, "sell": 0, "net": 0},
+            "source": "NSE Live API",
+        }
+
+        # Save to JSON cache
+        try:
+            with open(json_file, "w") as f:
+                json.dump(final_output, f, indent=4)
+            print(f"FII/DII: Saved fresh data to cache")
+        except Exception as e:
+            print(f"FII/DII JSON write error: {e}")
+
+        return final_output
+
+    except Exception as e:
+        print(f"FII/DII Live API fetch failed: {e}")
+        import traceback
+        traceback.print_exc()
+
+    # 3. If everything fails → return safe fallback
     return {
-        'fii': {'buy': 0.0, 'sell': 0.0, 'net': 0.0},
-        'dii': {'buy': 0.0, 'sell': 0.0, 'net': 0.0},
-        'status': 'placeholder',
-        'source': 'Unavailable'
+        "status": "error",
+        "date": datetime.utcnow().strftime("%d-%b-%Y"),
+        "fii": {"buy": 0, "sell": 0, "net": 0},
+        "dii": {"buy": 0, "sell": 0, "net": 0},
+        "source": "Fallback",
     }
+
 
 
 @st.cache_data(ttl=120, show_spinner=False)  # 2-min cache for intraday volume updates

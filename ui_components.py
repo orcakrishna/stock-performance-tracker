@@ -519,13 +519,13 @@ def render_gainer_loser_banner():
     
     with col5:
         st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
-        if fii_dii_data['status'] in ['success', 'cached', 'placeholder'] and fii_dii_data['fii']:
+        if fii_dii_data.get('status') in ['success', 'cached', 'placeholder', 'error'] and fii_dii_data.get('fii'):
             fii = fii_dii_data['fii']
             net_color = '#00ff00' if fii['net'] >= 0 else '#ff4444'
             net_abs = abs(fii['net'])
             action = 'Buy' if fii['net'] >= 0 else 'Sell'
-            # Show N/A for placeholder (0.0 values)
-            if fii_dii_data['status'] == 'placeholder':
+            # Show N/A for placeholder/error (0.0 values)
+            if fii_dii_data['status'] in ['placeholder', 'error']:
                 st.markdown(f"**🌍 FII:** <span style='color: #888; font-size: 0.85rem; line-height: 1.5;'>N/A</span>", unsafe_allow_html=True)
             else:
                 st.markdown(f"**🌍 FII:** <span style='color: {net_color}; font-size: 0.85rem; line-height: 1.5;'>₹{net_abs:.0f} Cr ({action})</span>", unsafe_allow_html=True)
@@ -535,13 +535,13 @@ def render_gainer_loser_banner():
     
     with col6:
         st.markdown('<div class="gainer-loser-metric">', unsafe_allow_html=True)
-        if fii_dii_data['status'] in ['success', 'cached', 'placeholder'] and fii_dii_data['dii']:
+        if fii_dii_data.get('status') in ['success', 'cached', 'placeholder', 'error'] and fii_dii_data.get('dii'):
             dii = fii_dii_data['dii']
             net_color = '#00ff00' if dii['net'] >= 0 else '#ff4444'
             net_abs = abs(dii['net'])
             action = 'Buy' if dii['net'] >= 0 else 'Sell'
-            # Show N/A for placeholder (0.0 values)
-            if fii_dii_data['status'] == 'placeholder':
+            # Show N/A for placeholder/error (0.0 values)
+            if fii_dii_data['status'] in ['placeholder', 'error']:
                 st.markdown(f"**🏦 DII:** <span style='color: #888; font-size: 0.85rem; line-height: 1.5;'>N/A</span>", unsafe_allow_html=True)
             else:
                 st.markdown(f"**🏦 DII:** <span style='color: {net_color}; font-size: 0.85rem; line-height: 1.5;'>₹{net_abs:.0f} Cr ({action})</span>", unsafe_allow_html=True)
