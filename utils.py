@@ -318,14 +318,14 @@ def _get_ticker_data_closed():
     return _fetch_ticker_data_internal()
 
 
-@st.cache_data(ttl=60, show_spinner=False)  # 60-second cache for open market
+@st.cache_data(ttl=90, show_spinner=False)  # 90-second cache for open market (optimized)
 def _get_ticker_data_open():
-    """Fetch ticker data when market is open (cached for 60 seconds)"""
+    """Fetch ticker data when market is open (cached for 90 seconds)"""
     return _fetch_ticker_data_internal()
 
 
 def _fetch_ticker_data_internal():
-    """Internal function to fetch ticker data"""
+    """Internal function to fetch ticker data using bulk download for speed"""
     ticker_data = []
     
     # Get Nifty 50 stocks dynamically
@@ -335,36 +335,115 @@ def _fetch_ticker_data_internal():
     if not nifty_50_stocks:
         return []
     
-    stocks_to_fetch = nifty_50_stocks
+    stocks_to_fetch = nifty_50_stocks[:50]  # Limit to 50 for ticker
+    
+    try:
+        # Use bulk download for much faster fetching (10-50x speedup)
+        data = yf.download(
+            tickers=stocks_to_fetch,
+            period='2d',
+            interval='1d',
+            group_by='ticker',
+            progress=False,
+            auto_adjust=True,
+            threads=True
+        )
+        
+        if data.empty:
+            return []
+        
+        is_multi = isinstance(data.columns, pd.MultiIndex)
+        
+        for symbol in stocks_to_fetch:
+            try:
+                if is_multi and len(stocks_to_fetch) > 1:
+                    close_series = data[(symbol, 'Close')].dropna()
+                else:
+                    close_series = data['Close'].dropna() if 'Close' in data.columns else pd.Series()
+                
+                if close_series.empty:
+                    continue
+                
+                if len(close_series) >= 2:
+                    current_price = float(close_series.iloc[-1])
+                    prev_close = float(close_series.iloc[-2])
+                    change_pct = ((current_price - prev_close) / prev_close) * 100
+                elif len(close_series) == 1:
+                    # Try to get open price for single-day data
+                    if is_multi and len(stocks_to_fetch) > 1:
+                        open_series = data[(symbol, 'Open')].dropna()
+                    else:
+                        open_series = data['Open'].dropna() if 'Open' in data.columns else pd.Series()
+                    
+                    if not open_series.empty:
+                        current_price = float(close_series.iloc[-1])
+                        open_price = float(open_series.iloc[-1])
+                        if open_price > 0:
+                            change_pct = ((current_price - open_price) / open_price) * 100
+                        else:
+                            continue
+                    else:
+                        continue
+                else:
+                    continue
+                
+                ticker_data.append({
+                    'symbol': symbol.replace('.NS', '').replace('.BO', ''),
+                    'price': current_price,
+                    'change': change_pct
+                })
+            except Exception as e:
+                print(f"Error processing {symbol}: {e}")
+                continue
+    
+    except Exception as e:
+        print(f"Bulk ticker fetch failed: {e}")
+        # Fallback to sequential if bulk fails
+        return _fetch_ticker_data_fallback(stocks_to_fetch)
+    
+    market_status = "open" if _is_market_open() else "closed"
+    print(f"📊 Ticker: Fetched {len(ticker_data)}/{len(stocks_to_fetch)} stocks (market: {market_status})")
+    return ticker_data
+
+
+def _fetch_ticker_data_fallback(stocks_to_fetch):
+    """Fallback method using individual calls with limited workers"""
+    ticker_data = []
     
     def fetch_symbol_data(symbol):
         try:
             ticker = yf.Ticker(symbol)
+            fast_info = getattr(ticker, 'fast_info', None)
+            
+            if fast_info:
+                current_price = getattr(fast_info, 'last_price', None)
+                prev_close = getattr(fast_info, 'previous_close', None)
+                
+                if current_price and prev_close and prev_close > 0:
+                    change_pct = ((current_price - prev_close) / prev_close) * 100
+                    return {
+                        'symbol': symbol.replace('.NS', '').replace('.BO', ''),
+                        'price': float(current_price),
+                        'change': float(change_pct)
+                    }
+            
+            # Fallback to history
             hist = ticker.history(period='2d')
-
             if len(hist) >= 2:
                 current_price = hist['Close'].iloc[-1]
                 prev_close = hist['Close'].iloc[-2]
                 change_pct = ((current_price - prev_close) / prev_close) * 100
-            elif len(hist) == 1:
-                current_price = hist['Close'].iloc[-1]
-                open_price = hist['Open'].iloc[-1]
-                if open_price <= 0:
-                    return None
-                change_pct = ((current_price - open_price) / open_price) * 100
-            else:
-                return None
-
-            return {
-                'symbol': symbol.replace('.NS', '').replace('.BO', ''),
-                'price': float(current_price),
-                'change': float(change_pct)
-            }
+                return {
+                    'symbol': symbol.replace('.NS', '').replace('.BO', ''),
+                    'price': float(current_price),
+                    'change': float(change_pct)
+                }
         except Exception:
-            return None
-
+            pass
+        return None
+    
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    max_workers = 6 if len(stocks_to_fetch) > 6 else len(stocks_to_fetch)
+    max_workers = min(4, len(stocks_to_fetch))  # Limit to 4 workers to avoid rate limits
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(fetch_symbol_data, symbol): symbol for symbol in stocks_to_fetch}
         for future in as_completed(futures):
@@ -372,8 +451,6 @@ def _fetch_ticker_data_internal():
             if result:
                 ticker_data.append(result)
     
-    market_status = "open" if _is_market_open() else "closed"
-    print(f"📊 Ticker: Fetched {len(ticker_data)}/{len(stocks_to_fetch)} stocks (market: {market_status})")
     return ticker_data
 
 

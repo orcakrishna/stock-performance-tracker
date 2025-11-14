@@ -332,8 +332,8 @@ def fetch_stocks_data(selected_stocks, use_parallel, use_cache=True, status_plac
     # For large datasets (>100 stocks), always use bulk fetch with caching
     if num_stocks > 100:
         if status_placeholder:
-            status_placeholder.info(f"🚀 Optimized mode: Fetching {num_stocks} stocks with caching (3 parallel workers)\n\n{cache_msg}")
-        return fetch_stocks_bulk(selected_stocks, max_workers=3, use_cache=use_cache, status_placeholder=status_placeholder)
+            status_placeholder.info(f"🚀 Optimized mode: Fetching {num_stocks} stocks with caching (4 parallel workers)\n\n{cache_msg}")
+        return fetch_stocks_bulk(selected_stocks, max_workers=4, use_cache=use_cache, status_placeholder=status_placeholder)
     
     # For medium datasets (50-100), use parallel with caching
     elif use_parallel or num_stocks > 50:
