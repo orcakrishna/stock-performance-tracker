@@ -508,44 +508,51 @@ def main():
         import os
         json_file = os.path.join(os.path.dirname(__file__), "nifty_total_market.json")
         
-        if os.path.exists(json_file):
-            with open(json_file, "r") as f:
-                nse_data = json.load(f)
-            
-            if nse_data.get("status") == "success" and nse_data.get("data"):
-                st.sidebar.markdown(f"<span style='color: #00c853;'>✅ Loaded {len(nse_data['data'])} stocks from NSE Bhavcopy ({nse_data.get('date', '')}) - Zero Yahoo API calls!</span>", unsafe_allow_html=True)
+        try:
+            if os.path.exists(json_file):
+                with open(json_file, "r") as f:
+                    nse_data = json.load(f)
                 
-                # Convert to DataFrame directly
-                df_nse = pd.DataFrame(nse_data['data'])
-                
-                # Rename columns to match app format
-                df_nse = df_nse.rename(columns={
-                    'symbol': 'Stock Name',
-                    'close': 'Current Price',
-                    'change_pct': 'Today %',
-                    'volume': 'Volume',
-                    'open': 'Open',
-                    'high': 'High',
-                    'low': 'Low',
-                    'prev_close': 'Prev Close'
-                })
-                
-                # Add placeholder columns for other timeframes (NSE Bhavcopy is daily only)
-                df_nse['1 Week %'] = 0.0
-                df_nse['1 Month %'] = 0.0
-                df_nse['2 Months %'] = 0.0
-                df_nse['3 Months %'] = 0.0
-                df_nse['Sparkline'] = ''
-                
-                # Store in session for display
-                st.session_state.nifty_total_market_df = df_nse
-                selected_stocks = df_nse['Stock Name'].tolist()
-                available_stocks = selected_stocks
+                if nse_data and isinstance(nse_data, dict) and nse_data.get("status") == "success" and nse_data.get("data"):
+                    st.sidebar.markdown(f"<span style='color: #00c853;'>✅ Loaded {len(nse_data['data'])} stocks from NSE Bhavcopy ({nse_data.get('date', '')}) - Zero Yahoo API calls!</span>", unsafe_allow_html=True)
+                    
+                    # Convert to DataFrame directly
+                    df_nse = pd.DataFrame(nse_data['data'])
+                    
+                    # Rename columns to match app format
+                    df_nse = df_nse.rename(columns={
+                        'symbol': 'Stock Name',
+                        'close': 'Current Price',
+                        'change_pct': 'Today %',
+                        'volume': 'Volume',
+                        'open': 'Open',
+                        'high': 'High',
+                        'low': 'Low',
+                        'prev_close': 'Prev Close'
+                    })
+                    
+                    # Add placeholder columns for other timeframes (NSE Bhavcopy is daily only)
+                    df_nse['1 Week %'] = 0.0
+                    df_nse['1 Month %'] = 0.0
+                    df_nse['2 Months %'] = 0.0
+                    df_nse['3 Months %'] = 0.0
+                    df_nse['Sparkline'] = ''
+                    
+                    # Store in session for display
+                    st.session_state.nifty_total_market_df = df_nse
+                    selected_stocks = df_nse['Stock Name'].tolist()
+                    available_stocks = selected_stocks
+                else:
+                    st.sidebar.error("❌ Invalid Nifty Total Market data format.")
+                    st.sidebar.info("📋 **Action Required:** Trigger GitHub Actions workflow 'Fetch Nifty Total Market Daily Data' to generate the data file.")
+                    return
             else:
-                st.sidebar.error("❌ Invalid Nifty Total Market data. Run GitHub Actions workflow first.")
+                st.sidebar.error("❌ Nifty Total Market data file not found.")
+                st.sidebar.info("📋 **Action Required:**\n1. Update `.github/workflows/fetch_nifty_total_market.yml` in your repo\n2. Trigger the workflow manually to generate data\n3. Or run locally: `python fetch_nifty_total_market.py`")
                 return
-        else:
-            st.sidebar.error("❌ Nifty Total Market data not found. Run: `python fetch_nifty_total_market.py`")
+        except Exception as e:
+            st.sidebar.error(f"❌ Error loading Nifty Total Market: {str(e)}")
+            st.sidebar.info("📋 Please ensure the GitHub Actions workflow has run successfully to generate `nifty_total_market.json`")
             return
     
     # Determine stock list based on category
