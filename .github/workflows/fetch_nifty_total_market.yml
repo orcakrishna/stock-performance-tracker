@@ -1,17 +1,65 @@
 name: Fetch Nifty Total Market Daily Data
-
 on:
   schedule:
     # Runs daily at 6:00 PM IST → 12:30 PM UTC
     - cron: '30 12 * * *'
-  workflow_dispatch:   # allows manual trigger from the UI
+  workflow_dispatch:   # manual trigger
 
-# Give the default GITHUB_TOKEN write permission (required to push)
 permissions:
   contents: write
 
 jobs:
+  # -------------------------------------------------
+  # 1. Delete old runs (keep only current + latest)
+  # -------------------------------------------------
+  cleanup-old-runs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old workflow runs
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const workflow_id = context.workflow;   // name of this workflow
+
+            // 1. List all runs of this workflow, newest first
+            const runs = await github.paginate(
+              github.rest.actions.listWorkflowRuns,
+              { owner, repo, workflow_id, per_page: 100 }
+            );
+
+            // 2. Identify the run we are currently executing
+            const currentRunId = context.runId;
+
+            // 3. Find the most recent *completed* run (the one before us)
+            let previousRunId = null;
+            for (const run of runs) {
+              if (run.id === currentRunId) continue;          // skip self
+              if (run.status === 'completed') {
+                previousRunId = run.id;
+                break;
+              }
+            }
+
+            // 4. Delete everything else
+            for (const run of runs) {
+              if (run.id === currentRunId) continue;
+              if (run.id === previousRunId) continue;
+
+              console.log(`Deleting run #${run.id} (${run.status})`);
+              await github.rest.actions.deleteWorkflowRun({
+                owner,
+                repo,
+                run_id: run.id
+              });
+            }
+
+  # -------------------------------------------------
+  # 2. Your original data-fetch job (unchanged)
+  # -------------------------------------------------
   fetch-nse-data:
+    needs: cleanup-old-runs          # ← make sure cleanup finishes first
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -43,19 +91,13 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          # Force-add the output files (bypasses .gitignore)
-          git add -f nifty_total_market.json \
-                     nse_total_market_symbols.json || true
+          git add -f nifty_total_market.json nse_total_market_symbols.json || true
 
-          # Exit early if nothing changed
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0
           fi
 
           git commit -m "Update Nifty Total Market – $(date +'%Y-%m-%d')"
-
-          # Pull latest remote changes (rebase) → prevents push-reject
           git pull --rebase origin main
-
           git push origin main
