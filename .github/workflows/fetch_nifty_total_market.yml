@@ -1,41 +1,35 @@
-name: Fetch Nifty Total Market Daily Data
+name: Fetch Nifty Total Market Daily
 
 on:
   schedule:
-    # Runs daily at 6:00 PM IST (12:30 PM UTC)
-    - cron: '30 12 * * *'
-  workflow_dispatch:  # Manual trigger
+    - cron: '30 12 * * *'   # 6 PM IST
+  workflow_dispatch:
 
 jobs:
-  fetch-nse-data:
+  fetch:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v3
-        
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          
-      - name: Install dependencies
+
+      - name: Install deps
         run: |
-          pip install pandas requests urllib3
-          
-      - name: Warm-up delay (helps with SSL)
-        run: sleep 5
-          
-      - name: Fetch NSE Bhavcopy and filter Nifty 750
+          python -m pip install --upgrade pip
+          pip install pandas requests
+
+      - name: Run fetcher
         run: python fetch_nifty_total_market.py
-        env:
-          REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-          PYTHONWARNINGS: ignore:Unverified HTTPS request
-        
-      - name: Commit and push data
+
+      - name: Commit & push
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add nifty_total_market.json nse_total_market_symbols.json || true
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update Nifty Total Market data - $(date +'%Y-%m-%d')"
+          git add nifty_total_market*.json nse_total_market_symbols.json
+          git diff --quiet && git diff --staged --quiet || \
+            git commit -m "Update Nifty Total Market – $(date +'%Y-%m-%d')"
           git push
