@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # <-- CRITICAL: Allow push
+  contents: write
 
 jobs:
   fetch:
@@ -15,33 +15,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}  # Use default token with write access
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pandas requests
 
-      - name: Run fetcher
+      - name: Run fetch script
         run: python fetch_nifty_total_market.py
 
-      - name: Commit & push
+      - name: Commit and push if changed
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
+
           git add -f nifty_total_market.json
           git add -f nse_total_market_symbols.json
           git add -f nifty_total_market_meta.json
-          
+
           if git diff --staged --quiet; then
             echo "No changes to commit"
-          else
-            git commit -m "Update Nifty Total Market – $(date +'%Y-%m-%d')"
-            git push
+            exit 0
           fi
+
+          git commit -m "Update Nifty Total Market – $(date +'%Y-%m-%d')"
+          git pull --rebase origin main
+          git push origin main
