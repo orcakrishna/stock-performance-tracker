@@ -6,7 +6,7 @@ on:
 
 permissions:
   contents: write   # needed for push
-  actions: write    # <-- **NEW** – required to delete runs
+  actions: write    # required to delete runs
 
 jobs:
   # -------------------------------------------------
@@ -22,15 +22,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
-            const workflowFileName = 'fetch_nifty_total_market.yml'; // <-- yml file name
+            const workflowFileName = 'fetch_nifty_total_market.yml'; // yml file name
 
             // ---- resolve workflow ID from filename -----------------
             let workflow;
             try {
-              workflow = await github.rest.actions.getWorkflowByFileName({
+              workflow = await github.rest.actions.getWorkflow({
                 owner,
                 repo,
-                workflow_file_name: workflowFileName
+                workflow_id: workflowFileName  // ← filename goes HERE directly
               });
             } catch (e) {
               console.log(`Could not find workflow "${workflowFileName}". Check the filename.`);
@@ -57,6 +57,7 @@ jobs:
             }
 
             // ---- delete everything else -------------------------
+            let deletedCount = 0;
             for (const run of runs) {
               if (run.id === currentRunId || run.id === previousRunId) continue;
 
@@ -67,10 +68,12 @@ jobs:
                   repo,
                   run_id: run.id
                 });
+                deletedCount++;
               } catch (e) {
                 console.log(`Failed to delete #${run.id}: ${e.message}`);
               }
             }
+            console.log(`Cleanup complete. Deleted ${deletedCount} old runs. Kept: current (#${currentRunId}) and previous (#${previousRunId || 'none'}).`);
 
   # -------------------------------------------------
   # 2. Your original data-fetch job (unchanged)
