@@ -112,6 +112,59 @@ def get_nifty_total_market_symbols():
     return None  # Signal to extract from Bhavcopy
 
 
+def fetch_nse_live_market_data():
+    """
+    Fallback: Fetch live market data from NSE API (less strict SSL than Bhavcopy)
+    Returns DataFrame in same format as Bhavcopy
+    """
+    try:
+        session = requests.Session()
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.nseindia.com/market-data/live-equity-market',
+        })
+        
+        # Visit homepage for cookies
+        session.get("https://www.nseindia.com", timeout=10)
+        time.sleep(2)
+        
+        # Fetch all equity market data
+        url = "https://www.nseindia.com/api/equity-stockIndices?index=SECURITIES%20IN%20F%26O"
+        response = session.get(url, timeout=15)
+        response.raise_for_status()
+        
+        data = response.json()
+        stocks = data.get("data", [])
+        
+        # Convert to Bhavcopy-like DataFrame
+        records = []
+        for stock in stocks:
+            records.append({
+                'SYMBOL': stock.get('symbol', ''),
+                'SERIES': 'EQ',
+                'OPEN': stock.get('open', 0),
+                'HIGH': stock.get('dayHigh', 0),
+                'LOW': stock.get('dayLow', 0),
+                'CLOSE': stock.get('lastPrice', 0),
+                'LAST': stock.get('lastPrice', 0),
+                'PREVCLOSE': stock.get('previousClose', 0),
+                'TOTTRDQTY': stock.get('totalTradedVolume', 0),
+                'TOTTRDVAL': stock.get('totalTradedValue', 0),
+            })
+        
+        df = pd.DataFrame(records)
+        today = datetime.now()
+        
+        print(f"✅ Fetched {len(df)} stocks from NSE live API")
+        return df, today
+        
+    except Exception as e:
+        print(f"❌ NSE live API also failed: {e}")
+        raise Exception("Both Bhavcopy and live API failed")
+
+
 def fetch_nse_bhavcopy(date=None):
     """
     Fetch NSE Bhavcopy (all equity prices) for a given date
@@ -153,7 +206,9 @@ def fetch_nse_bhavcopy(date=None):
             print(f"❌ Failed for {date_str}: {e}")
             continue
     
-    raise Exception("Could not fetch Bhavcopy for last 5 days")
+    # If Bhavcopy fails, try NSE live market API (less strict SSL)
+    print("\n⚠️ Bhavcopy failed (SSL issue). Trying NSE live market API...")
+    return fetch_nse_live_market_data()
 
 
 def filter_and_save_nifty_750(df, symbols, report_date):
