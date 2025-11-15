@@ -1,16 +1,17 @@
 name: Fetch Nifty Total Market Daily Data
 on:
   schedule:
-    # Runs daily at 6:00 PM IST → 12:30 PM UTC
-    - cron: '30 12 * * *'
-  workflow_dispatch:   # manual trigger
+    - cron: '30 12 * * *'   # 6:00 PM IST → 12:30 PM UTC
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write   # needed for push
+  actions: write    # <-- **NEW** – required to delete runs
 
 jobs:
   # -------------------------------------------------
-  # 1. Delete old runs (keep only current + latest)
+  # 1. Delete every run except the current one and the
+  #     most-recent completed one
   # -------------------------------------------------
   cleanup-old-runs:
     runs-on: ubuntu-latest
@@ -21,45 +22,61 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
-            const workflow_id = context.workflow;   // name of this workflow
+            const workflowFileName = 'fetch_nifty_total_market.yml'; // <-- yml file name
 
-            // 1. List all runs of this workflow, newest first
+            // ---- resolve workflow ID from filename -----------------
+            let workflow;
+            try {
+              workflow = await github.rest.actions.getWorkflowByFileName({
+                owner,
+                repo,
+                workflow_file_name: workflowFileName
+              });
+            } catch (e) {
+              console.log(`Could not find workflow "${workflowFileName}". Check the filename.`);
+              throw e;
+            }
+            const workflow_id = workflow.data.id;
+
+            // ---- list all runs (newest first) --------------------
             const runs = await github.paginate(
               github.rest.actions.listWorkflowRuns,
               { owner, repo, workflow_id, per_page: 100 }
             );
 
-            // 2. Identify the run we are currently executing
             const currentRunId = context.runId;
-
-            // 3. Find the most recent *completed* run (the one before us)
             let previousRunId = null;
+
+            // find the first *completed* run that is NOT the current one
             for (const run of runs) {
-              if (run.id === currentRunId) continue;          // skip self
+              if (run.id === currentRunId) continue;
               if (run.status === 'completed') {
                 previousRunId = run.id;
                 break;
               }
             }
 
-            // 4. Delete everything else
+            // ---- delete everything else -------------------------
             for (const run of runs) {
-              if (run.id === currentRunId) continue;
-              if (run.id === previousRunId) continue;
+              if (run.id === currentRunId || run.id === previousRunId) continue;
 
-              console.log(`Deleting run #${run.id} (${run.status})`);
-              await github.rest.actions.deleteWorkflowRun({
-                owner,
-                repo,
-                run_id: run.id
-              });
+              console.log(`Deleting run #${run.id} (${run.created_at})`);
+              try {
+                await github.rest.actions.deleteWorkflowRun({
+                  owner,
+                  repo,
+                  run_id: run.id
+                });
+              } catch (e) {
+                console.log(`Failed to delete #${run.id}: ${e.message}`);
+              }
             }
 
   # -------------------------------------------------
   # 2. Your original data-fetch job (unchanged)
   # -------------------------------------------------
   fetch-nse-data:
-    needs: cleanup-old-runs          # ← make sure cleanup finishes first
+    needs: cleanup-old-runs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
