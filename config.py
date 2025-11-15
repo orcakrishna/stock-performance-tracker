@@ -46,11 +46,11 @@ FALLBACK_BSE_SENSEX = [
 
 # Market indices configuration
 INDICES_ROW1 = {
-    'Nifty 50': '^NSEI',
-    'Sensex': '^BSESN',
-    'Bank Nifty': '^NSEBANK',
-    'Nifty Midcap 50': '^NSEMDCP50',
     'Nifty Total Market': 'NIFTY_TOTAL_MKT.NS',
+    'Nifty 50': '^NSEI',
+    'Nifty Midcap 50': '^NSEMDCP50',
+    'Bank Nifty': '^NSEBANK',
+    'Sensex': '^BSESN',
     'Dow Jones': '^DJI',
     'NASDAQ': '^IXIC',
     'India VIX': '^INDIAVIX'

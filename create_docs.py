@@ -28,7 +28,7 @@ doc.add_heading('1. Project Overview', 1)
 doc.add_paragraph('The NSE Stock Performance Tracker is a Streamlit web application for tracking Indian stock market performance with real-time data, caching, and advanced visualizations.')
 
 doc.add_heading('Key Capabilities:', 2)
-caps = ['Track Nifty 50, Nifty Next 50, Nifty Total Market', 'Real-time market indices', 
+caps = ['Track Nifty 50 and Nifty Next 50', 'Real-time market indices', 
         '1-week to 3-month performance metrics', 'Live rolling ticker', 'Custom stock lists',
         'Persistent caching (6-hour expiry)', 'Parallel data fetching', 'Commodity prices']
 for cap in caps:
@@ -285,7 +285,7 @@ doc.add_page_break()
 # 6. Key Features
 doc.add_heading('6. Key Features', 1)
 features = [
-    'Multi-category support (Nifty 50, Next 50, Total Market)',
+    'Multi-category support (Nifty 50, Next 50, Custom, Upload)',
     'Real-time data with ~15min delay',
     '1-week to 3-month performance metrics',
     'Market indices (major and sectoral)',
@@ -344,7 +344,7 @@ doc.add_heading('Running:', 2)
 doc.add_paragraph('streamlit run app.py')
 
 doc.add_heading('Using the App:', 2)
-doc.add_paragraph('1. Select category (Nifty 50, Next 50, Total Market, Custom, Upload)')
+doc.add_paragraph('1. Select category (Nifty 50, Next 50, Custom, Upload)')
 doc.add_paragraph('2. Choose sorting (3 Months %, 2 Months %, etc.)')
 doc.add_paragraph('3. Enable parallel fetching for speed')
 doc.add_paragraph('4. View results with pagination')

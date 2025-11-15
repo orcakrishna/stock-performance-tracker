@@ -360,8 +360,7 @@ def render_market_indices():
             sparkline_data = get_index_sparkline(symbol)
             
             if price is not None and change is not None:
-                # Only exclude Nifty Total Market from charts
-                has_chart = sparkline_data and name != "Nifty Total Market"
+                has_chart = bool(sparkline_data)
                 
                 if has_chart:
                     st.markdown('<div class="has-chart">', unsafe_allow_html=True)
@@ -596,7 +595,6 @@ def render_sidebar_info():
         "- 🏖️ Holiday: 24-hour cache (no market)\n"
         "- 🔄 Auto-refresh based on market status\n\n"
         "**Features:**\n"
-        "- Nifty Total Market (~750 stocks)\n"
         "- Upload custom stock lists\n"
         "- Real-time commodities & indices\n"
         "- Auto-retry with rate limit protection"

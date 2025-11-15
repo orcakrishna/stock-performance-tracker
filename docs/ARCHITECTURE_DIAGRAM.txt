@@ -124,7 +124,7 @@
                                 └─→ data_fetchers.get_stock_list('Nifty 50')
         │
         ▼
-[3] User Selects Category (Nifty 50 / Next 50 / Total Market / Custom / Upload)
+[3] User Selects Category (Nifty 50 / Next 50 / Custom / Upload)
         │
         ▼
 [4] data_fetchers.get_stock_list(category)

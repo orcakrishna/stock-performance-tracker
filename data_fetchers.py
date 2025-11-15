@@ -50,7 +50,6 @@ def get_available_nse_indices():
     """Available indices with live data from Yahoo Finance"""
     indices = {
         'Nifty 50': 'NIFTY 50',
-        'Nifty Total Market': 'NIFTY_TOTAL_MKT',  # Special: loaded from JSON
         'Nifty 500': 'NIFTY 500',
         'Nifty Bank': 'NIFTY BANK',
         'Nifty IT': 'NIFTY IT',
@@ -656,59 +655,8 @@ def fetch_stocks_bulk(tickers, max_workers=4, use_cache=True, status_placeholder
     return cached_data
 
 
-def load_nifty_total_market_from_json():
-    """
-    Load Nifty Total Market data from pre-fetched NSE Bhavcopy JSON
-    Returns list of symbols WITHOUT Yahoo Finance suffix (pure NSE data)
-    """
-    json_file = os.path.join(os.path.dirname(__file__), "nifty_total_market.json")
-    
-    try:
-        if os.path.exists(json_file):
-            with open(json_file, "r") as f:
-                data = json.load(f)
-            
-            if data.get("status") == "success" and data.get("data"):
-                # Return raw symbols (no .NS suffix needed - using NSE data directly)
-                symbols = [item["symbol"] for item in data["data"]]
-                date_str = data.get("date", "")
-                total = len(symbols)
-                
-                return symbols, f"✅ Loaded {total} stocks from NSE Bhavcopy ({date_str}) - Zero Yahoo API calls!"
-            else:
-                print("Nifty Total Market JSON: Invalid data format")
-        else:
-            print(f"Nifty Total Market JSON not found: {json_file}")
-    except Exception as e:
-        print(f"Error loading Nifty Total Market JSON: {e}")
-    
-    # Fallback message
-    return [], "⚠️ Nifty Total Market data not available. Run: python fetch_nifty_total_market.py"
-
-
-def get_nifty_total_market_data_from_json():
-    """
-    Load complete Nifty Total Market data with OHLC, volume, changes from NSE Bhavcopy
-    Returns dict with pre-calculated data (no Yahoo Finance needed)
-    """
-    json_file = os.path.join(os.path.dirname(__file__), "nifty_total_market.json")
-    
-    try:
-        if os.path.exists(json_file):
-            with open(json_file, "r") as f:
-                return json.load(f)
-    except Exception as e:
-        print(f"Error loading Nifty Total Market data: {e}")
-    
-    return None
-
-
 @st.cache_data(ttl=3600, show_spinner=False)
 def get_stock_list(category_name):
-    # Special handling for Nifty Total Market (load from JSON file)
-    if category_name == "Nifty Total Market":
-        return load_nifty_total_market_from_json()
-    
     available_indices = get_available_nse_indices()
    
     if category_name in available_indices:
