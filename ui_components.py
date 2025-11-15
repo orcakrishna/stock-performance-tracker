@@ -151,21 +151,32 @@ def render_header():
         try:
             from data_fetchers import get_highest_volume_stocks
             
+            # Create placeholder FIRST before any computation
+            volume_placeholder = st.empty()
+            
             # Show loading indicator IMMEDIATELY
             base_box_html = '<div class="info-box"><div class="info-box-title">📊 Highest Volume Stocks</div>'
             loading_html = base_box_html + """
                 <div style='text-align: center; padding: 20px 0;'>
-                    <div class='spinner' style='border: 3px solid rgba(255, 255, 255, 0.1); border-left-color: #42a5f5; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; margin: 0 auto;'></div>
-                    <p style='color: rgba(255, 255, 255, 0.5); margin-top: 10px; font-size: 0.875rem;'>Fetching volume data...</p>
+                    <div class='volume-spinner'></div>
+                    <p style='color: #42a5f5; margin-top: 10px; font-size: 0.875rem; font-weight: 500;'>⏳ Loading volume data...</p>
                 </div>
                 <style>
-                    @keyframes spin {
+                    .volume-spinner {
+                        border: 3px solid rgba(66, 165, 245, 0.2);
+                        border-top: 3px solid #42a5f5;
+                        border-radius: 50%;
+                        width: 24px;
+                        height: 24px;
+                        animation: volume-spin 0.8s linear infinite;
+                        margin: 0 auto;
+                    }
+                    @keyframes volume-spin {
                         0% { transform: rotate(0deg); }
                         100% { transform: rotate(360deg); }
                     }
                 </style>
             </div>"""
-            volume_placeholder = st.empty()
             volume_placeholder.markdown(loading_html, unsafe_allow_html=True)
             
             # Cached function to fetch high volume stocks once per day
@@ -211,7 +222,7 @@ def render_header():
             error_html = """
             <div class="info-box">
                 <div class="info-box-title">📊 Highest Volume Stocks</div>
-                <span style='color: rgba(255, 255, 255, 0.5);'>Loading...</span>
+                <span style='color: rgba(255, 255, 255, 0.5);'>Unable to load data</span>
             </div>
             """
             st.markdown(error_html, unsafe_allow_html=True)
@@ -325,6 +336,17 @@ def render_market_indices():
         /* Add right padding to metric delta to make space for chart when chart exists */
         .has-chart [data-testid="stMetricDelta"] {
             margin-right: 60px !important;
+        }
+        
+        /* Loading skeleton animation */
+        .indices-loading {
+            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+            background-size: 200% 100%;
+            animation: loading-shimmer 1.5s infinite;
+        }
+        @keyframes loading-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
     </style>
     """, unsafe_allow_html=True)
