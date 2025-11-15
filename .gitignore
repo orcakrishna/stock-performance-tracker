@@ -32,7 +32,6 @@ logs/
 # Data
 *.csv
 *.xlsx
-*.json
 !sample_stocks.txt
 !saved_stock_lists/*.csv
 
