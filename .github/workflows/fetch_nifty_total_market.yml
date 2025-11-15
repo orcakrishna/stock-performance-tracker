@@ -2,8 +2,9 @@ name: Fetch Nifty Total Market Daily Data
 
 on:
   schedule:
+    # Runs daily at 6:00 PM IST (12:30 PM UTC)
     - cron: '30 12 * * *'
-  workflow_dispatch:
+  workflow_dispatch:  # Manual trigger
 
 jobs:
   fetch-nse-data:
