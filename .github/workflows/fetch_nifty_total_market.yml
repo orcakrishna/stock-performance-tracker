@@ -2,8 +2,11 @@ name: Fetch Nifty Total Market Daily
 
 on:
   schedule:
-    - cron: '30 12 * * *'   # 6 PM IST
+    - cron: '30 12 * * *'  # 6 PM IST
   workflow_dispatch:
+
+permissions:
+  contents: write   # <-- CRITICAL: Allow push
 
 jobs:
   fetch:
@@ -11,6 +14,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}  # Use default token with write access
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -29,7 +34,14 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add nifty_total_market*.json nse_total_market_symbols.json
-          git diff --quiet && git diff --staged --quiet || \
+          
+          git add -f nifty_total_market.json
+          git add -f nse_total_market_symbols.json
+          git add -f nifty_total_market_meta.json
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
             git commit -m "Update Nifty Total Market – $(date +'%Y-%m-%d')"
-          git push
+            git push
+          fi
