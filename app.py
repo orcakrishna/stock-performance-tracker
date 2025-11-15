@@ -501,8 +501,55 @@ def main():
         st.session_state.cached_stocks_data = None
         st.session_state.last_category = category
     
+    # Special handling for Nifty Total Market (direct JSON load)
+    if category == 'Nifty Total Market':
+        # Load pre-calculated data from JSON (zero Yahoo API calls!)
+        import json
+        import os
+        json_file = os.path.join(os.path.dirname(__file__), "nifty_total_market.json")
+        
+        if os.path.exists(json_file):
+            with open(json_file, "r") as f:
+                nse_data = json.load(f)
+            
+            if nse_data.get("status") == "success" and nse_data.get("data"):
+                st.sidebar.markdown(f"<span style='color: #00c853;'>✅ Loaded {len(nse_data['data'])} stocks from NSE Bhavcopy ({nse_data.get('date', '')}) - Zero Yahoo API calls!</span>", unsafe_allow_html=True)
+                
+                # Convert to DataFrame directly
+                df_nse = pd.DataFrame(nse_data['data'])
+                
+                # Rename columns to match app format
+                df_nse = df_nse.rename(columns={
+                    'symbol': 'Stock Name',
+                    'close': 'Current Price',
+                    'change_pct': 'Today %',
+                    'volume': 'Volume',
+                    'open': 'Open',
+                    'high': 'High',
+                    'low': 'Low',
+                    'prev_close': 'Prev Close'
+                })
+                
+                # Add placeholder columns for other timeframes (NSE Bhavcopy is daily only)
+                df_nse['1 Week %'] = 0.0
+                df_nse['1 Month %'] = 0.0
+                df_nse['2 Months %'] = 0.0
+                df_nse['3 Months %'] = 0.0
+                df_nse['Sparkline'] = ''
+                
+                # Store in session for display
+                st.session_state.nifty_total_market_df = df_nse
+                selected_stocks = df_nse['Stock Name'].tolist()
+                available_stocks = selected_stocks
+            else:
+                st.sidebar.error("❌ Invalid Nifty Total Market data. Run GitHub Actions workflow first.")
+                return
+        else:
+            st.sidebar.error("❌ Nifty Total Market data not found. Run: `python fetch_nifty_total_market.py`")
+            return
+    
     # Determine stock list based on category
-    if category == 'Upload File':
+    elif category == 'Upload File':
         selected_stocks, available_stocks = handle_file_upload()
     else:
         # Dynamic category - fetch from NSE
@@ -601,99 +648,125 @@ def main():
     with market_indices_placeholder.container():
         render_market_indices()
     
-    # Check if we need to fetch data (only if stocks list changed)
-    stocks_list_key = ','.join(sorted(selected_stocks))  # Create unique key for current stock list
-    
-    if (st.session_state.cached_stocks_data is None or 
-        st.session_state.cached_stocks_list != stocks_list_key):
-        # Create a status placeholder for temporary messages
-        status_placeholder_top = st.empty()
+    # Special fast path for Nifty Total Market (pre-loaded data)
+    if category == 'Nifty Total Market' and hasattr(st.session_state, 'nifty_total_market_df'):
+        df = st.session_state.nifty_total_market_df.copy()
+        actual_count = len(df)
         
-        # Show clean loading spinner
         with title_placeholder.container():
-            st.markdown("""
-                <div style='text-align: center; padding: 40px 0;'>
-                    <div class='spinner'></div>
-                    <p style='color: #95e1d3; margin-top: 20px; font-size: 1.1rem;'>Loading...</p>
-                </div>
-                <style>
-                    .spinner {
-                        border: 3px solid rgba(255, 255, 255, 0.1);
-                        border-left-color: #00d4ff;
-                        border-radius: 50%;
-                        width: 24px;
-                        height: 24px;
-                        animation: spin 1s linear infinite;
-                        margin: 0 auto;
-                    }
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                </style>
+            st.markdown(f"""
+            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;'>
+                <h3 style='margin: 0; color: white;'>📊 {category} - Performance Summary ({actual_count} Stock(s))</h3>
+                <span style='color: #00c853; font-size: 0.75rem; white-space: nowrap;'>⚡ Instant Load - NSE Bhavcopy</span>
+            </div>
             """, unsafe_allow_html=True)
         
-        # Fetch stock data only when needed
-        stocks_data = fetch_stocks_data(selected_stocks, use_parallel, use_cache, status_placeholder=status_placeholder_top)
+        # Display summary
+        summary_text = f"🔽 Sorted by: <strong>{sort_by}</strong> ({sort_order}) | 📅 NSE Daily Data"
         
-        if not stocks_data:
-            status_placeholder_top.empty()  # Clear status messages
-            with title_placeholder.container():
-                st.error("❌ Failed to fetch data for the selected stocks. Please try again later.")
-            return
-        
-        # Cache the fetched data
-        st.session_state.cached_stocks_data = stocks_data
-        st.session_state.cached_stocks_list = stocks_list_key
-        
-        # Clear status messages after successful load
-        status_placeholder_top.empty()
-    else:
-        # Use cached data (no re-fetch needed for sorting)
-        stocks_data = st.session_state.cached_stocks_data
-    
-    # Display title with actual fetched count
-    actual_count = len(stocks_data)
-    if category == 'Upload File' and st.session_state.current_list_name:
-        display_title = f"📊 {st.session_state.current_list_name} - Performance Summary ({actual_count} Stock(s))"
-    else:
-        display_title = f"📊 {category} - Performance Summary ({actual_count} Stock(s))"
-    
-    # Log failed stocks (without displaying in title)
-    if actual_count < len(selected_stocks):
-        fetched_symbols = {data['Stock Name'] for data in stocks_data}
-        failed_symbols = [s.replace('.NS', '').replace('.BO', '') for s in selected_stocks 
-                         if s.replace('.NS', '').replace('.BO', '') not in fetched_symbols]
-        if failed_symbols:
-            print(f"⚠️ Failed to fetch data for: {', '.join(failed_symbols)}")
-    
-    with title_placeholder.container():
-        st.markdown(f"""
-        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;'>
-            <h3 style='margin: 0; color: white;'>{display_title}</h3>
-            <span style='color: #ffc107; font-size: 0.75rem; white-space: nowrap;'>ⓘ Weekly/Monthly % may vary ±2%</span>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Get market session status and current time
-    market_status, status_color = get_market_session_status()
-    ist_time, _ = get_current_times()
-    last_updated = ist_time.strftime('%d %b %Y, %I:%M %p IST')
-    
-    # Display summary of current view (will be updated after search if needed)
-    summary_text = f"🔽 Sorted by: <strong>{sort_by}</strong> ({sort_order}) | 📅 Range: <strong>1M / 2M / 3M</strong>"
-    
-    with summary_placeholder.container():
-        st.markdown(f"""
-        <div style='display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;'>
-            <div style='font-size: 0.95rem; color: #95e1d3;'>
-                {summary_text}
+        with summary_placeholder.container():
+            st.markdown(f"""
+            <div style='display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;'>
+                <div style='font-size: 0.95rem; color: #95e1d3;'>
+                    {summary_text}
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Create DataFrame
-    df = pd.DataFrame(stocks_data)
+            """, unsafe_allow_html=True)
+    else:
+        # Standard Yahoo Finance fetch for other categories
+        # Check if we need to fetch data (only if stocks list changed)
+        stocks_list_key = ','.join(sorted(selected_stocks))  # Create unique key for current stock list
+        
+        if (st.session_state.cached_stocks_data is None or 
+            st.session_state.cached_stocks_list != stocks_list_key):
+            # Create a status placeholder for temporary messages
+            status_placeholder_top = st.empty()
+            
+            # Show clean loading spinner
+            with title_placeholder.container():
+                st.markdown("""
+                    <div style='text-align: center; padding: 40px 0;'>
+                        <div class='spinner'></div>
+                        <p style='color: #95e1d3; margin-top: 20px; font-size: 1.1rem;'>Loading...</p>
+                    </div>
+                    <style>
+                        .spinner {
+                            border: 3px solid rgba(255, 255, 255, 0.1);
+                            border-left-color: #00d4ff;
+                            border-radius: 50%;
+                            width: 24px;
+                            height: 24px;
+                            animation: spin 1s linear infinite;
+                            margin: 0 auto;
+                        }
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    </style>
+                """, unsafe_allow_html=True)
+            
+            # Fetch stock data only when needed
+            stocks_data = fetch_stocks_data(selected_stocks, use_parallel, use_cache, status_placeholder=status_placeholder_top)
+            
+            if not stocks_data:
+                status_placeholder_top.empty()  # Clear status messages
+                with title_placeholder.container():
+                    st.error("❌ Failed to fetch data for the selected stocks. Please try again later.")
+                return
+            
+            # Cache the fetched data
+            st.session_state.cached_stocks_data = stocks_data
+            st.session_state.cached_stocks_list = stocks_list_key
+            
+            # Clear status messages after successful load
+            status_placeholder_top.empty()
+        else:
+            # Use cached data (no re-fetch needed for sorting)
+            stocks_data = st.session_state.cached_stocks_data
+        
+        # Display title with actual fetched count
+        actual_count = len(stocks_data)
+        if category == 'Upload File' and st.session_state.current_list_name:
+            display_title = f"📊 {st.session_state.current_list_name} - Performance Summary ({actual_count} Stock(s))"
+        else:
+            display_title = f"📊 {category} - Performance Summary ({actual_count} Stock(s))"
+        
+        # Log failed stocks (without displaying in title)
+        if actual_count < len(selected_stocks):
+            fetched_symbols = {data['Stock Name'] for data in stocks_data}
+            failed_symbols = [s.replace('.NS', '').replace('.BO', '') for s in selected_stocks 
+                             if s.replace('.NS', '').replace('.BO', '') not in fetched_symbols]
+            if failed_symbols:
+                print(f"⚠️ Failed to fetch data for: {', '.join(failed_symbols)}")
+        
+        with title_placeholder.container():
+            st.markdown(f"""
+            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;'>
+                <h3 style='margin: 0; color: white;'>{display_title}</h3>
+                <span style='color: #ffc107; font-size: 0.75rem; white-space: nowrap;'>ⓘ Weekly/Monthly % may vary ±2%</span>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Get market session status and current time
+        market_status, status_color = get_market_session_status()
+        ist_time, _ = get_current_times()
+        last_updated = ist_time.strftime('%d %b %Y, %I:%M %p IST')
+        
+        # Display summary of current view (will be updated after search if needed)
+        summary_text = f"🔽 Sorted by: <strong>{sort_by}</strong> ({sort_order}) | 📅 Range: <strong>1M / 2M / 3M</strong>"
+        
+        with summary_placeholder.container():
+            st.markdown(f"""
+            <div style='display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;'>
+                <div style='font-size: 0.95rem; color: #95e1d3;'>
+                    {summary_text}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Create DataFrame
+        df = pd.DataFrame(stocks_data)
     
     # Apply sorting
     ascending = True if sort_order == 'Worst to Best' else False
