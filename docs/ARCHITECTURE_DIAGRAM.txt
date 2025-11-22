@@ -216,7 +216,15 @@
         └─→ Paginate (10 items per page)
         │
         ▼
-[10] utils.create_html_table(df_page)
+[10] app.py: Apply Search Filter (optional)
+        │
+        ├─→ st.text_input("🔍 Search") captures query (>= 3 chars)
+        ├─→ Filter df by case-insensitive substring on "Stock Name"
+        ├─→ Update summary stats with filtered counts
+        └─→ Fetch 52-week snapshots for top matches (≤5)
+        │
+        ▼
+[11] utils.create_html_table(df_page)
         │
         ├─→ Generate HTML table structure
         ├─→ Color-code percentage columns:
@@ -226,7 +234,7 @@
         └─→ Return HTML string
         │
         ▼
-[11] Display Results
+[12] Display Results
         │
         ├─→ st.markdown(html_table, unsafe_allow_html=True)
         ├─→ ui_components.render_pagination_controls()
