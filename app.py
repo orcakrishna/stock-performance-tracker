@@ -425,7 +425,7 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
         </style>
         """, unsafe_allow_html=True)
         
-        col_title, col_search, col_clear = st.columns([3.2, 1.5, 0.3])
+        col_title, col_search, col_clear = st.columns([3.0, 1.5, 0.5])
         
         with col_title:
             # Title - left aligned
@@ -446,14 +446,15 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
                 st.session_state.current_page = 1
         
         with col_clear:
-            # Reduced vertical spacing
+            # Show Clear button when there's a search query (checks updated value)
             st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
-            if st.session_state.search_query.strip() and st.button("Clear", key="clear_search"):
-                # Use immediate st.rerun() for user actions (not deferred trigger)
-                st.session_state.search_query = ""
-                st.session_state.current_page = 1
-                st.session_state.search_version += 1
-                st.rerun()
+            if st.session_state.search_query.strip():
+                if st.button("Clear", key="clear_search", help="Clear search"):
+                    # Use immediate st.rerun() for user actions (not deferred trigger)
+                    st.session_state.search_query = ""
+                    st.session_state.current_page = 1
+                    st.session_state.search_version += 1
+                    st.rerun()
 
     query = st.session_state.search_query.strip().lower()
     df = pd.DataFrame(stocks_data)

@@ -22,10 +22,10 @@ def render_header():
             background: linear-gradient(135deg, rgba(26, 35, 126, 0.3) 0%, rgba(13, 27, 42, 0.5) 100%) !important;
             border: 1px solid rgba(66, 165, 245, 0.3) !important;
             border-radius: 12px !important;
-            padding: 1rem !important;
+            padding: 0.75rem !important;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 20px rgba(66, 165, 245, 0.1) !important;
             transition: all 0.3s ease !important;
-            margin-bottom: 1rem !important;
+            margin-bottom: 0.5rem !important;
         }
         
         .info-box:hover {
@@ -39,11 +39,11 @@ def render_header():
             font-size: 0.875rem !important;
             font-weight: 600 !important;
             color: #42a5f5 !important;
-            margin-bottom: 0.75rem !important;
+            margin-bottom: 0.5rem !important;
             text-transform: uppercase !important;
             letter-spacing: 0.5px !important;
             border-bottom: 1px solid rgba(66, 165, 245, 0.3) !important;
-            padding-bottom: 0.5rem !important;
+            padding-bottom: 0.4rem !important;
         }
 
         .market-overview-title {
@@ -196,7 +196,7 @@ def render_header():
                 if volume_stocks:
                     volume_stocks_html = base_box_html
                     volume_stocks_html += '<table style="width: 100%; font-size: 0.875rem; border-collapse: collapse;">'
-                    volume_stocks_html += '<thead><tr style="border-bottom: 1px solid rgba(66, 165, 245, 0.3);"><th style="text-align: left; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;">Symbol</th><th style="text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;">Price</th><th style="text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;">Change</th><th style="text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;">Volume</th></tr></thead>'
+                    volume_stocks_html += '<thead><tr style="border-bottom: 1px solid rgba(66, 165, 245, 0.3);"><th style="text-align: left; padding: 0.2rem 0.5rem; color: #42a5f5; font-weight: 600; font-size: 0.8rem;">Symbol</th><th style="text-align: right; padding: 0.2rem 0.5rem; color: #42a5f5; font-weight: 600; font-size: 0.8rem;">Price</th><th style="text-align: right; padding: 0.2rem 0.5rem; color: #42a5f5; font-weight: 600; font-size: 0.8rem;">Change</th><th style="text-align: right; padding: 0.2rem 0.5rem; color: #42a5f5; font-weight: 600; font-size: 0.8rem;">Volume</th></tr></thead>'
                     volume_stocks_html += '<tbody>'
 
                     for stock in volume_stocks:

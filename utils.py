@@ -166,10 +166,10 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     return f"""<table style='width: 100%; font-size: 0.875rem; border-collapse: collapse;'>
         <thead>
             <tr style='border-bottom: 1px solid rgba(66, 165, 245, 0.3);'>
-                <th style='text-align: left; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>Commodity</th>
-                <th style='text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>Price</th>
-                <th style='text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>Today</th>
-                <th style='text-align: right; padding: 0.3rem 0.5rem; color: #42a5f5; font-weight: 600;'>1W</th>
+                <th style='text-align: left; padding: 0.2rem 0.5rem; color: #42a5f5; font-weight: 600; font-size: 0.8rem;'>Commodity</th>
+                <th style='text-align: right; padding: 0.2rem 0.5rem; color: #42a5f5; font-weight: 600; font-size: 0.8rem;'>Price</th>
+                <th style='text-align: right; padding: 0.2rem 0.5rem; color: #42a5f5; font-weight: 600; font-size: 0.8rem;'>Today</th>
+                <th style='text-align: right; padding: 0.2rem 0.5rem; color: #42a5f5; font-weight: 600; font-size: 0.8rem;'>1W</th>
             </tr>
         </thead>
         <tbody>
