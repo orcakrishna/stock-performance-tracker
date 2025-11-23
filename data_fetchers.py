@@ -12,11 +12,38 @@ import time
 from datetime import datetime, timedelta
 import yfinance as yf
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import wraps
 
 from config import COMMODITIES, FALLBACK_NIFTY_50, FALLBACK_NIFTY_NEXT_50, FALLBACK_BSE_SENSEX
 from cache_manager import load_from_cache, save_to_cache, load_bulk_cache, save_bulk_cache
 
 DEFAULT_EXCHANGE_SUFFIX = '.NS'
+
+
+def retry_with_backoff(max_retries=3, initial_delay=1.0, backoff_factor=2.0):
+    """Decorator to retry function calls with exponential backoff on failure"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            delay = initial_delay
+            last_exception = None
+            
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        time.sleep(delay)
+                        delay *= backoff_factor
+                    # Log the retry attempt
+                    if hasattr(st, 'logger'):
+                        st.logger.warning(f"Retry {attempt + 1}/{max_retries} for {func.__name__}: {str(e)}")
+            
+            # All retries failed, raise the last exception
+            raise last_exception
+        return wrapper
+    return decorator
 
 
 def normalize_symbol(symbol: str, default_suffix: str = DEFAULT_EXCHANGE_SUFFIX) -> str:
@@ -166,8 +193,17 @@ def get_index_performance(index_symbol, index_name=None):
     return None, None
 
 
+@retry_with_backoff(max_retries=3, initial_delay=0.5, backoff_factor=2.0)
+def _fetch_stock_data_with_retry(normalized_ticker):
+    """Internal function to fetch stock data with retry logic"""
+    ticker_obj = yf.Ticker(normalized_ticker)
+    fast_info = getattr(ticker_obj, 'fast_info', None)
+    hist = get_cached_history(normalized_ticker, period='6mo', interval='1d')
+    return fast_info, hist
+
+
 def get_stock_performance(ticker, use_cache=True):
-    """Fetch stock performance with low-latency Yahoo Finance access."""
+    """Fetch stock performance with low-latency Yahoo Finance access and retry on failure."""
     normalized_ticker = normalize_symbol(ticker)
     display_symbol = normalized_ticker.replace('.NS', '').replace('.BO', '')
 
@@ -178,10 +214,14 @@ def get_stock_performance(ticker, use_cache=True):
         if cached_data:
             return cached_data
 
-    ticker_obj = yf.Ticker(normalized_ticker)
-    fast_info = getattr(ticker_obj, 'fast_info', None)
-
-    hist = get_cached_history(normalized_ticker, period='6mo', interval='1d')
+    try:
+        fast_info, hist = _fetch_stock_data_with_retry(normalized_ticker)
+    except Exception as e:
+        # All retries failed, return None
+        if hasattr(st, 'logger'):
+            st.logger.error(f"Failed to fetch data for {normalized_ticker} after retries: {str(e)}")
+        return None
+    
     if hist is None or hist.empty:
         return None
 
@@ -260,13 +300,21 @@ def get_stock_performance(ticker, use_cache=True):
     return result
 
 
+@retry_with_backoff(max_retries=2, initial_delay=0.5, backoff_factor=2.0)
+def _fetch_52week_data_with_retry(normalized):
+    """Internal function to fetch 52-week data with retry logic"""
+    stock = yf.Ticker(normalized)
+    fast_info = getattr(stock, 'fast_info', None)
+    hist = stock.history(period='1y', interval='1d', auto_adjust=True, actions=False)
+    return fast_info, hist
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def get_stock_52_week_range(ticker):
-    """Return current price and 52-week high/low details using fast_info and cached history"""
+    """Return current price and 52-week high/low details using fast_info and cached history with retry logic"""
     try:
         normalized = normalize_symbol(ticker)
-        stock = yf.Ticker(normalized)
-        fast_info = getattr(stock, 'fast_info', None)
+        fast_info, hist = _fetch_52week_data_with_retry(normalized)
         
         # Try to get 52W data from fast_info first (much faster)
         week_52_high = fast_get(fast_info, 'year_high')
@@ -283,8 +331,7 @@ def get_stock_52_week_range(ticker):
                 'low_date': None,
             }
         
-        # Fallback to history if fast_info incomplete
-        hist = stock.history(period='1y', interval='1d', auto_adjust=True, actions=False)
+        # Fallback to history if fast_info incomplete (already fetched with retry)
         if hist is None or hist.empty:
             return None
         

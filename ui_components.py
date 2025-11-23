@@ -313,8 +313,6 @@ def create_index_sparkline_svg(sparkline_data, change_pct, symbol, width=50, hei
 
 def render_market_indices():
     """Render market indices performance section with mini charts"""
-    st.markdown("### 📈 Market Indices - Today's Performance")
-    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(METRIC_CSS, unsafe_allow_html=True)
     
     # Add CSS to position chart next to percentage delta inside metric box
@@ -785,8 +783,8 @@ def render_averages(df):
 # =========================
 # PAGINATION
 # =========================
-def render_pagination_controls(total_items, items_per_page, position="top"):
-    """Render pagination controls and return current page data range"""
+def render_pagination_controls(total_items, items_per_page, position="top", csv_data=None, csv_filename=None):
+    """Render pagination controls with optional CSV download and return current page data range"""
     total_pages = (total_items + items_per_page - 1) // items_per_page
 
     if 'current_page' not in st.session_state:
@@ -799,9 +797,8 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
     # Wrap pagination in a container div for specific styling
     st.markdown('<div class="pagination-container">', unsafe_allow_html=True)
     
-    # Use 3 columns: left arrow, centered text, right arrow
-    # Increase middle width to push right button further right
-    col1, col2, col3 = st.columns([0.4, 11.2, 0.4])
+    # Use 4 columns: left arrow, centered text, download button, right arrow
+    col1, col2, col3, col4 = st.columns([0.4, 9.5, 1.7, 0.4])
     
     with col1:
         st.markdown("""
@@ -873,13 +870,25 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
         )
     
     with col3:
+        # CSV Download button (if data provided)
+        if csv_data and csv_filename:
+            st.download_button(
+                label="📥 CSV",
+                data=csv_data,
+                file_name=csv_filename,
+                mime="text/csv",
+                key=f"download_csv_{position}",
+                help=f"Download all {total_items} stocks as CSV"
+            )
+    
+    with col4:
         st.markdown("""
             <style>
-            div[data-testid="column"]:nth-of-type(3) {
+            div[data-testid="column"]:nth-of-type(4) {
                 display: flex !important;
                 justify-content: flex-end !important;
             }
-            div[data-testid="column"]:nth-of-type(3) button {
+            div[data-testid="column"]:nth-of-type(4) button {
                 background-color: #00ff88 !important;
                 color: white !important;
                 border: none !important;
@@ -889,12 +898,12 @@ def render_pagination_controls(total_items, items_per_page, position="top"):
             }
             /* Mobile pagination - keep horizontal and stick to right */
             @media (max-width: 768px) {
-                .pagination-container [data-testid="column"]:nth-of-type(3) {
+                .pagination-container [data-testid="column"]:nth-of-type(4) {
                     flex: 0 0 auto !important;
                     min-width: 40px !important;
                     max-width: 60px !important;
                 }
-                .pagination-container [data-testid="column"]:nth-of-type(3) button {
+                .pagination-container [data-testid="column"]:nth-of-type(4) button {
                     font-size: 1rem !important;
                     padding: 4px 8px !important;
                     width: 100% !important;

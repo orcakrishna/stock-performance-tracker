@@ -111,17 +111,18 @@ CUSTOM_CSS = """
         zoom: 1.0;
     }
     
+    /* MODERN FINTECH DARK THEME - To revert, see config_original.py */
     .main {
-        background: linear-gradient(135deg, #0a1929 0%, #1a237e 50%, #0d1b2a 100%) !important;
+        background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%) !important;
         padding: 0.5rem 1rem 1rem 1rem;
     }
     .stApp {
-        background: linear-gradient(135deg, #0a1929 0%, #1a237e 50%, #0d1b2a 100%) !important;
+        background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%) !important;
     }
     
     /* Page-wide background */
     body {
-        background: linear-gradient(135deg, #0a1929 0%, #1a237e 50%, #0d1b2a 100%) !important;
+        background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%) !important;
     }
     .block-container {
         padding-top: 0rem !important;
@@ -155,20 +156,20 @@ CUSTOM_CSS = """
         display: none !important;
     }
     
-    /* Style sidebar toggle button */
+    /* Style sidebar toggle button - Cyan accent */
     button[kind="header"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        color: white !important;
-        border: 2px solid #ffffff !important;
+        background: linear-gradient(135deg, #00D9FF 0%, #00A3CC 100%) !important;
+        color: #0f1419 !important;
+        border: 2px solid #00D9FF !important;
         border-radius: 8px !important;
         padding: 8px 12px !important;
         font-size: 1.1rem !important;
         font-weight: bold !important;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.6) !important;
+        box-shadow: 0 2px 12px rgba(0, 217, 255, 0.4) !important;
     }
     button[kind="header"]:hover {
-        background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%) !important;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.8) !important;
+        background: linear-gradient(135deg, #00FFA3 0%, #00CC82 100%) !important;
+        box-shadow: 0 4px 16px rgba(0, 255, 163, 0.5) !important;
         transform: scale(1.05) !important;
     }
     
@@ -415,60 +416,63 @@ CUSTOM_CSS = """
     .stMarkdown {
         margin-bottom: 0.25rem !important;
     }
-    /* Dataframe/Table Styling - Match High Volume Stocks */
+    /* Dataframe/Table Styling - Modern Fintech */
     .dataframe, 
     .stDataFrame,
     [data-testid="stDataFrame"],
     table {
-        background: linear-gradient(135deg, rgba(26, 35, 126, 0.3) 0%, rgba(13, 27, 42, 0.5) 100%) !important;
-        border: 1px solid rgba(66, 165, 245, 0.3) !important;
-        border-radius: 8px !important;
+        background: linear-gradient(135deg, rgba(20, 28, 39, 0.8) 0%, rgba(15, 20, 25, 0.9) 100%) !important;
+        border: 1px solid rgba(0, 217, 255, 0.25) !important;
+        border-radius: 10px !important;
         overflow: hidden !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 20px rgba(66, 165, 245, 0.1) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 217, 255, 0.1) !important;
     }
     
     thead tr th,
     .dataframe thead tr th,
     [data-testid="stDataFrame"] thead tr th {
-        background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%) !important;
-        color: #42a5f5 !important;
-        font-weight: 600 !important;
-        border: 1px solid rgba(66, 165, 245, 0.3) !important;
+        background: linear-gradient(135deg, #141c27 0%, #1a1f2e 100%) !important;
+        color: #00D9FF !important;
+        font-weight: 700 !important;
+        border: 1px solid rgba(0, 217, 255, 0.3) !important;
         padding: 0.5rem !important;
         font-size: 0.875rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
     }
     
     tbody tr td,
     .dataframe tbody tr td,
     [data-testid="stDataFrame"] tbody tr td {
-        background-color: rgba(13, 27, 42, 0.4) !important;
+        background-color: rgba(20, 28, 39, 0.5) !important;
         color: #ffffff;
-        border: 1px solid rgba(66, 165, 245, 0.2) !important;
+        border: 1px solid rgba(0, 217, 255, 0.15) !important;
         padding: 0.5rem !important;
     }
     
     tbody tr:hover td,
     .dataframe tbody tr:hover td,
     [data-testid="stDataFrame"] tbody tr:hover td {
-        background: linear-gradient(135deg, rgba(26, 35, 126, 0.5) 0%, rgba(13, 71, 161, 0.3) 100%) !important;
+        background: linear-gradient(135deg, rgba(0, 217, 255, 0.15) 0%, rgba(0, 163, 204, 0.2) 100%) !important;
+        border-color: rgba(0, 217, 255, 0.4) !important;
     }
     
     tbody tr:nth-child(even) td {
-        background-color: rgba(13, 27, 42, 0.5) !important;
+        background-color: rgba(15, 20, 25, 0.6) !important;
     }
     .positive {
-        color: #00ff00 !important;
+        color: #00FFA3 !important;
         font-weight: bold;
     }
     .negative {
-        color: #ff4444 !important;
+        color: #FF6B6B !important;
         font-weight: bold;
     }
     
-    /* Sidebar Styling - Navy Blue Theme */
+    /* Sidebar Styling - Modern Fintech */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0d1b2a 0%, #1a237e 100%) !important;
-        border-right: 2px solid rgba(66, 165, 245, 0.3) !important;
+        background: linear-gradient(180deg, #0f1419 0%, #1a1f2e 100%) !important;
+        border-right: 2px solid rgba(0, 217, 255, 0.3) !important;
     }
     [data-testid="stSidebar"] > div:first-child {
         background: transparent !important;
@@ -690,12 +694,12 @@ CUSTOM_CSS = """
     }
     
     .gainer-item {
-        color: #00ff00;
+        color: #00FFA3;
         white-space: nowrap;
     }
     
     .loser-item {
-        color: #ff4444;
+        color: #FF6B6B;
         white-space: nowrap;
     }
     
@@ -727,15 +731,15 @@ CUSTOM_CSS = """
         font-size: 1rem !important;
     }
     
-    /* Rolling Ticker Styles - Navy Blue Theme */
+    /* Rolling Ticker Styles - Modern Fintech */
     .ticker-container {
-        background: linear-gradient(90deg, rgba(13, 27, 42, 0.8) 0%, rgba(26, 35, 126, 0.6) 50%, rgba(13, 27, 42, 0.8) 100%);
-        border: 1px solid rgba(66, 165, 245, 0.3);
-        border-radius: 8px;
+        background: linear-gradient(90deg, rgba(15, 20, 25, 0.9) 0%, rgba(20, 28, 39, 0.7) 50%, rgba(15, 20, 25, 0.9) 100%);
+        border: 1px solid rgba(0, 217, 255, 0.3);
+        border-radius: 10px;
         padding: 8px 0;
         margin: 0 0 15px 0;
         overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 20px rgba(66, 165, 245, 0.1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 25px rgba(0, 217, 255, 0.15);
         width: 100%;
         position: relative;
     }
@@ -752,22 +756,24 @@ CUSTOM_CSS = """
         align-items: center;
         margin: 0 30px;
         padding: 6px 18px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 6px;
-        border-left: 3px solid #00d4ff;
+        background: rgba(0, 217, 255, 0.08);
+        border-radius: 8px;
+        border-left: 3px solid #00D9FF;
         transition: all 0.3s ease;
         min-height: 32px;
     }
     
     .ticker-item:hover {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(0, 255, 163, 0.12);
+        border-left-color: #00FFA3;
         transform: scale(1.05);
+        box-shadow: 0 2px 8px rgba(0, 217, 255, 0.3);
     }
     
     .ticker-symbol {
         font-weight: bold;
         font-size: 0.938rem;
-        color: #00d4ff;
+        color: #00D9FF;
         margin-right: 8px;
         line-height: 1.5;
     }
@@ -781,14 +787,14 @@ CUSTOM_CSS = """
     
     .ticker-change-positive {
         font-size: 0.875rem;
-        color: #00ff00;
+        color: #00FFA3;
         font-weight: bold;
         line-height: 1.5;
     }
     
     .ticker-change-negative {
         font-size: 0.875rem;
-        color: #ff4444;
+        color: #FF6B6B;
         font-weight: bold;
         line-height: 1.5;
     }
@@ -878,21 +884,21 @@ CUSTOM_CSS = """
 # Metric styling CSS - Beautiful box design for indices
 METRIC_CSS = """
 <style>
-    /* Beautiful box styling for metrics - Navy Blue Theme - Compact */
+    /* Beautiful box styling for metrics - Modern Fintech Theme - Compact */
     [data-testid="stMetric"] {
-        background: linear-gradient(135deg, rgba(26, 35, 126, 0.3) 0%, rgba(13, 27, 42, 0.5) 100%) !important;
-        border: 1px solid rgba(66, 165, 245, 0.3) !important;
-        border-radius: 8px !important;
+        background: linear-gradient(135deg, rgba(20, 28, 39, 0.8) 0%, rgba(15, 20, 25, 0.9) 100%) !important;
+        border: 1px solid rgba(0, 217, 255, 0.25) !important;
+        border-radius: 10px !important;
         padding: 0.5rem 0.75rem !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 15px rgba(66, 165, 245, 0.08) !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 217, 255, 0.1) !important;
         transition: all 0.3s ease !important;
     }
     
     [data-testid="stMetric"]:hover {
-        background: linear-gradient(135deg, rgba(26, 35, 126, 0.5) 0%, rgba(13, 71, 161, 0.3) 100%) !important;
-        border-color: rgba(66, 165, 245, 0.6) !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 20px rgba(66, 165, 245, 0.15) !important;
+        background: linear-gradient(135deg, rgba(0, 217, 255, 0.15) 0%, rgba(0, 163, 204, 0.2) 100%) !important;
+        border-color: rgba(0, 217, 255, 0.5) !important;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 217, 255, 0.25) !important;
     }
     
     [data-testid="stMetricLabel"] { 
@@ -925,26 +931,26 @@ METRIC_CSS = """
         white-space: nowrap !important;
     }
     
-    /* Positive change - green box */
+    /* Positive change - mint green box */
     [data-testid="stMetricDelta"]:has(svg[data-testid="stMetricDeltaIcon-Up"]) { 
-        color: #00ff00 !important;
-        background-color: rgba(0, 255, 0, 0.15) !important;
-        border: 1px solid rgba(0, 255, 0, 0.3) !important;
+        color: #00FFA3 !important;
+        background-color: rgba(0, 255, 163, 0.15) !important;
+        border: 1px solid rgba(0, 255, 163, 0.35) !important;
     }
     
     [data-testid="stMetricDelta"] svg[data-testid="stMetricDeltaIcon-Up"] { 
-        fill: #00ff00 !important; 
+        fill: #00FFA3 !important; 
     }
     
-    /* Negative change - red box */
+    /* Negative change - coral red box */
     [data-testid="stMetricDelta"]:has(svg[data-testid="stMetricDeltaIcon-Down"]) { 
-        color: #ff4444 !important;
-        background-color: rgba(255, 68, 68, 0.15) !important;
-        border: 1px solid rgba(255, 68, 68, 0.3) !important;
+        color: #FF6B6B !important;
+        background-color: rgba(255, 107, 107, 0.15) !important;
+        border: 1px solid rgba(255, 107, 107, 0.35) !important;
     }
     
     [data-testid="stMetricDelta"] svg[data-testid="stMetricDeltaIcon-Down"] { 
-        fill: #ff4444 !important; 
+        fill: #FF6B6B !important; 
     }
 </style>
 

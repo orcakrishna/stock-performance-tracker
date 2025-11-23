@@ -4,6 +4,7 @@ Handles saving, loading, listing, and deleting custom stock lists.
 """
 
 import os
+from typing import List, Optional, Dict
 import pandas as pd
 from config import SAVED_LISTS_DIR
 
@@ -17,7 +18,7 @@ def ensure_saved_lists_dir() -> None:
             f.write("")
 
 
-def save_list_to_csv(list_name: str, stocks: list[str]) -> bool:
+def save_list_to_csv(list_name: str, stocks: List[str]) -> bool:
     """Save a stock list to CSV. Returns True if successful."""
     try:
         ensure_saved_lists_dir()
@@ -29,7 +30,7 @@ def save_list_to_csv(list_name: str, stocks: list[str]) -> bool:
         return False
 
 
-def load_list_from_csv(list_name: str) -> list[str] | None:
+def load_list_from_csv(list_name: str) -> Optional[List[str]]:
     """Load a stock list from CSV. Returns list of symbols or None."""
     filename = os.path.join(SAVED_LISTS_DIR, f"{list_name}.csv")
     if not os.path.exists(filename):
@@ -56,7 +57,7 @@ def delete_list_csv(list_name: str) -> bool:
     return False
 
 
-def load_all_saved_lists() -> dict[str, list[str]]:
+def load_all_saved_lists() -> Dict[str, List[str]]:
     """Load all saved stock lists from directory."""
     ensure_saved_lists_dir()
     saved_lists = {}
