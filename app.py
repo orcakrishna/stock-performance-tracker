@@ -110,13 +110,19 @@ def init_session_state():
         "search_query": "",
         "search_version": 0,
         "last_updated_ts": None,
-        "pending_upload": None,
         # Use a nonce string for rerun trigger to avoid race-condition toggles
         "trigger_rerun_nonce": None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
+
+# -------------------- Helper Functions --------------------
+def reset_search_and_pagination():
+    """Helper to reset search and pagination state - DRY principle"""
+    st.session_state.current_page = 1
+    st.session_state.search_query = ""
+    st.session_state.search_version += 1
 
 # -------------------- Cache Helpers --------------------
 def make_list_key(stocks):
@@ -171,10 +177,7 @@ def render_stock_selection_sidebar():
             st.session_state.current_list_source = None
             st.session_state.cached_stocks_data = None
             st.session_state.cached_stocks_list_key = None
-            st.session_state.current_page = 1
-            st.session_state.search_query = ""
-            st.session_state.search_version += 1
-            st.session_state.pending_upload = None
+            reset_search_and_pagination()
 
     category = st.sidebar.selectbox(
         "Select Category",
@@ -200,9 +203,7 @@ def _render_disk_and_session_lists():
                 if st.button(f"{name} ({len(stocks)})", key=f"disk_{name}"):
                     st.session_state.current_list_name = name
                     st.session_state.current_list_source = "disk"
-                    st.session_state.search_query = ""
-                    st.session_state.current_page = 1
-                    st.session_state.pending_upload = None
+                    reset_search_and_pagination()
                     st.session_state.cached_stocks_data = None
                     st.session_state.cached_stocks_list_key = None
             with c2:
@@ -229,9 +230,7 @@ def _render_disk_and_session_lists():
                 if st.button(f"{name} ({len(stocks)})", key=f"sess_{name}"):
                     st.session_state.current_list_name = name
                     st.session_state.current_list_source = "session"
-                    st.session_state.search_query = ""
-                    st.session_state.current_page = 1
-                    st.session_state.pending_upload = None
+                    reset_search_and_pagination()
                     st.session_state.cached_stocks_data = None
                     st.session_state.cached_stocks_list_key = None
             with c2:
@@ -290,13 +289,15 @@ def handle_file_upload():
         source = "disk" if st.session_state.current_list_source == "disk" else "session"
         lst = st.session_state.disk_lists if source == "disk" else st.session_state.saved_lists
         count = len(lst.get(st.session_state.current_list_name, []))
-        st.sidebar.success(f"**Active → {st.session_state.current_list_name}** ({count} stocks)")
+        # SECURITY FIX: Sanitize list name to prevent XSS
+        safe_list_name = sanitize_html(st.session_state.current_list_name)
+        st.sidebar.success(f"**Active → {safe_list_name}** ({count} stocks)")
 
     # Upload New List
     st.sidebar.markdown("**Upload New List**")
     uploaded_file = st.sidebar.file_uploader("TXT/CSV file with symbols", type=["txt", "csv"], key="uploader", accept_multiple_files=False, help="Upload a file with stock symbols (max 5MB)")
 
-    if uploaded_file and not st.session_state.pending_upload:
+    if uploaded_file:
         MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
         file_size = uploaded_file.size
         if file_size > MAX_FILE_SIZE:
@@ -342,9 +343,7 @@ def handle_file_upload():
                 st.session_state.saved_lists[name] = validated
                 st.session_state.current_list_name = name
                 st.session_state.current_list_source = "session"
-                st.session_state.search_query = ""
-                st.session_state.search_version += 1
-                st.session_state.pending_upload = None
+                reset_search_and_pagination()
                 st.session_state.cached_stocks_data = None
                 st.session_state.cached_stocks_list_key = None
 
@@ -362,8 +361,6 @@ def handle_file_upload():
                 # Only one safe rerun at the end
                 trigger_rerun()
 
-        st.session_state.pending_upload = {"name": name, "stocks": validated, "invalid": invalid}
-
     # Return active list
     if st.session_state.current_list_name:
         source = st.session_state.current_list_source or "session"
@@ -380,13 +377,16 @@ def fetch_stocks_data(selected_stocks, use_parallel, use_cache=True, status=None
     # Prefer bulk when available and large lists
     if len(selected_stocks) > 100 and "fetch_stocks_bulk" in globals():
         try:
-            return fetch_stocks_bulk(selected_stocks, max_workers=8, use_cache=use_cache, status_placeholder=status)
+            # CONSISTENCY FIX: Use same worker logic as individual fetch
+            bulk_workers = min(8, max(1, len(selected_stocks) // 20))
+            return fetch_stocks_bulk(selected_stocks, max_workers=bulk_workers, use_cache=use_cache, status_placeholder=status)
         except Exception as e:
             logger.exception("Bulk fetch failed: %s", e)
             # fall through to threaded fetch
 
     # SECURITY FIX: Reduced max workers to prevent memory issues and rate limiting
-    max_workers = min(4, max(1, len(selected_stocks) // 10))
+    # Aligned with bulk mode for consistency
+    max_workers = min(4, max(1, len(selected_stocks) // 20))
     data = []
 
     if use_parallel and max_workers > 1:
@@ -599,6 +599,12 @@ def main():
     apply_screenshot_protection()
 
     init_session_state()
+    
+    # CRITICAL FIX: Check nonce FIRST to prevent race conditions
+    # Move this to top before any other UI operations
+    if st.session_state.trigger_rerun_nonce:
+        st.session_state.trigger_rerun_nonce = None
+        st.rerun()
 
     # Render header first (fast - uses cached data)
     render_header()
@@ -716,11 +722,7 @@ def main():
 
     render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order)
 
-    # Final safe rerun trigger check
-    if st.session_state.trigger_rerun_nonce:
-        # consume the nonce and rerun exactly once
-        st.session_state.trigger_rerun_nonce = None
-        st.rerun()
+    # Nonce check moved to top of main() to prevent race conditions
 
 
 if __name__ == "__main__":

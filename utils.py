@@ -273,6 +273,7 @@ def create_sparkline_svg(sparkline_data, today_change, stock_symbol, width=80, h
 
 def create_html_table(df_page):
     """Create HTML table with colored percentage values and mini charts"""
+    import html as html_lib
     
     html_table = ''
     html_table += '''<div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
@@ -282,7 +283,9 @@ def create_html_table(df_page):
     # Add "Chart" column header after "Stock Name"
     for col in df_page.columns:
         if col != 'sparkline_data':  # Skip the raw data column
-            html_table += f'<th style="padding: 12px; text-align: left; border: 1px solid #555; color: #ffffff; font-weight: bold; font-size: 14px;">{col}</th>'
+            # SECURITY FIX: Escape column names to prevent XSS
+            safe_col = html_lib.escape(str(col))
+            html_table += f'<th style="padding: 12px; text-align: left; border: 1px solid #555; color: #ffffff; font-weight: bold; font-size: 14px;">{safe_col}</th>'
             if col == 'Stock Name':
                 html_table += '<th style="padding: 12px; text-align: center; border: 1px solid #555; color: #ffffff; font-weight: bold; font-size: 14px;">Chart</th>'
     
@@ -301,10 +304,13 @@ def create_html_table(df_page):
             value = row[col]
             
             if col in ['Today %', '1 Week %', '1 Month %', '2 Months %', '3 Months %']:
+                # colored_value already includes HTML, so it's safe (trusted internal function)
                 colored_value = color_percentage(value)
                 html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff; font-size: 14px;">{colored_value}</td>'
             else:
-                html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff; font-size: 14px;">{value}</td>'
+                # SECURITY FIX: Escape all other cell values to prevent XSS
+                safe_value = html_lib.escape(str(value))
+                html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #ffffff; font-size: 14px;">{safe_value}</td>'
             
             # Add sparkline cell after Stock Name
             if col == 'Stock Name':
