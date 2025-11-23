@@ -589,7 +589,7 @@ def main():
                 fii_dii_text = f"<span style='color: #888; font-size: 0.85rem;'>FII/DII: {fii_dii_source}</span>"
 
             st.markdown(
-                f"""<div style='display: flex; justify-content: space-between; align-items: center; margin: -10px 0 15px 0; padding: 8px;'>
+                f"""<div style='display: flex; justify-content: space-between; align-items: center; margin: -10px 0 8px 0; padding: 8px;'>
                     <div style='flex: 1; text-align: left;'>
                         <span style='color: #ffffff; font-size: 1.35rem; font-weight: 600;'>📈 Market Indices - Today's Performance</span>
                     </div>
@@ -607,7 +607,7 @@ def main():
             )
         else:
             st.markdown(
-                """<div style='margin: -10px 0 15px 0; padding: 8px;'>
+                """<div style='margin: -10px 0 8px 0; padding: 8px;'>
                     <span style='color: #ffffff; font-size: 1.35rem; font-weight: 600;'>📈 Market Indices - Today's Performance</span>
                 </div>""",
                 unsafe_allow_html=True

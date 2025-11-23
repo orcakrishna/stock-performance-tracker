@@ -373,13 +373,13 @@ def render_market_indices():
                 st.metric(label=name, value="--", delta="--")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Row 2: Sectoral Indices - Reduced spacing
-    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+    # Row 2: Sectoral Indices - Ultra compact spacing
+    st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
     st.markdown(
         "### <span style='color: #ffffff; font-weight: 600;'>Sectoral Indices:</span>",
         unsafe_allow_html=True,
     )
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
 
     st.markdown('<div class="metric-row">', unsafe_allow_html=True)
     cols2 = st.columns(len(INDICES_ROW2))
@@ -998,7 +998,8 @@ def fetch_sectoral_yearly_data():
 def render_sectoral_yearly_performance():
     """Render comprehensive sectoral indices 1-year performance"""
     
-    st.markdown("---")
+    # Minimal spacing - compact divider
+    st.markdown("<hr style='margin: 8px 0 5px 0; border: 1px solid rgba(255, 255, 255, 0.1);'>", unsafe_allow_html=True)
     st.subheader("📊 Sectoral Indices - 1 Year Performance")
     st.caption("Annual performance comparison across all major sectors")
     
