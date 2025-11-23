@@ -413,7 +413,7 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
     current_name = st.session_state.current_list_name or category or "Selected Stocks"
     title = f"{current_name} - Performance Summary ({len(stocks_data)} stocks)"
     with title_ph.container():
-        # Add compact CSS for smaller search input
+        # Add compact CSS for smaller search input with sectoral card border color
         st.markdown("""
         <style>
         div[data-testid="stTextInput"] > div > div > input {
@@ -421,6 +421,11 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
             min-height: 32px !important;
             padding: 4px 10px !important;
             font-size: 0.85rem !important;
+            border: 1px solid rgba(66, 165, 245, 0.3) !important;
+        }
+        div[data-testid="stTextInput"] > div > div > input:focus {
+            border: 1px solid rgba(66, 165, 245, 0.6) !important;
+            outline: none !important;
         }
         </style>
         """, unsafe_allow_html=True)
