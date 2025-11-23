@@ -413,25 +413,41 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
     current_name = st.session_state.current_list_name or category or "Selected Stocks"
     title = f"{current_name} - Performance Summary ({len(stocks_data)} stocks)"
     with title_ph.container():
-        st.markdown(f"<h3 style='color:white; margin:0;'>{title}</h3>", unsafe_allow_html=True)
-
-    with search_ph.container():
-        col1, col2 = st.columns([3.5, 1])
-        with col1:
+        # Add compact CSS for smaller search input
+        st.markdown("""
+        <style>
+        div[data-testid="stTextInput"] > div > div > input {
+            height: 32px !important;
+            min-height: 32px !important;
+            padding: 4px 10px !important;
+            font-size: 0.85rem !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        col_title, col_search, col_clear = st.columns([3.2, 1.5, 0.3])
+        
+        with col_title:
+            # Title - left aligned
+            st.markdown(f"<h3 style='color:white; margin:0; padding-top:4px;'>{title}</h3>", unsafe_allow_html=True)
+        
+        with col_search:
             search_key = f"search_v{st.session_state.search_version}"
             new_query = st.text_input(
                 "Search stocks (name or symbol)",
                 value=st.session_state.search_query,
-                placeholder="e.g. Reliance, TCS",
+                placeholder="🔍 Search your favourite stocks like HDFC Bank, Reliance etc",
                 key=search_key,
                 label_visibility="collapsed",
-                help="Case-insensitive"
+                help="Case-insensitive search"
             )
             if new_query != st.session_state.search_query:
                 st.session_state.search_query = new_query.strip()
                 st.session_state.current_page = 1
-
-        with col2:
+        
+        with col_clear:
+            # Reduced vertical spacing
+            st.markdown("<div style='height:4px;'></div>", unsafe_allow_html=True)
             if st.session_state.search_query.strip() and st.button("Clear", key="clear_search"):
                 # Use immediate st.rerun() for user actions (not deferred trigger)
                 st.session_state.search_query = ""
