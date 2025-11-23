@@ -50,6 +50,7 @@ from ui_components import (
 )
 from utils import create_html_table
 from screenshot_protection import apply_screenshot_protection
+from security_fixes import secure_password_compare, LoginRateLimiter, sanitize_html, sanitize_dataframe_for_csv
 
 # -------------------- Logging --------------------
 logger = logging.getLogger("nse_tracker")
@@ -244,18 +245,34 @@ def handle_file_upload():
     st.sidebar.markdown("---")
     st.sidebar.markdown("<p style='color: #ff4444; font-weight: 600;'>Manage Stock Lists</p>", unsafe_allow_html=True)
 
-    # Admin Login
+    # Admin Login with rate limiting
     if ADMIN_PASSWORD and not st.session_state.admin_authenticated:
         with st.sidebar.expander("Admin Login", expanded=False):
-            pwd = st.text_input("Password", type="password", key="admin_pass_input")
-            if st.button("Login", key="admin_login_btn"):
-                if pwd == ADMIN_PASSWORD:
-                    st.session_state.admin_authenticated = True
-                    st.session_state.admin_mode = True
-                    st.success("Admin access granted!")
-                    trigger_rerun()
-                else:
-                    st.error("Incorrect password")
+            limiter = LoginRateLimiter(max_attempts=5, lockout_minutes=15)
+            
+            # Check lockout status
+            is_locked, remaining_mins = limiter.is_locked_out()
+            if is_locked:
+                st.error(f"🔒 Too many failed attempts. Try again in {remaining_mins} minutes.")
+            else:
+                pwd = st.text_input("Password", type="password", key="admin_pass_input")
+                remaining = limiter.get_remaining_attempts()
+                if remaining < 5:
+                    st.warning(f"⚠️ {remaining} attempts remaining before lockout")
+                
+                if st.button("Login", key="admin_login_btn"):
+                    # Use timing-safe comparison
+                    if secure_password_compare(pwd, ADMIN_PASSWORD):
+                        limiter.reset()
+                        st.session_state.admin_authenticated = True
+                        st.session_state.admin_mode = True
+                        st.success("Admin access granted!")
+                        trigger_rerun()
+                    else:
+                        if limiter.record_failure():
+                            st.error("🔒 Account locked for 15 minutes due to failed attempts")
+                        else:
+                            st.error("Incorrect password")
 
     if st.session_state.admin_authenticated:
         st.sidebar.markdown("**Admin Mode Active**")
@@ -368,7 +385,8 @@ def fetch_stocks_data(selected_stocks, use_parallel, use_cache=True, status=None
             logger.exception("Bulk fetch failed: %s", e)
             # fall through to threaded fetch
 
-    max_workers = min(12, max(1, len(selected_stocks) // 5))
+    # SECURITY FIX: Reduced max workers to prevent memory issues and rate limiting
+    max_workers = min(4, max(1, len(selected_stocks) // 10))
     data = []
 
     if use_parallel and max_workers > 1:
@@ -412,7 +430,9 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
     sect_ph = st.empty()
 
     current_name = st.session_state.current_list_name or category or "Selected Stocks"
-    title = f"{current_name} - Performance Summary ({len(stocks_data)} stocks)"
+    # SECURITY FIX: Sanitize user-provided list name to prevent XSS
+    safe_current_name = sanitize_html(current_name)
+    title = f"{safe_current_name} - Performance Summary ({len(stocks_data)} stocks)"
     with title_ph.container():
         # Add compact CSS for smaller search input with sectoral card border color
         st.markdown("""
@@ -487,7 +507,9 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
 
         with message_ph.container():
             if filtered_df.empty:
-                st.warning(f"No matches for '**{st.session_state.search_query}**'. Showing all.")
+                # SECURITY FIX: Sanitize search query display
+                safe_query = sanitize_html(st.session_state.search_query)
+                st.warning(f"No matches for '**{safe_query}**'. Showing all.")
             else:
                 st.success(f"Found **{len(filtered_df)}** match(es)")
 
@@ -500,7 +522,9 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
         """Fragment that only reruns when pagination changes, not the entire app"""
         # Prepare CSV export data (remove Ticker and sparkline_data columns)
         export_df = filtered_df.drop(columns=["Ticker", "sparkline_data"], errors="ignore")
-        csv_data = export_df.to_csv(index=False).encode('utf-8')
+        # SECURITY FIX: Prevent CSV formula injection
+        safe_df = sanitize_dataframe_for_csv(export_df)
+        csv_data = safe_df.to_csv(index=False).encode('utf-8')
         
         # Create filename based on current list/category
         download_name = st.session_state.current_list_name or category or "stock_data"
@@ -584,10 +608,18 @@ def main():
     ticker_placeholder = st.empty()
     heading_placeholder = st.empty()
 
+    # Show loading message for gainer/loser banner
+    with banner_placeholder.container():
+        st.info("⏳ Loading market movers and FII/DII data...")
+    
     # Load gainer/loser banner (can be slow due to FII/DII API)
     with banner_placeholder.container():
         fii_dii_source = render_gainer_loser_banner()
 
+    # Show loading message for ticker
+    with ticker_placeholder.container():
+        st.info("⏳ Loading live ticker with 50 stocks...")
+    
     # Load ticker (can be slow - 50 stocks)
     with ticker_placeholder.container():
         stock_count, advances, declines = render_live_ticker()
@@ -625,7 +657,11 @@ def main():
             )
 
     # Render Market Indices IMMEDIATELY (before slow stock data loading)
-    render_market_indices()
+    indices_placeholder = st.empty()
+    with indices_placeholder.container():
+        st.info("⏳ Loading market indices data...")
+    with indices_placeholder.container():
+        render_market_indices()
 
     category = render_stock_selection_sidebar()
 
