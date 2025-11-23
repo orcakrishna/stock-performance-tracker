@@ -373,8 +373,8 @@ def render_market_indices():
                 st.metric(label=name, value="--", delta="--")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Row 2: Sectoral Indices
-    st.markdown("<br>", unsafe_allow_html=True)
+    # Row 2: Sectoral Indices - Reduced spacing
+    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
     st.markdown(
         "### <span style='color: #ffffff; font-weight: 600;'>Sectoral Indices:</span>",
         unsafe_allow_html=True,
@@ -873,7 +873,7 @@ def render_pagination_controls(total_items, items_per_page, position="top", csv_
         # CSV Download button (if data provided)
         if csv_data and csv_filename:
             st.download_button(
-                label="📥 CSV",
+                label="📥 Download CSV",
                 data=csv_data,
                 file_name=csv_filename,
                 mime="text/csv",
