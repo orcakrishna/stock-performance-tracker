@@ -10,17 +10,27 @@ import pandas as pd
 import yfinance as yf
 from data_fetchers import get_stock_list
 
+# Color constants for consistency
+COLOR_GREEN = '#00FFA3'  # Mint green for gains
+COLOR_RED = '#FF6B6B'    # Coral red for losses
+COLOR_NEUTRAL = '#ffffff'
+COLOR_WARNING = '#ffa500'
+
+# Market timing constants (IST, in minutes)
+PRE_OPEN_START = 9 * 60      # 9:00 AM
+MARKET_OPEN = 9 * 60 + 15     # 9:15 AM
+MARKET_CLOSE = 15 * 60 + 30   # 3:30 PM
 
 def color_percentage(val):
     """Color code percentage values for HTML display"""
     try:
         num_val = float(val)
         if num_val > 0:
-            return f'<span style="color: #00ff00; font-weight: bold;">+{num_val}%</span>'
+            return f'<span style="color: {COLOR_GREEN}; font-weight: bold;">+{num_val}%</span>'
         elif num_val < 0:
-            return f'<span style="color: #ff4444; font-weight: bold;">{num_val}%</span>'
+            return f'<span style="color: {COLOR_RED}; font-weight: bold;">{num_val}%</span>'
         else:
-            return f'<span style="color: #ffffff;">{num_val}%</span>'
+            return f'<span style="color: {COLOR_NEUTRAL};">{num_val}%</span>'
     except:
         return val
 
@@ -45,25 +55,21 @@ def get_market_session_status():
     # Check if weekend
     weekday = current_time.weekday()  # 0 = Monday, 6 = Sunday
     if weekday >= 5:  # Saturday or Sunday
-        return "🔴 Market Closed (Weekend)", "#ff4444"
+        return "🔴 Market Closed (Weekend)", COLOR_RED
     
     current_hour = current_time.hour
     current_minute = current_time.minute
     current_time_mins = current_hour * 60 + current_minute
     
-    # Market timings (IST)
-    pre_open_start = 9 * 60 + 0  # 9:00 AM
-    market_open = 9 * 60 + 15    # 9:15 AM
-    market_close = 15 * 60 + 30  # 3:30 PM
-    
-    if current_time_mins < pre_open_start:
-        return "🔴 Market Closed", "#ff4444"
-    elif pre_open_start <= current_time_mins < market_open:
-        return "🟡 Pre-Open Session", "#ffa500"
-    elif market_open <= current_time_mins < market_close:
-        return "🟢 Market Open (Live)", "#00ff00"
+    # Use constants for market timings
+    if current_time_mins < PRE_OPEN_START:
+        return "🔴 Market Closed", COLOR_RED
+    elif PRE_OPEN_START <= current_time_mins < MARKET_OPEN:
+        return "🟡 Pre-Open Session", COLOR_WARNING
+    elif MARKET_OPEN <= current_time_mins < MARKET_CLOSE:
+        return "🟢 Market Open (Live)", COLOR_GREEN
     else:
-        return "🔴 Market Closed", "#ff4444"
+        return "🔴 Market Closed", COLOR_RED
 
 
 def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=None):
@@ -71,57 +77,66 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     # Determine USD/INR color based on change
     usd_inr_change = commodities_prices.get('usd_inr_change', 0)
     if usd_inr_change > 0:
-        usd_inr_color = '#ff4444'  # Red - INR weakened
+        usd_inr_color = COLOR_RED  # Red - INR weakened
     elif usd_inr_change < 0:
-        usd_inr_color = '#00ff00'  # Green - INR strengthened
+        usd_inr_color = COLOR_GREEN  # Green - INR strengthened
     else:
-        usd_inr_color = '#95e1d3'  # Neutral
+        usd_inr_color = COLOR_NEUTRAL  # Neutral
     
     # Get commodity data with defaults
     oil_price = commodities_prices.get('oil', '--')
     oil_change = commodities_prices.get('oil_change', 0)
     oil_arrow = '▲' if oil_change >= 0 else '▼'
-    oil_color = '#00ff00' if oil_change >= 0 else '#ff4444'
+    oil_color = COLOR_GREEN if oil_change >= 0 else COLOR_RED
     oil_change_display = f"{oil_arrow} {abs(oil_change):.2f}%" if oil_change != 0 else '-'
     
     eth_price = commodities_prices.get('ethereum', '--')
     eth_change = commodities_prices.get('ethereum_change', 0)
     eth_arrow = '▲' if eth_change >= 0 else '▼'
-    eth_color = '#00ff00' if eth_change >= 0 else '#ff4444'
+    eth_color = COLOR_GREEN if eth_change >= 0 else COLOR_RED
     eth_change_display = f"{eth_arrow} {abs(eth_change):.2f}%" if eth_change != 0 else '-'
     
     btc_price = commodities_prices.get('btc', '--')
     btc_change = commodities_prices.get('btc_change', 0)
     btc_arrow = '▲' if btc_change >= 0 else '▼'
-    btc_color = '#00ff00' if btc_change >= 0 else '#ff4444'
+    btc_color = COLOR_GREEN if btc_change >= 0 else COLOR_RED
     btc_change_display = f"{btc_arrow} {abs(btc_change):.2f}%" if btc_change != 0 else '-'
     
     gold_price = commodities_prices.get('gold', '--')
     gold_inr = commodities_prices.get('gold_inr', '--')
     gold_change = commodities_prices.get('gold_change', 0)
     gold_arrow = '▲' if gold_change >= 0 else '▼'
-    gold_color = '#00ff00' if gold_change >= 0 else '#ff4444'
+    gold_color = COLOR_GREEN if gold_change >= 0 else COLOR_RED
     gold_change_display = f"{gold_arrow} {abs(gold_change):.2f}%" if gold_change != 0 else '-'
     
     silver_price = commodities_prices.get('silver', '--')
     silver_inr = commodities_prices.get('silver_inr', '--')
     silver_change = commodities_prices.get('silver_change', 0)
     silver_arrow = '▲' if silver_change >= 0 else '▼'
-    silver_color = '#00ff00' if silver_change >= 0 else '#ff4444'
+    silver_color = COLOR_GREEN if silver_change >= 0 else COLOR_RED
     silver_change_display = f"{silver_arrow} {abs(silver_change):.2f}%" if silver_change != 0 else '-'
     
     usd_inr = commodities_prices.get('usd_inr', '--')
     usd_inr_change_raw = commodities_prices.get('usd_inr_change', 0)
     
-    # Calculate USD/INR today's percentage change
+    # CRITICAL FIX: Calculate USD/INR today's percentage change correctly
+    # usd_inr_change_raw is absolute change (e.g., +0.90)
+    # Formula: (change / previous_value) * 100
     if usd_inr_change_raw != 0 and usd_inr != '--':
         try:
             current_value = float(usd_inr.replace('₹', ''))
-            usd_inr_change_pct = (usd_inr_change_raw / (current_value - usd_inr_change_raw)) * 100
-            usd_inr_arrow = '▲' if usd_inr_change_pct >= 0 else '▼'
-            usd_inr_today_color = '#ff4444' if usd_inr_change_pct >= 0 else '#00ff00'  # Red=INR weakened, Green=INR strengthened
-            usd_inr_today_display = f"<span style='color: {usd_inr_today_color}; font-weight: bold;'>{usd_inr_arrow} {abs(usd_inr_change_pct):.2f}%</span>"
-        except:
+            previous_value = current_value - usd_inr_change_raw
+            
+            if previous_value > 0:
+                usd_inr_change_pct = (usd_inr_change_raw / previous_value) * 100
+                usd_inr_arrow = '▲' if usd_inr_change_pct >= 0 else '▼'
+                # Red=INR weakened (USD up), Green=INR strengthened (USD down)
+                usd_inr_today_color = COLOR_RED if usd_inr_change_pct >= 0 else COLOR_GREEN
+                usd_inr_today_display = f"<span style='color: {usd_inr_today_color}; font-weight: bold;'>{usd_inr_arrow} {abs(usd_inr_change_pct):.2f}%</span>"
+            else:
+                usd_inr_today_display = '-'
+        except Exception as e:
+            print(f"Error calculating USD/INR change: {e}")
             usd_inr_today_display = '-'
     else:
         usd_inr_today_display = '-'
@@ -143,7 +158,7 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
     def week_change_html(week_change):
         if week_change == 0:
             return '-'
-        color = '#00ff00' if week_change >= 0 else '#ff4444'
+        color = COLOR_GREEN if week_change >= 0 else COLOR_RED
         triangle = '▲' if week_change >= 0 else '▼'
         return f"<span style='color: {color}; font-weight: bold;'>{triangle} {abs(week_change):.2f}%</span>"
     
@@ -206,15 +221,27 @@ def format_time_display(ist_time, edt_time, commodities_prices, next_holiday=Non
 
 
 def create_sparkline_svg(sparkline_data, today_change, stock_symbol, width=80, height=30):
-    """Create an SVG sparkline from normalized data with color based on today's performance"""
+    """Create an SVG sparkline from price data with auto-normalization and color based on today's performance"""
     if not sparkline_data or len(sparkline_data) < 2:
         return ""
     
+    # CRITICAL FIX: Normalize data to 0-100 range
+    min_val = min(sparkline_data)
+    max_val = max(sparkline_data)
+    range_val = max_val - min_val
+    
+    if range_val == 0:
+        # Flat line - all values same
+        normalized = [50] * len(sparkline_data)
+    else:
+        # Normalize to 0-100
+        normalized = [(val - min_val) / range_val * 100 for val in sparkline_data]
+    
     # Create SVG path
     points = []
-    step = width / (len(sparkline_data) - 1)
+    step = width / (len(normalized) - 1)
     
-    for i, value in enumerate(sparkline_data):
+    for i, value in enumerate(normalized):
         x = i * step
         # Invert Y axis (SVG coordinates start from top)
         y = height - (value / 100 * height)
@@ -225,10 +252,10 @@ def create_sparkline_svg(sparkline_data, today_change, stock_symbol, width=80, h
     # Determine color based on today's performance (Today % column)
     try:
         today_pct = float(today_change)
-        color = "#00ff00" if today_pct >= 0 else "#ff4444"
+        color = COLOR_GREEN if today_pct >= 0 else COLOR_RED
     except:
         # Fallback to trend-based color if today_change is invalid
-        color = "#00ff00" if sparkline_data[-1] >= sparkline_data[0] else "#ff4444"
+        color = COLOR_GREEN if sparkline_data[-1] >= sparkline_data[0] else COLOR_RED
     
     # Create clickable SVG with direct link
     tradingview_url = f"https://www.tradingview.com/chart/?symbol=NSE:{stock_symbol}"
@@ -306,11 +333,8 @@ def _is_market_open():
     current_minute = current_time.minute
     current_time_mins = current_hour * 60 + current_minute
     
-    # Market timings (IST): 9:15 AM to 3:30 PM
-    market_open = 9 * 60 + 15
-    market_close = 15 * 60 + 30
-    
-    return market_open <= current_time_mins < market_close
+    # Market timings (IST): use constants
+    return MARKET_OPEN <= current_time_mins < MARKET_CLOSE
 
 
 @st.cache_data(ttl=3600, show_spinner=False)  # Default 1-hour cache for closed market
