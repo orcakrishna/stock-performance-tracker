@@ -24,6 +24,7 @@ except Exception:
 
 warnings.filterwarnings("ignore")
 
+
 # -------------------- Local modules --------------------
 from config import CUSTOM_CSS, ITEMS_PER_PAGE
 from data_fetchers import (
@@ -416,6 +417,10 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
         # Add compact CSS for smaller search input with sectoral card border color
         st.markdown("""
         <style>
+        /* Target the outer container of the text input */
+        div[data-testid="stTextInput"] {
+        width: 500px !important;      /* adjust this (overall rectangle length) */
+    }
         div[data-testid="stTextInput"] > div > div > input {
             height: 32px !important;
             min-height: 32px !important;
@@ -430,7 +435,7 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
         </style>
         """, unsafe_allow_html=True)
         
-        col_title, col_search, col_clear = st.columns([3.0, 1.5, 0.5])
+        col_title, col_search, col_clear = st.columns([1.25, 1.75, 0.5])
         
         with col_title:
             # Title - left aligned

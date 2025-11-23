@@ -374,12 +374,16 @@ def render_market_indices():
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Row 2: Sectoral Indices - Ultra compact spacing
-    st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
     st.markdown(
-        "### <span style='color: #ffffff; font-weight: 600;'>Sectoral Indices:</span>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
+        """
+    <div style='margin-top:-15px;'>
+        <h3 style='color:#ffffff; font-weight:600; margin:0 0 5px 0;'>
+            Sectoral Indices:
+        </h3>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
     st.markdown('<div class="metric-row">', unsafe_allow_html=True)
     cols2 = st.columns(len(INDICES_ROW2))
@@ -469,6 +473,7 @@ def render_gainer_loser_banner():
         return
     
     # Find top gainer and loser
+    st.markdown("<br>", unsafe_allow_html=True)
     top_gainer = max(indices_data, key=lambda x: x['change'])
     top_loser = min(indices_data, key=lambda x: x['change'])
     
