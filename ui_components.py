@@ -583,6 +583,7 @@ def render_gainer_loser_banner():
 def render_sidebar_info():
     """Render sidebar information section"""
     st.sidebar.markdown("---")
+    st.sidebar.markdown("<div style='margin-top: 80px;'></div>", unsafe_allow_html=True)
     st.sidebar.info(
         "ℹ️ **Data Sources:**\n"
         "- Stock Lists: NSE CSV (dynamic, no API blocks)\n"
