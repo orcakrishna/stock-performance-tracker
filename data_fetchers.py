@@ -365,9 +365,168 @@ def get_stock_52_week_range(ticker):
         return None
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+def _fetch_commodities_individual(tickers_list):
+    """FALLBACK: Fetch commodities one by one if bulk download fails"""
+    import math
+    print("🔄 Fetching commodities individually (fallback mode)...")
+    prices = {}
+    
+    def fetch_single(ticker, name_key):
+        """Fetch single commodity with error handling"""
+        try:
+            print(f"🔍 Fetching {name_key} ({ticker})...")
+            ticker_obj = yf.Ticker(ticker)
+            hist = ticker_obj.history(period='1mo')
+            
+            if hist is None:
+                print(f"❌ {name_key}: hist is None")
+                return None
+            
+            if hist.empty:
+                print(f"⚠️ {name_key}: Empty DataFrame")
+                return None
+                
+            if len(hist) < 2:
+                print(f"⚠️ {name_key}: Only {len(hist)} data point(s)")
+                return None
+            
+            current = float(hist['Close'].iloc[-1])
+            previous = float(hist['Close'].iloc[-2])
+            
+            if math.isnan(current) or math.isnan(previous):
+                print(f"⚠️ NaN values for {name_key}")
+                return None
+            
+            change_pct = ((current - previous) / previous) * 100 if previous != 0 else 0
+            if math.isnan(change_pct):
+                change_pct = 0
+            
+            week_change = 0
+            if len(hist) >= 7:
+                week_ago = float(hist['Close'].iloc[-6])
+                if not math.isnan(week_ago) and week_ago != 0:
+                    week_change = ((current - week_ago) / week_ago) * 100
+                    if math.isnan(week_change):
+                        week_change = 0
+            
+            print(f"✓ {name_key}: ${current:.2f} ({change_pct:+.2f}%)")
+            return {
+                'current': current,
+                'change': change_pct,
+                'week_change': week_change,
+                'arrow': 'Up' if change_pct >= 0 else 'Down',
+                'color': '#00FFA3' if change_pct >= 0 else '#FF6B6B'
+            }
+        except Exception as e:
+            print(f"❌ Error fetching {name_key}: {e}")
+            return None
+    
+    # Fetch USD/INR first (needed for gold/silver)
+    inr_result = fetch_single('INR=X', 'USD/INR')
+    if inr_result and inr_result['current'] > 0:
+        # Individual fetch returns correct value directly (e.g., 89.59)
+        usd_inr_rate = inr_result['current']
+        print(f"✓ USD/INR: ₹{usd_inr_rate:.2f} ({inr_result['change']:+.2f}%)")
+    else:
+        print("⚠️ USD/INR fetch failed, using fallback rate")
+        usd_inr_rate = 84.55
+    
+    prices['usd_inr'] = f"₹{usd_inr_rate:.2f}"
+    prices['usd_inr_change'] = inr_result['change'] if inr_result else 0
+    prices['usd_inr_week_change'] = inr_result['week_change'] if inr_result else 0
+    
+    # Oil
+    oil_result = fetch_single(COMMODITIES['oil'], 'Oil')
+    if oil_result:
+        prices['oil'] = f"${oil_result['current']:.2f}"
+        prices['oil_change'] = oil_result['change']
+        prices['oil_arrow'] = oil_result['arrow']
+        prices['oil_color'] = oil_result['color']
+        prices['oil_week_change'] = oil_result['week_change']
+    else:
+        prices['oil'] = '--'
+        prices['oil_change'] = 0
+        prices['oil_arrow'] = ''
+        prices['oil_color'] = '#ffffff'
+        prices['oil_week_change'] = 0
+    
+    # Gold
+    gold_result = fetch_single(COMMODITIES['gold'], 'Gold')
+    if gold_result:
+        gold_per_gram_usd = gold_result['current'] / 31.1035
+        gold_per_10g_inr = gold_per_gram_usd * 10 * usd_inr_rate
+        prices['gold'] = f"${gold_result['current']:.2f}"
+        prices['gold_inr'] = f"₹{gold_per_10g_inr:,.0f}/10g"
+        prices['gold_change'] = gold_result['change']
+        prices['gold_arrow'] = gold_result['arrow']
+        prices['gold_color'] = gold_result['color']
+        prices['gold_week_change'] = gold_result['week_change']
+    else:
+        prices['gold'] = '--'
+        prices['gold_inr'] = '--'
+        prices['gold_change'] = 0
+        prices['gold_arrow'] = ''
+        prices['gold_color'] = '#ffffff'
+        prices['gold_week_change'] = 0
+    
+    # Silver
+    silver_result = fetch_single(COMMODITIES['silver'], 'Silver')
+    if silver_result:
+        silver_per_gram_usd = silver_result['current'] / 31.1035
+        silver_per_kg_inr = silver_per_gram_usd * 1000 * usd_inr_rate
+        prices['silver'] = f"${silver_result['current']:.2f}"
+        prices['silver_inr'] = f"₹{silver_per_kg_inr:,.0f}/kg"
+        prices['silver_change'] = silver_result['change']
+        prices['silver_arrow'] = silver_result['arrow']
+        prices['silver_color'] = silver_result['color']
+        prices['silver_week_change'] = silver_result['week_change']
+    else:
+        prices['silver'] = '--'
+        prices['silver_inr'] = '--'
+        prices['silver_change'] = 0
+        prices['silver_arrow'] = ''
+        prices['silver_color'] = '#ffffff'
+        prices['silver_week_change'] = 0
+    
+    # Bitcoin
+    btc_result = fetch_single(COMMODITIES['btc'], 'Bitcoin')
+    if btc_result:
+        prices['btc'] = f"${btc_result['current']:,.0f}"
+        prices['btc_change'] = btc_result['change']
+        prices['btc_arrow'] = btc_result['arrow']
+        prices['btc_color'] = btc_result['color']
+        prices['btc_week_change'] = btc_result['week_change']
+    else:
+        prices['btc'] = '--'
+        prices['btc_change'] = 0
+        prices['btc_arrow'] = ''
+        prices['btc_color'] = '#ffffff'
+        prices['btc_week_change'] = 0
+    
+    # Ethereum
+    eth_result = fetch_single(COMMODITIES['ethereum'], 'Ethereum')
+    if eth_result:
+        prices['ethereum'] = f"${eth_result['current']:,.2f}"
+        prices['ethereum_change'] = eth_result['change']
+        prices['ethereum_arrow'] = eth_result['arrow']
+        prices['ethereum_color'] = eth_result['color']
+        prices['ethereum_week_change'] = eth_result['week_change']
+    else:
+        prices['ethereum'] = '--'
+        prices['ethereum_change'] = 0
+        prices['ethereum_arrow'] = ''
+        prices['ethereum_color'] = '#ffffff'
+        prices['ethereum_week_change'] = 0
+    
+    return prices
+
+
+@st.cache_data(ttl=300, show_spinner=False)  # Reduced from 3600 to 300 (5 min) for testing
 def get_commodities_prices():
     """OPTIMIZED: Fetch all commodity prices with SINGLE bulk download - 5-10x faster"""
+    print("=" * 60)
+    print("🌍 FETCHING COMMODITY PRICES")
+    print("=" * 60)
     prices = {}
     
     # CRITICAL FIX: Use SINGLE bulk download instead of 6+ separate API calls
@@ -382,38 +541,88 @@ def get_commodities_prices():
     ]
     
     try:
-        # Download all at once - much more efficient
-        data = yf.download(tickers_list, period='1mo', interval='1d', progress=False, 
-                          group_by='ticker', threads=False)
+        # CRITICAL FIX: Bulk download returns NaN for commodities - skip directly to individual
+        print("⚠️ Bulk download returns NaN for commodities - using individual fetches")
+        return _fetch_commodities_individual(tickers_list)
+        
+        # OLD CODE - Bulk download disabled due to NaN issues
+        # print("📊 Fetching commodity prices (bulk download)...")
+        # data = yf.download(tickers_list, period='1mo', interval='1d', progress=False, 
+        #                   group_by='ticker', threads=False)
+        # 
+        # # DEBUG: Check if data was fetched
+        # if data is None or data.empty:
+        #     print("⚠️ WARNING: Bulk download failed, trying individual fetches...")
+        #     # FALLBACK: Fetch individually
+        #     return _fetch_commodities_individual(tickers_list)
         
         # Helper function to extract commodity data
         def extract_commodity_data(ticker_symbol, name_key):
-            """Extract price and change data for a commodity"""
+            """Extract price and change data for a commodity with NaN handling"""
             try:
-                ticker_data = data[ticker_symbol] if len(tickers_list) > 1 else data
+                # CRITICAL FIX: Handle DataFrame structure correctly
+                if len(tickers_list) > 1:
+                    # Multi-ticker download: data has MultiIndex columns
+                    if ticker_symbol in data.columns.get_level_values(0):
+                        ticker_data = data[ticker_symbol]
+                    else:
+                        print(f"WARNING: {ticker_symbol} not found in downloaded data")
+                        return {f'{name_key}': '--', f'{name_key}_change': 0, 
+                                f'{name_key}_arrow': '', f'{name_key}_color': '#ffffff', 
+                                f'{name_key}_week_change': 0}
+                else:
+                    ticker_data = data
+                
                 if ticker_data.empty or len(ticker_data) < 2:
+                    print(f"WARNING: Not enough data for {name_key} (len={len(ticker_data)})")
                     return {f'{name_key}': '--', f'{name_key}_change': 0, 
                             f'{name_key}_arrow': '', f'{name_key}_color': '#ffffff', 
                             f'{name_key}_week_change': 0}
                 
+                # CRITICAL FIX: Check if 'Close' column exists
+                if 'Close' not in ticker_data.columns:
+                    print(f"ERROR: No 'Close' column for {name_key}. Available columns: {ticker_data.columns.tolist()}")
+                    return {f'{name_key}': '--', f'{name_key}_change': 0, 
+                            f'{name_key}_arrow': '', f'{name_key}_color': '#ffffff', 
+                            f'{name_key}_week_change': 0}
+                
+                # CRITICAL FIX: Handle NaN values from yfinance
+                import math
                 current = float(ticker_data['Close'].iloc[-1])
                 previous = float(ticker_data['Close'].iloc[-2])
-                change_pct = ((current - previous) / previous) * 100
+                
+                # Check for NaN values
+                if math.isnan(current) or math.isnan(previous):
+                    print(f"WARNING: NaN values detected for {name_key} (current={current}, previous={previous})")
+                    return {f'{name_key}': '--', f'{name_key}_change': 0, 
+                            f'{name_key}_arrow': '', f'{name_key}_color': '#ffffff', 
+                            f'{name_key}_week_change': 0}
+                
+                change_pct = ((current - previous) / previous) * 100 if previous != 0 else 0
+                # Check if result is NaN
+                if math.isnan(change_pct):
+                    change_pct = 0
+                
                 arrow = 'Up' if change_pct >= 0 else 'Down'
                 color = '#00FFA3' if change_pct >= 0 else '#FF6B6B'
                 
                 week_change = 0
                 if len(ticker_data) >= 7:
                     week_ago = float(ticker_data['Close'].iloc[-6])
-                    week_change = ((current - week_ago) / week_ago) * 100
+                    if not math.isnan(week_ago) and week_ago != 0:
+                        week_change = ((current - week_ago) / week_ago) * 100
+                        if math.isnan(week_change):
+                            week_change = 0
                 
-                return {
+                result = {
                     'current': current,
                     f'{name_key}_change': change_pct,
                     f'{name_key}_arrow': arrow,
                     f'{name_key}_color': color,
                     f'{name_key}_week_change': week_change
                 }
+                print(f"✓ Successfully extracted {name_key}: current=${current:.2f}, change={change_pct:.2f}%")
+                return result
             except Exception as e:
                 print(f"Error extracting {name_key}: {e}")
                 return {f'{name_key}': '--', f'{name_key}_change': 0, 
@@ -422,7 +631,13 @@ def get_commodities_prices():
         
         # Get USD/INR rate (needed for gold/silver INR conversion)
         inr_data = extract_commodity_data('INR=X', 'usd_inr')
-        usd_inr_rate = inr_data.get('current', 84.0)  # Updated default for 2025
+        usd_inr_rate = inr_data.get('current', 84.55)  # Updated default for Nov 2024
+        
+        # CRITICAL FIX: Ensure USD/INR rate is valid (not NaN)
+        import math
+        if math.isnan(usd_inr_rate):
+            usd_inr_rate = 84.55  # Fallback to current rate
+        
         prices['usd_inr'] = f"₹{usd_inr_rate:.2f}"
         prices['usd_inr_change'] = inr_data['usd_inr_change'] if 'current' in inr_data else 0
         prices['usd_inr_week_change'] = inr_data.get('usd_inr_week_change', 0)
@@ -476,19 +691,28 @@ def get_commodities_prices():
             prices.update(eth_data)
         
     except Exception as e:
-        print(f"Bulk commodity fetch failed: {e}")
-        # Return empty defaults for all commodities
-        for key in ['oil', 'gold', 'silver', 'btc', 'ethereum']:
-            prices[key] = "--"
-            prices[f'{key}_change'] = 0
-            prices[f'{key}_arrow'] = ''
-            prices[f'{key}_color'] = '#ffffff'
-            prices[f'{key}_week_change'] = 0
-        prices['gold_inr'] = "--"
-        prices['silver_inr'] = "--"
-        prices['usd_inr'] = "--"
-        prices['usd_inr_change'] = 0
-        prices['usd_inr_week_change'] = 0
+        print(f"❌ Bulk commodity fetch failed: {e}")
+        import traceback
+        traceback.print_exc()
+        # CRITICAL FIX: Try individual fallback instead of returning empty data
+        print("🔄 Attempting fallback to individual fetches...")
+        try:
+            return _fetch_commodities_individual(tickers_list)
+        except Exception as e2:
+            print(f"❌ Fallback also failed: {e2}")
+            # Return empty defaults only if both methods fail
+            for key in ['oil', 'gold', 'silver', 'btc', 'ethereum']:
+                prices[key] = "--"
+                prices[f'{key}_change'] = 0
+                prices[f'{key}_arrow'] = ''
+                prices[f'{key}_color'] = '#ffffff'
+                prices[f'{key}_week_change'] = 0
+            prices['gold_inr'] = "--"
+            prices['silver_inr'] = "--"
+            prices['usd_inr'] = "₹84.55"
+            prices['usd_inr_change'] = 0
+            prices['usd_inr_week_change'] = 0
+            return prices
     
     return prices
 
