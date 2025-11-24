@@ -521,7 +521,7 @@ def _fetch_commodities_individual(tickers_list):
     return prices
 
 
-@st.cache_data(ttl=300, show_spinner=False)  # Reduced from 3600 to 300 (5 min) for testing
+@st.cache_data(ttl=900, show_spinner=False)  # 15 min cache - commodities don't need minute-by-minute updates
 def get_commodities_prices():
     """OPTIMIZED: Fetch all commodity prices with SINGLE bulk download - 5-10x faster"""
     print("=" * 60)
@@ -874,7 +874,7 @@ def get_next_nse_holiday():
     except Exception as e:
         print(f"Error parsing fallback holidays: {e}")
    
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=86400, show_spinner=False)  # Cache 24 hours - FII/DII updates once daily post-market
 def get_fii_dii_data():
     json_file = os.path.join(os.path.dirname(__file__), "fii_dii_data.json")
 
