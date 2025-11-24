@@ -971,64 +971,47 @@ def main():
     # Render header first (fast - uses cached data)
     render_header()
 
-    # Create placeholders for components that may load slowly
-    banner_placeholder = st.empty()
-    ticker_placeholder = st.empty()
-    heading_placeholder = st.empty()
-
-    # Show loading message for gainer/loser banner
-    with banner_placeholder.container():
-        st.info("⏳ Loading market movers and FII/DII data...")
-    
-    # Load gainer/loser banner (can be slow due to FII/DII API)
-    with banner_placeholder.container():
+    # Load gainer/loser banner (stays visible while rest loads)
+    with st.spinner("⏳ Loading market movers and FII/DII data..."):
         fii_dii_source = render_gainer_loser_banner()
 
-    # Show loading message for ticker
-    with ticker_placeholder.container():
-        st.info("⏳ Loading live ticker with 50 stocks...")
-    
-    # Load ticker (can be slow - 50 stocks)
-    with ticker_placeholder.container():
+    # Load ticker (stays visible while rest loads)
+    with st.spinner("⏳ Loading live ticker with 50 stocks..."):
         stock_count, advances, declines = render_live_ticker()
 
     # Display heading with advance/decline info
-    with heading_placeholder.container():
-        if stock_count and advances is not None and declines is not None:
-            fii_dii_text = ""
-            if fii_dii_source:
-                fii_dii_text = f"<span style='color: #888; font-size: 0.85rem;'>FII/DII: {fii_dii_source}</span>"
+    if stock_count and advances is not None and declines is not None:
+        fii_dii_text = ""
+        if fii_dii_source:
+            fii_dii_text = f"<span style='color: #888; font-size: 0.85rem;'>FII/DII: {fii_dii_source}</span>"
 
-            st.markdown(
-                f"""<div style='display: flex; justify-content: space-between; align-items: center; margin: -10px 0 8px 0; padding: 8px;'>
-                    <div style='flex: 1; text-align: left;'>
-                        <span style='color: #ffffff; font-size: 1.35rem; font-weight: 600;'>📈 Market Indices - Today's Performance</span>
-                    </div>
-                    <div style='flex: 1; text-align: center; font-size: 0.9rem;'>
-                        <span style='color: #888; margin: 0 8px;'>•</span>
-                        <span style='color: #00ff00; font-weight: 600;'>Advances: {advances}</span>
-                        <span style='color: #888; margin: 0 8px;'>•</span>
-                        <span style='color: #ff4444; font-weight: 600;'>Declines: {declines}</span>
-                    </div>
-                    <div style='flex: 1; text-align: right; font-size: 0.85rem;'>
-                        {fii_dii_text}
-                    </div>
-                </div>""",
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(
-                """<div style='margin: -10px 0 8px 0; padding: 8px;'>
+        st.markdown(
+            f"""<div style='display: flex; justify-content: space-between; align-items: center; margin: -10px 0 8px 0; padding: 8px;'>
+                <div style='flex: 1; text-align: left;'>
                     <span style='color: #ffffff; font-size: 1.35rem; font-weight: 600;'>📈 Market Indices - Today's Performance</span>
-                </div>""",
-                unsafe_allow_html=True
-            )
+                </div>
+                <div style='flex: 1; text-align: center; font-size: 0.9rem;'>
+                    <span style='color: #888; margin: 0 8px;'>•</span>
+                    <span style='color: #00ff00; font-weight: 600;'>Advances: {advances}</span>
+                    <span style='color: #888; margin: 0 8px;'>•</span>
+                    <span style='color: #ff4444; font-weight: 600;'>Declines: {declines}</span>
+                </div>
+                <div style='flex: 1; text-align: right; font-size: 0.85rem;'>
+                    {fii_dii_text}
+                </div>
+            </div>""",
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            """<div style='margin: -10px 0 8px 0; padding: 8px;'>
+                <span style='color: #ffffff; font-size: 1.35rem; font-weight: 600;'>📈 Market Indices - Today's Performance</span>
+            </div>""",
+            unsafe_allow_html=True
+        )
 
-    # Render Market Indices IMMEDIATELY (before slow stock data loading)
-    indices_placeholder = st.empty()
-    with indices_placeholder.container():
-        st.info("⏳ Loading market indices data...")
-    with indices_placeholder.container():
+    # Render Market Indices (stays visible while rest loads)
+    with st.spinner("⏳ Loading market indices data..."):
         render_market_indices()
 
     # CRITICAL: Render admin login FIRST so admin_mode is set
