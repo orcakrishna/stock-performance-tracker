@@ -57,9 +57,16 @@ from ui_components import (
     render_sectoral_yearly_performance,
 )
 from utils import create_html_table
-from screenshot_protection import apply_screenshot_protection
 from security_fixes import secure_password_compare, LoginRateLimiter, sanitize_html, sanitize_dataframe_for_csv
 from views.portfolio import render_portfolio_page
+
+# Optional screenshot protection
+try:
+    from screenshot_protection import apply_screenshot_protection
+except Exception:
+    def apply_screenshot_protection():
+        """Fallback if screenshot_protection module unavailable"""
+        pass
 
 # -------------------- Logging --------------------
 logger = logging.getLogger("nse_tracker")
@@ -139,13 +146,26 @@ def reset_search_and_pagination():
 
 # -------------------- Cache Helpers --------------------
 def make_list_key(stocks):
+    """Generate a unique hash key for a list of stock symbols.
+    
+    Args:
+        stocks: List of stock symbol strings
+        
+    Returns:
+        SHA1 hash string for cache key lookup
+    """
     if not stocks:
         return "empty"
-    joined = ",".join(sorted(stocks))
-    return hashlib.sha1(joined.encode("utf-8")).hexdigest()
+    # More efficient: sort once, join directly, hash in one go
+    return hashlib.sha1(",".join(sorted(stocks)).encode("utf-8")).hexdigest()
 
 @st.cache_data(ttl=60 * 60 * 24, show_spinner=False)
 def cached_load_all_saved_lists():
+    """Load all saved stock lists from disk with 24-hour caching.
+    
+    Returns:
+        dict: Dictionary of list_name -> list of stock symbols
+    """
     try:
         return load_all_saved_lists()
     except Exception as e:
@@ -154,6 +174,14 @@ def cached_load_all_saved_lists():
 
 @st.cache_data(ttl=60 * 60 * 6, show_spinner=False)
 def cached_get_stock_list(category):
+    """Fetch stock list for a category/index with 6-hour caching.
+    
+    Args:
+        category: Index category name (e.g., 'Nifty 50', 'Bank Nifty')
+        
+    Returns:
+        tuple: (list of stock symbols, metadata)
+    """
     try:
         return get_stock_list(category)
     except Exception as e:
@@ -182,6 +210,11 @@ def on_category_change():
         st.session_state.current_page = 1
 
 def render_stock_selection_sidebar():
+    """Render the index selection dropdown in sidebar.
+    
+    Returns:
+        str: Selected category/index name
+    """
     st.sidebar.markdown("**Index List**")
     try:
         available_indices = get_available_nse_indices() or {}
@@ -324,6 +357,11 @@ def render_admin_login():
 
 
 def handle_file_upload():
+    """Handle stock list file upload and validation.
+    
+    Returns:
+        tuple: (list of validated stock symbols, source type)
+    """
     st.sidebar.markdown("---")
     st.sidebar.markdown("<p style='color: #ff4444; font-weight: 600;'>Manage Stock Lists</p>", unsafe_allow_html=True)
 
@@ -417,6 +455,17 @@ def handle_file_upload():
 
 # -------------------- Data Fetching --------------------
 def fetch_stocks_data(selected_stocks, use_parallel, use_cache=True, status=None):
+    """Fetch performance data for multiple stocks.
+    
+    Args:
+        selected_stocks: List of stock symbols to fetch
+        use_parallel: Whether to use parallel fetching
+        use_cache: Whether to use cached data
+        status: Optional streamlit placeholder for status updates
+        
+    Returns:
+        list: List of stock performance dictionaries
+    """
     if not selected_stocks:
         return []
 
@@ -467,6 +516,15 @@ def fetch_stocks_data(selected_stocks, use_parallel, use_cache=True, status=None
 
 # -------------------- Main UI Renderer --------------------
 def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
+    """Render the main stock performance table and analytics.
+    
+    Args:
+        category: Selected index/category name
+        selected_stocks: List of stock symbols
+        stocks_data: List of stock performance data dictionaries
+        sort_by: Column name to sort by
+        sort_order: 'Best to Worst' or 'Worst to Best'
+    """
     title_ph = st.empty()
     search_ph = st.empty()
     message_ph = st.empty()
