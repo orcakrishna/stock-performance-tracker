@@ -177,9 +177,8 @@ def render_stock_selection_sidebar():
     # Build selectbox options
     index_options = list(available_indices.keys())
     
-    # Add Upload File option for admin
-    if st.session_state.admin_mode:
-        index_options.append("Upload File")
+    # Add Upload File option for everyone (not admin-only)
+    index_options.append("Upload File")
 
     # Check if current category is still valid
     current_cat = st.session_state.selected_category
@@ -202,6 +201,7 @@ def render_stock_selection_sidebar():
         key="category_select",
         label_visibility="collapsed",
     )
+    
     return category
 
 
@@ -330,13 +330,13 @@ def handle_file_upload():
 
     # Upload New List
     st.sidebar.markdown("**Upload New List**")
-    uploaded_file = st.sidebar.file_uploader("TXT/CSV file with symbols", type=["txt", "csv"], key="uploader", accept_multiple_files=False, help="Upload a file with stock symbols (max 5MB)")
+    uploaded_file = st.sidebar.file_uploader("TXT/CSV file with symbols", type=["txt", "csv"], key="uploader", accept_multiple_files=False, help="Upload a file with stock symbols (max 2MB)")
 
     if uploaded_file:
-        MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+        MAX_FILE_SIZE = 2 * 1024 * 1024  # 2MB
         file_size = uploaded_file.size
         if file_size > MAX_FILE_SIZE:
-            st.sidebar.error(f"❌ File too large! Maximum size is 5MB. Your file is {file_size / (1024 * 1024):.2f}MB")
+            st.sidebar.error(f"❌ File too large! Maximum size is 2MB. Your file is {file_size / (1024 * 1024):.2f}MB")
             return [], None
 
         try:
@@ -706,107 +706,106 @@ def render_portfolio_ui():
     
     st.markdown("---")
     
-    # Add Stock Form
-    st.subheader("➕ Add Stock to Portfolio")
-    
-    # Get all available stocks for autocomplete (cached)
-    @st.cache_data(ttl=3600, show_spinner=False)
-    def get_all_nse_stocks():
-        """Get comprehensive list of NSE stocks from all indices (display names only)"""
-        all_stocks = set()
-        try:
-            # Get stocks from major indices
-            for idx in ["Nifty 50", "Nifty 100", "Nifty 200", "Nifty 500"]:
-                stocks, _ = get_stock_list(idx)
-                if stocks:
-                    # Remove .NS extension for display
-                    clean_stocks = [s.replace('.NS', '') for s in stocks]
-                    all_stocks.update(clean_stocks)
-        except Exception:
-            pass
-        return sorted(list(all_stocks))
-    
-    available_stocks = get_all_nse_stocks()
-    
-    with st.form("add_stock_form", clear_on_submit=True):
-        col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
+    # Add Stock Form (collapsed by default for clean UI)
+    with st.expander("➕ Add Stock to Portfolio", expanded=False):
+        # Get all available stocks for autocomplete (cached)
+        @st.cache_data(ttl=3600, show_spinner=False)
+        def get_all_nse_stocks():
+            """Get comprehensive list of NSE stocks from all indices (display names only)"""
+            all_stocks = set()
+            try:
+                # Get stocks from major indices
+                for idx in ["Nifty 50", "Nifty 100", "Nifty 200", "Nifty 500"]:
+                    stocks, _ = get_stock_list(idx)
+                    if stocks:
+                        # Remove .NS extension for display
+                        clean_stocks = [s.replace('.NS', '') for s in stocks]
+                        all_stocks.update(clean_stocks)
+            except Exception:
+                pass
+            return sorted(list(all_stocks))
         
-        with col1:
-            # Searchable dropdown with autocomplete (display without .NS)
-            symbol_dropdown = st.selectbox(
-                "Stock Symbol",
-                options=[""] + available_stocks,
-                index=0,
-                help="Start typing to search (e.g., INFY, RELIANCE, TCS)"
-            )
+        available_stocks = get_all_nse_stocks()
+        
+        with st.form("add_stock_form", clear_on_submit=True):
+            col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
             
-            # Use dropdown selection first
-            symbol = symbol_dropdown.strip().upper() if symbol_dropdown else ""
-            # Remove .NS if user somehow enters it
-            if symbol:
-                symbol = symbol.replace('.NS', '')
-        
-        with col2:
-            quantity = st.number_input("Quantity", min_value=1, value=1, step=1)
-        
-        with col3:
-            buy_price = st.number_input("Buy Price (₹)", min_value=0.01, value=100.0, step=0.01)
-        
-        with col4:
-            buy_date = st.date_input("Buy Date", value=pd.Timestamp.now())
-        
-        # Manual entry and Notes on same line to save space
-        col_manual, col_notes = st.columns(2)
-        with col_manual:
-            symbol_manual = st.text_input("Or enter manually", placeholder="e.g., RELIANCE")
-            # Override with manual entry if provided
-            if symbol_manual and symbol_manual.strip():
-                symbol = symbol_manual.strip().upper().replace('.NS', '')
-        
-        with col_notes:
-            notes = st.text_input("Notes (optional)", placeholder="e.g., Long-term hold")
-        
-        submitted = st.form_submit_button("Add Stock", type="primary")
-        
-        if submitted:
-            # Check if symbol is provided
-            if not symbol or symbol.strip() == "":
-                st.error("❌ Please select or enter a stock symbol")
-            else:
-                # Validate input
-                is_valid, error_msg = validate_holding_input(
-                    symbol, quantity, buy_price, buy_date.strftime("%Y-%m-%d")
+            with col1:
+                # Searchable dropdown with autocomplete (display without .NS)
+                symbol_dropdown = st.selectbox(
+                    "Stock Symbol",
+                    options=[""] + available_stocks,
+                    index=0,
+                    help="Start typing to search (e.g., INFY, RELIANCE, TCS)"
                 )
                 
-                if not is_valid:
-                    st.error(f"❌ {error_msg}")
+                # Use dropdown selection first
+                symbol = symbol_dropdown.strip().upper() if symbol_dropdown else ""
+                # Remove .NS if user somehow enters it
+                if symbol:
+                    symbol = symbol.replace('.NS', '')
+            
+            with col2:
+                quantity = st.number_input("Quantity", min_value=1, value=1, step=1)
+            
+            with col3:
+                buy_price = st.number_input("Buy Price (₹)", min_value=0.01, value=100.0, step=0.01)
+            
+            with col4:
+                buy_date = st.date_input("Buy Date", value=pd.Timestamp.now())
+            
+            # Manual entry and Notes on same line to save space
+            col_manual, col_notes = st.columns(2)
+            with col_manual:
+                symbol_manual = st.text_input("Or enter manually", placeholder="e.g., RELIANCE")
+                # Override with manual entry if provided
+                if symbol_manual and symbol_manual.strip():
+                    symbol = symbol_manual.strip().upper().replace('.NS', '')
+            
+            with col_notes:
+                notes = st.text_input("Notes (optional)", placeholder="e.g., Long-term hold")
+            
+            submitted = st.form_submit_button("Add Stock", type="primary")
+        
+            if submitted:
+                # Check if symbol is provided
+                if not symbol or symbol.strip() == "":
+                    st.error("❌ Please select or enter a stock symbol")
                 else:
-                    # Add .NS extension for API validation (internally needed)
-                    symbol_with_ns = symbol if symbol.endswith('.NS') else f"{symbol}.NS"
+                    # Validate input
+                    is_valid, error_msg = validate_holding_input(
+                        symbol, quantity, buy_price, buy_date.strftime("%Y-%m-%d")
+                    )
                     
-                    # Validate stock symbol with .NS extension
-                    if not validate_stock_symbol(symbol_with_ns):
-                        st.error(f"❌ Invalid stock symbol: {symbol}")
+                    if not is_valid:
+                        st.error(f"❌ {error_msg}")
                     else:
-                        # Add to holdings (store with .NS for API calls)
-                        new_holding = {
-                            'stock_symbol': symbol_with_ns,
-                            'quantity': quantity,
-                            'buy_price': buy_price,
-                            'buy_date': buy_date.strftime("%Y-%m-%d"),
-                            'notes': notes
-                        }
-                        st.session_state.portfolio_holdings.append(new_holding)
+                        # Add .NS extension for API validation (internally needed)
+                        symbol_with_ns = symbol if symbol.endswith('.NS') else f"{symbol}.NS"
                         
-                        # Save to file
-                        if save_portfolio(st.session_state.portfolio_holdings):
-                            # Force reload of portfolio
-                            st.session_state.portfolio_loaded = False
-                            st.toast(f"✅ Added {symbol}", icon="📈")
-                            # Use experimental rerun to avoid full page flash
-                            st.rerun()
+                        # Validate stock symbol with .NS extension
+                        if not validate_stock_symbol(symbol_with_ns):
+                            st.error(f"❌ Invalid stock symbol: {symbol}")
                         else:
-                            st.error("❌ Failed to save portfolio")
+                            # Add to holdings (store with .NS for API calls)
+                            new_holding = {
+                                'stock_symbol': symbol_with_ns,
+                                'quantity': quantity,
+                                'buy_price': buy_price,
+                                'buy_date': buy_date.strftime("%Y-%m-%d"),
+                                'notes': notes
+                            }
+                            st.session_state.portfolio_holdings.append(new_holding)
+                            
+                            # Save to file
+                            if save_portfolio(st.session_state.portfolio_holdings):
+                                # Force reload of portfolio
+                                st.session_state.portfolio_loaded = False
+                                st.toast(f"✅ Added {symbol}", icon="📈")
+                                # Use experimental rerun to avoid full page flash
+                                st.rerun()
+                            else:
+                                st.error("❌ Failed to save portfolio")
     
     st.markdown("---")
     
@@ -1015,13 +1014,14 @@ def main():
     # Show appropriate view based on admin status
     st.markdown("---")
     
-    # Show portfolio for admin, market view for everyone else
+    # Admin gets portfolio section at top
     if st.session_state.admin_mode:
-        # Admin sees portfolio directly (no tabs)
-        render_portfolio_ui()
-    else:
-        # Non-admin sees market view (no tabs)
-        market_view_content()
+        with st.expander("💼 My Portfolio", expanded=False):
+            render_portfolio_ui()
+        st.markdown("---")
+    
+    # Everyone (including admin) sees market view
+    market_view_content()
 
 def market_view_content():
     """Render the main market view content (existing functionality)"""
@@ -1055,7 +1055,7 @@ def market_view_content():
         cached_get_stock_list.clear()
         cached_load_all_saved_lists.clear()
         st.success("All caches cleared!")
-        st.rerun()  # Immediate rerun for user-initiated refresh
+        st.rerun()
 
     render_sidebar_info()
 
@@ -1077,8 +1077,6 @@ def market_view_content():
         stocks_data = st.session_state.cached_stocks_data
 
     render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order)
-
-    # Nonce check moved to top of main() to prevent race conditions
 
 
 if __name__ == "__main__":

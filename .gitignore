@@ -8,8 +8,8 @@ venv/
 env/
 ENV/
 
-# Streamlit
-.streamlit/
+# Streamlit - block only secrets, allow config
+.streamlit/secrets.toml
 
 # Logs
 logs/
