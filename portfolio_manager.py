@@ -110,7 +110,7 @@ def get_sector_allocation(holdings_with_pnl: List[Dict]) -> Dict[str, float]:
 
 def get_top_performers(holdings_with_pnl: List[Dict], top_n: int = 3) -> List[Tuple[str, float]]:
     """
-    Get top N performing stocks by P&L percentage
+    Get top N performing stocks by P&L percentage (unique stocks only)
     
     Args:
         holdings_with_pnl: Holdings list with calculated P&L
@@ -122,19 +122,30 @@ def get_top_performers(holdings_with_pnl: List[Dict], top_n: int = 3) -> List[Tu
     if not holdings_with_pnl:
         return []
     
-    # Sort by P&L percentage descending
-    sorted_holdings = sorted(
-        holdings_with_pnl,
-        key=lambda x: x.get('pnl_pct', 0),
-        reverse=True
-    )
+    # Group by stock symbol and calculate average P&L% for duplicates
+    stock_pnl = {}
+    for h in holdings_with_pnl:
+        symbol = h['stock_symbol']
+        pnl_pct = h.get('pnl_pct', 0)
+        
+        if symbol in stock_pnl:
+            # Average P&L% for same stock with multiple entries
+            stock_pnl[symbol].append(pnl_pct)
+        else:
+            stock_pnl[symbol] = [pnl_pct]
     
-    return [(h['stock_symbol'], h['pnl_pct']) for h in sorted_holdings[:top_n]]
+    # Calculate average and create list
+    unique_stocks = [(symbol, sum(pnls) / len(pnls)) for symbol, pnls in stock_pnl.items()]
+    
+    # Sort by P&L percentage descending
+    sorted_stocks = sorted(unique_stocks, key=lambda x: x[1], reverse=True)
+    
+    return sorted_stocks[:top_n]
 
 
 def get_worst_performers(holdings_with_pnl: List[Dict], bottom_n: int = 3) -> List[Tuple[str, float]]:
     """
-    Get bottom N performing stocks by P&L percentage
+    Get bottom N performing stocks by P&L percentage (unique stocks only)
     
     Args:
         holdings_with_pnl: Holdings list with calculated P&L
@@ -146,13 +157,25 @@ def get_worst_performers(holdings_with_pnl: List[Dict], bottom_n: int = 3) -> Li
     if not holdings_with_pnl:
         return []
     
-    # Sort by P&L percentage ascending
-    sorted_holdings = sorted(
-        holdings_with_pnl,
-        key=lambda x: x.get('pnl_pct', 0)
-    )
+    # Group by stock symbol and calculate average P&L% for duplicates
+    stock_pnl = {}
+    for h in holdings_with_pnl:
+        symbol = h['stock_symbol']
+        pnl_pct = h.get('pnl_pct', 0)
+        
+        if symbol in stock_pnl:
+            # Average P&L% for same stock with multiple entries
+            stock_pnl[symbol].append(pnl_pct)
+        else:
+            stock_pnl[symbol] = [pnl_pct]
     
-    return [(h['stock_symbol'], h['pnl_pct']) for h in sorted_holdings[:bottom_n]]
+    # Calculate average and create list
+    unique_stocks = [(symbol, sum(pnls) / len(pnls)) for symbol, pnls in stock_pnl.items()]
+    
+    # Sort by P&L percentage ascending (worst first)
+    sorted_stocks = sorted(unique_stocks, key=lambda x: x[1])
+    
+    return sorted_stocks[:bottom_n]
 
 
 def validate_holding_input(symbol: str, quantity: float, buy_price: float, buy_date: str) -> Tuple[bool, str]:

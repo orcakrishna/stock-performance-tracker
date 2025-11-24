@@ -787,15 +787,37 @@ def render_portfolio_ui():
                         if not validate_stock_symbol(symbol_with_ns):
                             st.error(f"❌ Invalid stock symbol: {symbol}")
                         else:
-                            # Add to holdings (store with .NS for API calls)
-                            new_holding = {
-                                'stock_symbol': symbol_with_ns,
-                                'quantity': quantity,
-                                'buy_price': buy_price,
-                                'buy_date': buy_date.strftime("%Y-%m-%d"),
-                                'notes': notes
-                            }
-                            st.session_state.portfolio_holdings.append(new_holding)
+                            # Check for duplicate: same stock, same date
+                            buy_date_str = buy_date.strftime("%Y-%m-%d")
+                            duplicate_found = False
+                            
+                            for i, holding in enumerate(st.session_state.portfolio_holdings):
+                                if holding['stock_symbol'] == symbol_with_ns and holding['buy_date'] == buy_date_str:
+                                    # Duplicate found - merge quantities and average price
+                                    old_qty = holding['quantity']
+                                    old_price = holding['buy_price']
+                                    new_qty = old_qty + quantity
+                                    # Weighted average price
+                                    avg_price = ((old_qty * old_price) + (quantity * buy_price)) / new_qty
+                                    
+                                    st.session_state.portfolio_holdings[i]['quantity'] = new_qty
+                                    st.session_state.portfolio_holdings[i]['buy_price'] = round(avg_price, 2)
+                                    st.session_state.portfolio_holdings[i]['notes'] = notes if notes else holding['notes']
+                                    
+                                    duplicate_found = True
+                                    st.info(f"ℹ️ Merged with existing {symbol} entry: {old_qty} + {quantity} = {new_qty} shares @ avg ₹{avg_price:.2f}")
+                                    break
+                            
+                            if not duplicate_found:
+                                # Add new holding
+                                new_holding = {
+                                    'stock_symbol': symbol_with_ns,
+                                    'quantity': quantity,
+                                    'buy_price': buy_price,
+                                    'buy_date': buy_date_str,
+                                    'notes': notes
+                                }
+                                st.session_state.portfolio_holdings.append(new_holding)
                             
                             # Save to file
                             if save_portfolio(st.session_state.portfolio_holdings):
@@ -905,8 +927,9 @@ def render_portfolio_ui():
             use_container_width=False
         )
     
-    # Top Performers
-    if len(st.session_state.portfolio_holdings) >= 3:
+    # Top Performers - only show if at least 3 unique stocks
+    unique_stocks = len(set(h['stock_symbol'] for h in st.session_state.portfolio_holdings))
+    if unique_stocks >= 3:
         st.markdown("---")
         perf_col1, perf_col2 = st.columns(2)
         
