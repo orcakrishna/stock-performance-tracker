@@ -149,14 +149,25 @@ def sanitize_csv_field(field):
     
     # Check if field starts with dangerous characters
     if first_char in ('=', '+', '-', '@', '\t', '\r'):
-        # EXCEPTION: Negative numbers are safe (e.g., "-0.4", "-123.45")
+        # EXCEPTION: Negative numbers are safe (e.g., "-0.4", "-123.45", "-0.4%")
         if first_char == '-':
-            # Try to parse as number
+            # Try to parse as number (strip % if present)
+            test_value = field_str.rstrip('%')
             try:
-                float(field_str)
-                return field  # It's a valid negative number, safe!
+                float(test_value)
+                return field  # It's a valid negative number (with or without %), safe!
             except (ValueError, TypeError):
                 # Not a number, could be formula like "-1+1"
+                pass
+        
+        # EXCEPTION: Positive numbers with + are also safe (e.g., "+5.2%")
+        if first_char == '+':
+            test_value = field_str[1:].rstrip('%')  # Remove leading + and trailing %
+            try:
+                float(test_value)
+                return field  # It's a valid positive number, safe!
+            except (ValueError, TypeError):
+                # Not a number, could be formula
                 pass
         
         # Prefix with single quote to force text interpretation

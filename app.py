@@ -521,7 +521,15 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
     def render_table_fragment():
         """Fragment that only reruns when pagination changes, not the entire app"""
         # Prepare CSV export data (remove Ticker and sparkline_data columns)
-        export_df = filtered_df.drop(columns=["Ticker", "sparkline_data"], errors="ignore")
+        export_df = filtered_df.drop(columns=["Ticker", "sparkline_data"], errors="ignore").copy()
+        
+        # Add % symbol to percentage columns for Excel display
+        percentage_columns = ['Today %', '1 Week %', '1 Month %', '2 Months %', '3 Months %']
+        for col in percentage_columns:
+            if col in export_df.columns:
+                # Format: add % symbol (e.g., "2.5" → "2.5%")
+                export_df[col] = export_df[col].apply(lambda x: f"{x}%" if pd.notna(x) and x != '' else x)
+        
         # SECURITY FIX: Prevent CSV formula injection
         safe_df = sanitize_dataframe_for_csv(export_df)
         csv_data = safe_df.to_csv(index=False).encode('utf-8')
