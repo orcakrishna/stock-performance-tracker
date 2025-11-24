@@ -35,8 +35,16 @@ from data_fetchers import (
     get_available_nse_indices,
     get_stock_52_week_range,
 )
-from file_manager import load_all_saved_lists, save_list_to_csv, delete_list_csv
+from file_manager import (
+    load_all_saved_lists, save_list_to_csv, delete_list_csv,
+    load_portfolio, save_portfolio, delete_holding, clear_portfolio
+)
 from cache_manager import clear_cache as clear_cache_manager
+from portfolio_manager import (
+    calculate_portfolio_metrics, validate_holding_input,
+    format_currency, format_percentage, get_pnl_color,
+    get_top_performers, get_worst_performers
+)
 from ui_components import (
     render_header,
     render_market_indices,
@@ -112,6 +120,9 @@ def init_session_state():
         "last_updated_ts": None,
         # Use a nonce string for rerun trigger to avoid race-condition toggles
         "trigger_rerun_nonce": None,
+        # Portfolio state
+        "portfolio_holdings": [],
+        "portfolio_loaded": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -240,10 +251,11 @@ def _render_disk_and_session_lists():
                         st.session_state.current_list_name = None
 
 
-def handle_file_upload():
+def render_admin_login():
+    """Render admin login/logout in sidebar (always visible)"""
     st.sidebar.markdown("---")
-    st.sidebar.markdown("<p style='color: #ff4444; font-weight: 600;'>Manage Stock Lists</p>", unsafe_allow_html=True)
-
+    st.sidebar.markdown("<p style='color: #42a5f5; font-weight: 600;'>🔐 Admin Access</p>", unsafe_allow_html=True)
+    
     # Admin Login with rate limiting
     if ADMIN_PASSWORD and not st.session_state.admin_authenticated:
         with st.sidebar.expander("Admin Login", expanded=False):
@@ -265,21 +277,27 @@ def handle_file_upload():
                         limiter.reset()
                         st.session_state.admin_authenticated = True
                         st.session_state.admin_mode = True
-                        st.success("Admin access granted!")
+                        st.success("✅ Admin access granted!")
                         trigger_rerun()
                     else:
                         if limiter.record_failure():
                             st.error("🔒 Account locked for 15 minutes due to failed attempts")
                         else:
-                            st.error("Incorrect password")
+                            st.error("❌ Incorrect password")
 
     if st.session_state.admin_authenticated:
-        st.sidebar.markdown("**Admin Mode Active**")
+        st.sidebar.success("✅ **Admin Mode Active**")
         st.session_state.admin_mode = st.sidebar.checkbox("Save new lists to disk", value=st.session_state.admin_mode)
-        if st.sidebar.button("Logout"):
+        if st.sidebar.button("🚪 Logout"):
             st.session_state.admin_authenticated = False
             st.session_state.admin_mode = False
+            st.success("Logged out successfully")
             trigger_rerun()
+
+
+def handle_file_upload():
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("<p style='color: #ff4444; font-weight: 600;'>Manage Stock Lists</p>", unsafe_allow_html=True)
 
     # Render lists
     _render_disk_and_session_lists()
@@ -595,6 +613,238 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
         except Exception as e:
             logger.exception("Sectoral failed: %s", e)
 
+# -------------------- Portfolio UI --------------------
+def render_portfolio_ui():
+    """Render the portfolio tracker interface (admin-only)"""
+    
+    # Load portfolio if not loaded
+    if not st.session_state.portfolio_loaded:
+        st.session_state.portfolio_holdings = load_portfolio()
+        st.session_state.portfolio_loaded = True
+    
+    st.title("💼 My Portfolio")
+    
+    # Get current prices for all holdings
+    current_prices = {}
+    if st.session_state.portfolio_holdings:
+        symbols = [h['stock_symbol'] for h in st.session_state.portfolio_holdings]
+        with st.spinner("Fetching current prices..."):
+            for symbol in symbols:
+                try:
+                    data = get_stock_performance(symbol, use_cache=True)
+                    if data and 'current_price' in data:
+                        current_prices[symbol] = data['current_price']
+                except Exception:
+                    # Use buy price as fallback
+                    holding = next(h for h in st.session_state.portfolio_holdings if h['stock_symbol'] == symbol)
+                    current_prices[symbol] = holding['buy_price']
+    
+    # Calculate portfolio metrics
+    metrics = calculate_portfolio_metrics(st.session_state.portfolio_holdings, current_prices)
+    
+    # Portfolio Summary Cards
+    if metrics['total_invested'] > 0:
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(
+                label="📊 Total Invested",
+                value=format_currency(metrics['total_invested'])
+            )
+        
+        with col2:
+            st.metric(
+                label="💰 Current Value",
+                value=format_currency(metrics['current_value'])
+            )
+        
+        with col3:
+            pnl_color = get_pnl_color(metrics['total_pnl'])
+            st.markdown(f"""
+                <div style='padding: 10px; border-radius: 5px; background-color: rgba(255,255,255,0.05);'>
+                    <div style='font-size: 0.875rem; color: #888;'>💵 Total P&L</div>
+                    <div style='font-size: 1.5rem; font-weight: 600; color: {pnl_color};'>
+                        {format_currency(metrics['total_pnl'])}
+                    </div>
+                    <div style='font-size: 0.875rem; color: {pnl_color};'>
+                        {format_percentage(metrics['total_pnl_pct'])}
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            st.metric(
+                label="📈 Holdings",
+                value=f"{len(st.session_state.portfolio_holdings)} stocks"
+            )
+    
+    st.markdown("---")
+    
+    # Add Stock Form
+    st.subheader("➕ Add Stock to Portfolio")
+    
+    with st.form("add_stock_form", clear_on_submit=True):
+        col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
+        
+        with col1:
+            symbol = st.text_input("Stock Symbol", placeholder="e.g., RELIANCE").strip().upper()
+        
+        with col2:
+            quantity = st.number_input("Quantity", min_value=1, value=1, step=1)
+        
+        with col3:
+            buy_price = st.number_input("Buy Price (₹)", min_value=0.01, value=100.0, step=0.01)
+        
+        with col4:
+            buy_date = st.date_input("Buy Date", value=pd.Timestamp.now())
+        
+        notes = st.text_input("Notes (optional)", placeholder="e.g., Long-term hold")
+        
+        submitted = st.form_submit_button("Add Stock", type="primary")
+        
+        if submitted:
+            # Validate input
+            is_valid, error_msg = validate_holding_input(
+                symbol, quantity, buy_price, buy_date.strftime("%Y-%m-%d")
+            )
+            
+            if not is_valid:
+                st.error(f"❌ {error_msg}")
+            else:
+                # Validate stock symbol
+                if not validate_stock_symbol(symbol):
+                    st.error(f"❌ Invalid stock symbol: {symbol}")
+                else:
+                    # Add to holdings
+                    new_holding = {
+                        'stock_symbol': symbol,
+                        'quantity': quantity,
+                        'buy_price': buy_price,
+                        'buy_date': buy_date.strftime("%Y-%m-%d"),
+                        'notes': notes
+                    }
+                    st.session_state.portfolio_holdings.append(new_holding)
+                    
+                    # Save to file
+                    if save_portfolio(st.session_state.portfolio_holdings):
+                        st.success(f"✅ Added {symbol} to portfolio!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to save portfolio")
+    
+    st.markdown("---")
+    
+    # Holdings Table
+    if not st.session_state.portfolio_holdings:
+        st.info("📭 Your portfolio is empty. Add your first stock above!")
+    else:
+        st.subheader(f"📈 Holdings ({len(st.session_state.portfolio_holdings)} stocks)")
+        
+        # Create DataFrame for display
+        holdings_data = []
+        for i, holding in enumerate(metrics['holdings_with_pnl']):
+            pnl_display = f"{format_currency(holding['pnl'])} ({format_percentage(holding['pnl_pct'])})"
+            pnl_color = get_pnl_color(holding['pnl'])
+            
+            holdings_data.append({
+                '#': i + 1,
+                'Stock': holding['stock_symbol'],
+                'Qty': int(holding['quantity']),
+                'Buy Price': format_currency(holding['buy_price']),
+                'Current Price': format_currency(holding['current_price']),
+                'Invested': format_currency(holding['invested']),
+                'Current Value': format_currency(holding['current_value']),
+                'P&L': pnl_display,
+                'Buy Date': holding['buy_date'],
+                'Notes': holding.get('notes', ''),
+                '_pnl_color': pnl_color,
+                '_index': i
+            })
+        
+        df = pd.DataFrame(holdings_data)
+        
+        # Display table with custom HTML for colors
+        html_table = '<table style="width:100%; border-collapse: collapse; background-color: #2d2d2d;">'
+        html_table += '<thead><tr style="background-color: #3d3d3d;">'
+        for col in ['#', 'Stock', 'Qty', 'Buy Price', 'Current Price', 'Invested', 'Current Value', 'P&L', 'Buy Date', 'Notes', 'Action']:
+            html_table += f'<th style="padding: 12px; border: 1px solid #555; color: #fff; text-align: left;">{col}</th>'
+        html_table += '</tr></thead><tbody>'
+        
+        for _, row in df.iterrows():
+            html_table += '<tr>'
+            for col in ['#', 'Stock', 'Qty', 'Buy Price', 'Current Price', 'Invested', 'Current Value']:
+                html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #fff;">{row[col]}</td>'
+            
+            # P&L with color
+            html_table += f'<td style="padding: 12px; border: 1px solid #555; color: {row["_pnl_color"]}; font-weight: 600;">{row["P&L"]}</td>'
+            
+            # Other columns
+            for col in ['Buy Date', 'Notes']:
+                html_table += f'<td style="padding: 12px; border: 1px solid #555; color: #fff;">{row[col]}</td>'
+            
+            # Action column with delete button
+            html_table += f'<td style="padding: 12px; border: 1px solid #555; text-align: center;">'
+            html_table += f'<span style="cursor: pointer; font-size: 1.2rem;" title="Delete">❌</span></td>'
+            html_table += '</tr>'
+        
+        html_table += '</tbody></table>'
+        
+        st.markdown(html_table, unsafe_allow_html=True)
+        
+        # Delete buttons (outside table for functionality)
+        st.markdown("### 🗑️ Delete Holdings")
+        cols = st.columns(min(5, len(st.session_state.portfolio_holdings)))
+        for i, holding in enumerate(st.session_state.portfolio_holdings):
+            with cols[i % 5]:
+                if st.button(f"🗑️ {holding['stock_symbol']}", key=f"del_holding_{i}"):
+                    st.session_state.portfolio_holdings = delete_holding(st.session_state.portfolio_holdings, i)
+                    save_portfolio(st.session_state.portfolio_holdings)
+                    st.success(f"Deleted {holding['stock_symbol']}")
+                    st.rerun()
+        
+        st.markdown("---")
+        
+        # Export & Clear
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            # Export to CSV
+            export_df = pd.DataFrame(st.session_state.portfolio_holdings)
+            csv_data = export_df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Download Portfolio (CSV)",
+                data=csv_data,
+                file_name="my_portfolio.csv",
+                mime="text/csv"
+            )
+        
+        with col2:
+            if st.button("🗑️ Clear All", type="secondary"):
+                if st.session_state.portfolio_holdings:
+                    st.session_state.portfolio_holdings = []
+                    clear_portfolio()
+                    st.success("Portfolio cleared!")
+                    st.rerun()
+        
+        # Top Performers
+        if len(st.session_state.portfolio_holdings) >= 3:
+            st.markdown("---")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("🏆 Top Performers")
+                top = get_top_performers(metrics['holdings_with_pnl'], 3)
+                for symbol, pnl_pct in top:
+                    color = get_pnl_color(pnl_pct)
+                    st.markdown(f"**{symbol}**: <span style='color: {color};'>{format_percentage(pnl_pct)}</span>", unsafe_allow_html=True)
+            
+            with col2:
+                st.subheader("📉 Needs Attention")
+                worst = get_worst_performers(metrics['holdings_with_pnl'], 3)
+                for symbol, pnl_pct in worst:
+                    color = get_pnl_color(pnl_pct)
+                    st.markdown(f"**{symbol}**: <span style='color: {color};'>{format_percentage(pnl_pct)}</span>", unsafe_allow_html=True)
+
 # -------------------- Main --------------------
 def main():
     st.set_page_config(
@@ -677,6 +927,30 @@ def main():
     with indices_placeholder.container():
         render_market_indices()
 
+    # TABS: Market View vs Portfolio
+    st.markdown("---")
+    
+    # Show portfolio tab only for admin
+    if st.session_state.admin_mode:
+        tab1, tab2 = st.tabs(["📊 Market View", "💼 My Portfolio"])
+    else:
+        tab1 = st.tabs(["📊 Market View"])[0]
+        tab2 = None
+    
+    # Portfolio Tab (Admin Only)
+    if tab2 is not None:
+        with tab2:
+            render_portfolio_ui()
+    
+    # Market View Tab (Main Content)
+    with tab1:
+        market_view_content()
+
+def market_view_content():
+    """Render the main market view content (existing functionality)"""
+    # Always show admin login in sidebar
+    render_admin_login()
+    
     category = render_stock_selection_sidebar()
 
     if st.session_state.last_category != category:
