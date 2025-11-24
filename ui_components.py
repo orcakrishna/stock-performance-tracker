@@ -791,14 +791,17 @@ def render_averages(df):
 # =========================
 def render_pagination_controls(total_items, items_per_page, position="top", csv_data=None, csv_filename=None):
     """Render pagination controls with optional CSV download and return current page data range"""
-    total_pages = (total_items + items_per_page - 1) // items_per_page
+    total_pages = max(1, (total_items + items_per_page - 1) // items_per_page) if total_items > 0 else 1
 
     if 'current_page' not in st.session_state:
         st.session_state.current_page = 1
-    elif total_pages > 0:
-        st.session_state.current_page = max(1, min(st.session_state.current_page, total_pages))
-    else:
-        st.session_state.current_page = 1
+    
+    # Ensure current_page is always within valid bounds
+    st.session_state.current_page = max(1, min(st.session_state.current_page, total_pages))
+    
+    # Calculate button states AFTER boundary check
+    is_first_page = (st.session_state.current_page <= 1)
+    is_last_page = (st.session_state.current_page >= total_pages)
     
     # Wrap pagination in a container div for specific styling
     st.markdown('<div class="pagination-container">', unsafe_allow_html=True)
@@ -831,9 +834,10 @@ def render_pagination_controls(total_items, items_per_page, position="top", csv_
             }
             </style>
         """, unsafe_allow_html=True)
-        if st.button("◄", disabled=(st.session_state.current_page == 1), key=f"prev_page_{position}"):
-            st.session_state.current_page -= 1
-            st.rerun()
+        if st.button("◄", disabled=is_first_page, key=f"prev_page_{position}"):
+            if st.session_state.current_page > 1:
+                st.session_state.current_page -= 1
+                st.rerun()
     
     start_idx = (st.session_state.current_page - 1) * items_per_page
     end_idx = min(start_idx + items_per_page, total_items)
@@ -917,9 +921,10 @@ def render_pagination_controls(total_items, items_per_page, position="top", csv_
             }
             </style>
         """, unsafe_allow_html=True)
-        if st.button("►", disabled=(st.session_state.current_page == total_pages), key=f"next_page_{position}"):
-            st.session_state.current_page += 1
-            st.rerun()
+        if st.button("►", disabled=is_last_page, key=f"next_page_{position}"):
+            if st.session_state.current_page < total_pages:
+                st.session_state.current_page += 1
+                st.rerun()
     
     # Close pagination container
     st.markdown("</div>", unsafe_allow_html=True)

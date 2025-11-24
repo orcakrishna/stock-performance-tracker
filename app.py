@@ -168,6 +168,19 @@ def trigger_rerun():
     st.session_state.trigger_rerun_nonce = uuid.uuid4().hex
 
 # -------------------- Sidebar: Selection & Upload --------------------
+def on_category_change():
+    """Callback when category selectbox changes"""
+    # Only reset if category actually changed
+    new_category = st.session_state.category_select
+    if st.session_state.last_category != new_category:
+        st.session_state.last_category = new_category
+        st.session_state.selected_category = new_category
+        st.session_state.cached_stocks_data = None
+        st.session_state.cached_stocks_list_key = None
+        st.session_state.search_query = ""
+        st.session_state.search_version += 1
+        st.session_state.current_page = 1
+
 def render_stock_selection_sidebar():
     st.sidebar.markdown("**Index List**")
     try:
@@ -191,17 +204,13 @@ def render_stock_selection_sidebar():
 
     current_index = index_options.index(current_cat) if current_cat in index_options else 0
 
-    # If user changes category, reset pagination
-    if current_cat != st.session_state.last_category:
-        if st.session_state.last_category is not None:
-            reset_search_and_pagination()
-
     category = st.sidebar.selectbox(
         "Choose:",
         options=index_options,
         index=current_index,
         key="category_select",
         label_visibility="collapsed",
+        on_change=on_category_change
     )
     
     return category
@@ -553,36 +562,30 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
     filtered_df = filtered_df.reset_index(drop=True)
     filtered_df.insert(0, "Rank", range(1, len(filtered_df) + 1))
 
-    # Use @st.fragment to avoid full app rerun on pagination/sort changes
-    @st.fragment
-    def render_table_fragment():
-        """Fragment that only reruns when pagination changes, not the entire app"""
-        # Prepare CSV export data (remove Ticker and sparkline_data columns)
-        export_df = filtered_df.drop(columns=["Ticker", "sparkline_data"], errors="ignore").copy()
-        
-        # Add % symbol to percentage columns for Excel display
-        percentage_columns = ['Today %', '1 Week %', '1 Month %', '2 Months %', '3 Months %']
-        for col in percentage_columns:
-            if col in export_df.columns:
-                # Format: add % symbol (e.g., "2.5" → "2.5%")
-                export_df[col] = export_df[col].apply(lambda x: f"{x}%" if pd.notna(x) and x != '' else x)
-        
-        # SECURITY FIX: Prevent CSV formula injection
-        safe_df = sanitize_dataframe_for_csv(export_df)
-        csv_data = safe_df.to_csv(index=False).encode('utf-8')
-        
-        # Create filename based on current list/category
-        download_name = st.session_state.current_list_name or category or "stock_data"
-        filename = f"{download_name}_performance.csv"
-        
+    # Prepare CSV export data (remove Ticker and sparkline_data columns)
+    export_df = filtered_df.drop(columns=["Ticker", "sparkline_data"], errors="ignore").copy()
+    
+    # Add % symbol to percentage columns for Excel display
+    percentage_columns = ['Today %', '1 Week %', '1 Month %', '2 Months %', '3 Months %']
+    for col in percentage_columns:
+        if col in export_df.columns:
+            # Format: add % symbol (e.g., "2.5" → "2.5%")
+            export_df[col] = export_df[col].apply(lambda x: f"{x}%" if pd.notna(x) and x != '' else x)
+    
+    # SECURITY FIX: Prevent CSV formula injection
+    safe_df = sanitize_dataframe_for_csv(export_df)
+    csv_data = safe_df.to_csv(index=False).encode('utf-8')
+    
+    # Create filename based on current list/category
+    download_name = st.session_state.current_list_name or category or "stock_data"
+    filename = f"{download_name}_performance.csv"
+    
+    with table_ph.container():
         total = len(filtered_df)
         start, end = render_pagination_controls(total, ITEMS_PER_PAGE, "top", csv_data=csv_data, csv_filename=filename)
         page_df = filtered_df.iloc[start:end]
         display_df = page_df.drop(columns=["Ticker"], errors="ignore")
         st.markdown(create_html_table(display_df), unsafe_allow_html=True)
-    
-    with table_ph.container():
-        render_table_fragment()
 
     with performers_ph.container():
         if not search_active:
@@ -721,13 +724,9 @@ def market_view_content():
     """Render the main market view content (existing functionality)"""
     category = render_stock_selection_sidebar()
 
-    if st.session_state.last_category != category:
-        st.session_state.last_category = category
-        st.session_state.cached_stocks_data = None
-        st.session_state.cached_stocks_list_key = None
-        st.session_state.search_query = ""
-        st.session_state.search_version += 1
-
+    # Category change handling is now done via on_change callback in the selectbox
+    # No need for duplicate logic here
+    
     # Get stock list
     if category == "Upload File":
         selected_stocks, _ = handle_file_upload()
