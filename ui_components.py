@@ -930,7 +930,7 @@ def render_pagination_controls(total_items, items_per_page, position="top", csv_
 # =========================
 # SECTORAL YEARLY PERFORMANCE
 # =========================
-@st.cache_data(ttl=3600, show_spinner=False)  # Cache for 1 hour, hide spinner
+@st.cache_data(ttl=86400, show_spinner=False)  # Cache 24 hours - 1-year performance updates once daily post-market
 def fetch_sectoral_yearly_data():
     """Fetch 1-year data for sectoral indices only (not main indices)"""
     import yfinance as yf
