@@ -176,6 +176,10 @@ def render_stock_selection_sidebar():
 
     # Build selectbox options
     index_options = list(available_indices.keys())
+    
+    # Add Upload File option for admin
+    if st.session_state.admin_mode:
+        index_options.append("Upload File")
 
     # Check if current category is still valid
     current_cat = st.session_state.selected_category
