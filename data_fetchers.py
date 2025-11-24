@@ -1008,7 +1008,7 @@ def get_fii_dii_data():
 
 
 
-@st.cache_data(ttl=600, show_spinner=False)  # 10-min cache - volume rankings don't need minute-by-minute updates
+@st.cache_data(ttl=900, show_spinner=False)  # 15-min cache - volume rankings change slowly, matches commodities cache
 def get_highest_volume_stocks(stock_list, top_n=5):
     """Fetch highest volume stocks using bulk download for speed"""
     if not stock_list:
