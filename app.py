@@ -66,6 +66,7 @@ if not logger.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 # -------------------- Admin Password --------------------
+@st.cache_resource
 def load_admin_password():
     """Load admin password from environment, st.secrets, or local .env.
     Note: path handling improved to be robust in multiple deploy environments.
@@ -631,6 +632,60 @@ def render_main_ui(category, selected_stocks, stocks_data, sort_by, sort_order):
             logger.exception("Sectoral failed: %s", e)
 
 # -------------------- Portfolio UI --------------------
+@st.cache_data(ttl=86400, show_spinner=False)  # Cache for 24 hours (refreshes at midnight)
+def get_all_nse_stocks():
+    """
+    Get comprehensive list of NSE stocks from all indices (display names only).
+    Cached for 24 hours to avoid slow first-load when adding stocks.
+    """
+    all_stocks = set()
+    try:
+        # Get stocks from major indices
+        for idx in ["Nifty 50", "Nifty 100", "Nifty 200", "Nifty 500"]:
+            stocks, _ = get_stock_list(idx)
+            if stocks:
+                # Remove .NS extension for display
+                clean_stocks = [s.replace('.NS', '') for s in stocks]
+                all_stocks.update(clean_stocks)
+    except Exception:
+        pass
+    return sorted(list(all_stocks))
+
+
+@st.cache_data(ttl=300, show_spinner=False)  # Cache for 5 minutes
+def get_portfolio_current_prices(holdings_tuple):
+    """
+    Fetch current prices for all portfolio holdings.
+    Cached to avoid duplicate fetching within same session.
+    
+    Args:
+        holdings_tuple: Tuple of (symbol, buy_price) for cache key uniqueness
+    
+    Returns:
+        Tuple of (current_prices dict, price_fetch_errors list)
+    """
+    current_prices = {}
+    price_fetch_errors = []
+    
+    for symbol, fallback_price in holdings_tuple:
+        try:
+            data = get_stock_performance(symbol, use_cache=True)
+            if data and 'Current Price' in data:
+                # Extract numeric value from formatted string like "₹1,234.56"
+                price_str = data['Current Price'].replace('₹', '').replace(',', '')
+                current_prices[symbol] = float(price_str)
+            else:
+                # API returned data but no current price
+                price_fetch_errors.append(f"{symbol}: No price data available")
+                current_prices[symbol] = fallback_price
+        except Exception as e:
+            # API call failed
+            price_fetch_errors.append(f"{symbol}: {str(e)}")
+            current_prices[symbol] = fallback_price
+    
+    return current_prices, price_fetch_errors
+
+
 def render_portfolio_ui():
     """Render the portfolio tracker interface (admin-only)"""
     
@@ -641,29 +696,15 @@ def render_portfolio_ui():
     
     st.title("💼 My Portfolio")
     
-    # Get current prices for all holdings
+    # Get current prices for all holdings (cached function - fetched only once)
     current_prices = {}
     price_fetch_errors = []
     if st.session_state.portfolio_holdings:
-        symbols = [h['stock_symbol'] for h in st.session_state.portfolio_holdings]
+        # Create cache key from holdings
+        holdings_tuple = tuple((h['stock_symbol'], h['buy_price']) for h in st.session_state.portfolio_holdings)
+        
         with st.spinner("Fetching current prices..."):
-            for symbol in symbols:
-                try:
-                    data = get_stock_performance(symbol, use_cache=True)
-                    if data and 'Current Price' in data:
-                        # Extract numeric value from formatted string like "₹1,234.56"
-                        price_str = data['Current Price'].replace('₹', '').replace(',', '')
-                        current_prices[symbol] = float(price_str)
-                    else:
-                        # API returned data but no current price
-                        price_fetch_errors.append(f"{symbol}: No price data available")
-                        holding = next(h for h in st.session_state.portfolio_holdings if h['stock_symbol'] == symbol)
-                        current_prices[symbol] = holding['buy_price']
-                except Exception as e:
-                    # API call failed
-                    price_fetch_errors.append(f"{symbol}: {str(e)}")
-                    holding = next(h for h in st.session_state.portfolio_holdings if h['stock_symbol'] == symbol)
-                    current_prices[symbol] = holding['buy_price']
+            current_prices, price_fetch_errors = get_portfolio_current_prices(holdings_tuple)
         
         # Show warning if any prices failed to fetch
         if price_fetch_errors:
@@ -708,23 +749,7 @@ def render_portfolio_ui():
     
     # Add Stock Form (collapsed by default for clean UI)
     with st.expander("➕ Add Stock to Portfolio", expanded=False):
-        # Get all available stocks for autocomplete (cached)
-        @st.cache_data(ttl=3600, show_spinner=False)
-        def get_all_nse_stocks():
-            """Get comprehensive list of NSE stocks from all indices (display names only)"""
-            all_stocks = set()
-            try:
-                # Get stocks from major indices
-                for idx in ["Nifty 50", "Nifty 100", "Nifty 200", "Nifty 500"]:
-                    stocks, _ = get_stock_list(idx)
-                    if stocks:
-                        # Remove .NS extension for display
-                        clean_stocks = [s.replace('.NS', '') for s in stocks]
-                        all_stocks.update(clean_stocks)
-            except Exception:
-                pass
-            return sorted(list(all_stocks))
-        
+        # Get all available stocks for autocomplete (cached globally, fast!)
         available_stocks = get_all_nse_stocks()
         
         with st.form("add_stock_form", clear_on_submit=True):
@@ -838,21 +863,9 @@ def render_portfolio_ui():
             st.info("📭 Your portfolio is empty. Add your first stock above!")
             return
         
-        # Recalculate metrics inside fragment (fetch live prices)
-        current_prices_frag = {}
-        for h in st.session_state.portfolio_holdings:
-            try:
-                data = get_stock_performance(h['stock_symbol'], use_cache=True)
-                if data and 'Current Price' in data:
-                    # Extract numeric value from formatted string like "₹1,234.56"
-                    price_str = data['Current Price'].replace('₹', '').replace(',', '')
-                    current_prices_frag[h['stock_symbol']] = float(price_str)
-                else:
-                    # No current price in API response
-                    current_prices_frag[h['stock_symbol']] = h['buy_price']
-            except Exception as e:
-                # API call failed, use buy price
-                current_prices_frag[h['stock_symbol']] = h['buy_price']
+        # Reuse cached prices (no duplicate fetching!)
+        holdings_tuple = tuple((h['stock_symbol'], h['buy_price']) for h in st.session_state.portfolio_holdings)
+        current_prices_frag, _ = get_portfolio_current_prices(holdings_tuple)
         
         metrics_frag = calculate_portfolio_metrics(st.session_state.portfolio_holdings, current_prices_frag)
         
@@ -902,9 +915,11 @@ def render_portfolio_ui():
                 if st.button("✕", key=f"del_{i}", help=f"Delete {display_symbol}", use_container_width=False):
                     st.session_state.portfolio_holdings.pop(i)
                     save_portfolio(st.session_state.portfolio_holdings)
+                    # Clear price cache so it refetches with new holdings
+                    get_portfolio_current_prices.clear()
                     st.session_state.portfolio_loaded = False  # Force reload
                     st.toast(f"✅ Deleted {display_symbol}", icon="🗑️")
-                    st.rerun()  # Full refresh to update metrics at top
+                    st.rerun(scope="fragment")  # Fragment rerun - no full page flash!
                 st.markdown("</div>", unsafe_allow_html=True)
             
             # Separator line with more top margin to prevent overlap
@@ -918,7 +933,11 @@ def render_portfolio_ui():
     # Export Portfolio
     if st.session_state.portfolio_holdings:
         export_df = pd.DataFrame(st.session_state.portfolio_holdings)
-        csv_data = export_df.to_csv(index=False).encode('utf-8')
+        # Remove any bloat columns (sparkline_data, Ticker, etc.) if they exist
+        export_df = export_df.drop(columns=["sparkline_data", "Ticker"], errors="ignore")
+        # Security: Prevent CSV injection
+        safe_df = sanitize_dataframe_for_csv(export_df)
+        csv_data = safe_df.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="📥 Download Portfolio (CSV)",
             data=csv_data,
