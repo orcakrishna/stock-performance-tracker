@@ -59,7 +59,7 @@ from ui_components import (
 from utils import create_html_table
 from screenshot_protection import apply_screenshot_protection
 from security_fixes import secure_password_compare, LoginRateLimiter, sanitize_html, sanitize_dataframe_for_csv
-from pages.portfolio import render_portfolio_page
+from views.portfolio import render_portfolio_page
 
 # -------------------- Logging --------------------
 logger = logging.getLogger("nse_tracker")
