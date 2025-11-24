@@ -2,15 +2,21 @@
 Portfolio page module - Admin portfolio management
 Extracted from app.py for better modularity
 """
+import sys
+from pathlib import Path
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import streamlit as st
 import pandas as pd
 from portfolio_manager import (
-    validate_holding_input, validate_stock_symbol,
+    validate_holding_input,
     calculate_portfolio_metrics, format_currency, format_percentage,
     get_pnl_color, get_top_performers, get_worst_performers
 )
 from file_manager import load_portfolio, save_portfolio
-from data_fetchers import get_stock_performance
+from data_fetchers import get_stock_performance, validate_stock_symbol, get_stock_list
 from security_fixes import sanitize_dataframe_for_csv
 
 
@@ -20,7 +26,6 @@ def get_all_nse_stocks():
     Get comprehensive list of NSE stocks from all indices (display names only).
     Cached for 24 hours to avoid slow first-load when adding stocks.
     """
-    from data_fetchers import get_stock_list
     all_stocks = set()
     try:
         # Get stocks from major indices
@@ -112,17 +117,21 @@ def render_portfolio_page():
         with col2:
             st.metric(
                 label="💰 Current Value",
-                value=format_currency(metrics['current_value']),
-                delta=format_currency(metrics['total_pnl'])
+                value=format_currency(metrics['current_value'])
             )
         
         with col3:
             pnl_pct = metrics['total_pnl_pct']
-            st.metric(
-                label="📈 Total P&L",
-                value=format_percentage(pnl_pct),
-                delta=f"{pnl_pct:+.2f}%"
-            )
+            pnl_color = "#00ff00" if pnl_pct >= 0 else "#ff4444"
+            st.markdown(f"""
+                <div style='padding: 10px 0;'>
+                    <div style='font-size: 0.875rem; color: rgba(250, 250, 250, 0.6); margin-bottom: 4px;'>📈 Total P&L</div>
+                    <div style='font-size: 1.875rem; font-weight: 600;'>
+                        {format_currency(metrics['total_pnl'])} 
+                        <span style='color: {pnl_color}; font-size: 1.25rem;'>({format_percentage(pnl_pct)})</span>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
         
         with col4:
             st.metric(
