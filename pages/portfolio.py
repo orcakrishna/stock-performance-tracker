@@ -121,23 +121,17 @@ def render_portfolio_page():
             )
         
         with col3:
-            pnl_pct = metrics['total_pnl_pct']
-            pnl_color = "#00ff00" if pnl_pct >= 0 else "#ff4444"
-            st.markdown(f"""
-                <div style='padding: 10px 0;'>
-                    <div style='font-size: 0.875rem; color: rgba(250, 250, 250, 0.6); margin-bottom: 4px;'>📈 Total P&L</div>
-                    <div style='font-size: 1.875rem; font-weight: 600;'>
-                        {format_currency(metrics['total_pnl'])} 
-                        <span style='color: {pnl_color}; font-size: 1.25rem;'>({format_percentage(pnl_pct)})</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+            st.metric(
+                label="📈 Total P&L",
+                value=format_currency(metrics['total_pnl'])
+            )
         
         with col4:
             st.metric(
                 label="📈 Holdings",
                 value=f"{len(st.session_state.portfolio_holdings)} stocks"
             )
+
     
     st.markdown("---")
     
