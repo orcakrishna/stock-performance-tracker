@@ -133,14 +133,32 @@ def sanitize_csv_field(field):
     Prevent CSV formula injection by escaping dangerous characters.
     Excel/Sheets interpret =, +, -, @, \t, \r as formula starts.
     
+    IMPORTANT: Negative numbers are safe and should NOT be escaped.
+    
     Example:
         df = df.applymap(sanitize_csv_field)
         csv_data = df.to_csv(index=False)
     """
     field_str = str(field)
     
+    # Empty field is safe
+    if not field_str:
+        return field
+    
+    first_char = field_str[0]
+    
     # Check if field starts with dangerous characters
-    if field_str and field_str[0] in ('=', '+', '-', '@', '\t', '\r'):
+    if first_char in ('=', '+', '-', '@', '\t', '\r'):
+        # EXCEPTION: Negative numbers are safe (e.g., "-0.4", "-123.45")
+        if first_char == '-':
+            # Try to parse as number
+            try:
+                float(field_str)
+                return field  # It's a valid negative number, safe!
+            except (ValueError, TypeError):
+                # Not a number, could be formula like "-1+1"
+                pass
+        
         # Prefix with single quote to force text interpretation
         return "'" + field_str
     
@@ -155,7 +173,12 @@ def sanitize_dataframe_for_csv(df):
         safe_df = sanitize_dataframe_for_csv(export_df)
         csv_data = safe_df.to_csv(index=False)
     """
-    return df.applymap(sanitize_csv_field)
+    # Use map() for pandas 2.0+ (applymap is deprecated)
+    try:
+        return df.map(sanitize_csv_field)
+    except AttributeError:
+        # Fallback for older pandas versions
+        return df.applymap(sanitize_csv_field)
 
 
 # =====================================================
