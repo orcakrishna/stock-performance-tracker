@@ -1,0 +1,121 @@
+name: Update FII/DII Data
+
+on:
+  schedule:
+    - cron: '0 13 * * *'      # 13:00 UTC = 18:30 IST → perfect timing
+  workflow_dispatch:
+
+concurrency:
+  group: update-fii-dii-data
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  actions: write   # needed for cleanup of old runs
+
+jobs:
+  # ————————————————————————
+  # 1. Skip weekends (Indian market closed)
+  # ————————————————————————
+  check-weekend:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Check if today is weekend
+        id: check
+        run: |
+          DOW=$(date -u '+%w')   # 0=Sunday, 6=Saturday
+          if [[ $DOW -eq 0 || $DOW -eq 6 ]]; then
+            echo "Weekend → skipping"
+            echo "should_run=false" >> $GITHUB_OUTPUT
+          else
+            echo "Weekday → running"
+            echo "should_run=true" >> $GITHUB_OUTPUT
+          fi
+
+  # ————————————————————————
+  # 2. Main job – only runs on weekdays
+  # ————————————————————————
+  fetch-and-update:
+    needs: check-weekend
+    if: ${{ needs.check-weekend.outputs.should_run == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 lxml
+
+      # ——— Clean old dated files (keep only today & yesterday) ———
+      - name: Clean old dated JSON files
+        run: |
+          TODAY=$(date -u +"%Y-%m-%d")
+          YESTERDAY=$(date -u -d "yesterday" +"%Y-%m-%d")
+          echo "Keeping only: fii_dii_data_${TODAY}.json and fii_dii_data_${YESTERDAY}.json"
+          find . -maxdepth 1 -name 'fii_dii_data_*.json' -type f | grep -v "fii_dii_data_${TODAY}\.json" | grep -v "fii_dii_data_${YESTERDAY}\.json" | xargs rm -f
+
+      # ——— Run your Python script ———
+      - name: Fetch latest FII/DII data
+        run: |
+          python fetch_fii_dii_daily.py
+          TODAY_FILE="fii_dii_data_$(date -u +'%Y-%m-%d').json"
+          if [[ ! -f "$TODAY_FILE" ]]; then
+            echo "::error::Script did not create $TODAY_FILE"
+            exit 1
+          fi
+          echo "Fetched → $TODAY_FILE"
+
+      # ——— Update the two main files you use ———
+      - name: Update fii_dii_data.json and fii_dii_data_prev.json
+        run: |
+          TODAY=$(date -u +"%Y-%m-%d")
+          YESTERDAY=$(date -u -d "yesterday" +"%Y-%m-%d")
+
+          cp "fii_dii_data_${TODAY}.json" fii_dii_data.json
+          echo "Updated → fii_dii_data.json"
+
+          if [[ -f "fii_dii_data_${YESTERDAY}.json" ]]; then
+            cp "fii_dii_data_${YESTERDAY}.json" fii_dii_data_prev.json
+            echo "Updated previous → fii_dii_data_prev.json"
+          else
+            cp fii_dii_data.json fii_dii_data_prev.json
+            echo "No yesterday file → using today as previous"
+          fi
+
+      # ——— Commit & push only if something changed ———
+      - name: Commit and push
+        run: |
+          git config user.name "FII/DII Bot"
+          git config user.email "fii-dii-bot@users.noreply.github.com"
+
+          git add fii_dii_data.json fii_dii_data_prev.json
+
+          if git diff --staged --quiet; then
+            echo "No changes → nothing to commit"
+            exit 0
+          fi
+
+          git commit -m "FII/DII Update – $(date +'%b %d, %Y')"
+          git push
+          echo "Pushed new data successfully"
+
+      # ——— Optional: keep workflow history clean ———
+      - name: Cleanup old workflow runs
+        if: always()
+        run: |
+          echo "Deleting old successful runs (keep last ~10)"
+          gh run list --repo ${{ github.repository }} --workflow="Update FII/DII Data" --status success --limit 100 \
+            | tail -n +11 | cut -f1 | xargs -I{} gh run delete {} --yes || true
+        env:
+          GH_TOKEN: ${{ github.token }}
